@@ -13,7 +13,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, betterControls;
+  ExtCtrls;
 
 type
 
@@ -25,11 +25,9 @@ type
     Button1: TButton;
     cbCaseSensitive: TCheckBox;
     edtText: TEdit;
-    gbDirection: TGroupBox;
     Label1: TLabel;
     lblDescription: TLabel;
-    rbDirectionUp: TRadioButton;
-    rbDirectionDown: TRadioButton;
+    rgUpDown: TRadioGroup;
   private
     { private declarations }
     function getFindText: string;
@@ -73,12 +71,12 @@ end;
 
 function TfrmFindDialog.getShowDirection: boolean;
 begin
-  result:=gbDirection.Visible;
+  result:=rgUpDown.Visible;
 end;
 
 procedure TfrmFindDialog.setShowDirection(s: boolean);
 begin
-  gbDirection.visible:=s;
+  rgUpDown.visible:=s;
 end;
 
 function TfrmFindDialog.getShowCaseSensitive: boolean;
@@ -103,18 +101,18 @@ end;
 
 function TfrmFindDialog.getDirection: TFindDirection;
 begin
-  if rbDirectionUp.checked then
-    result:=fdUp
+  if rgUpDown.itemindex=1 then
+    result:=fdDown
   else
-    result:=fdDown;
+    result:=fdUp;
 end;
 
 procedure TfrmFindDialog.setDirection(d: TFindDirection);
 begin
   if d=fdDown then
-    rbDirectionDown.Checked:=true
+    rgUpDown.itemindex:=1
   else
-    rbDirectionUp.checked:=true;
+    rgUpDown.itemindex:=0;
 end;
 
 function TfrmFindDialog.getFindText: string;

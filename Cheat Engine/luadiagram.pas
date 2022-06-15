@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, lua, lualib, lauxlib,LuaHandler, diagram, diagramblock,
-  diagramlink, diagramtypes, typinfo, betterControls;
+  diagramlink, diagramtypes, typinfo;
 
 procedure initializeLuaDiagram;
 

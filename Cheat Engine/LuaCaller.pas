@@ -29,8 +29,6 @@ type
       synchronizeparam: integer;
       synchronizeparamcount: integer;
       syncvm: Plua_State;
-
-      selfdestructing: boolean;
       procedure NotifyEvent(sender: TObject);
       procedure SelectionChangeEvent(Sender: TObject; User: boolean);
       procedure MouseEvent(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -101,7 +99,6 @@ type
       procedure DisassemblerViewOverrideCallback(address: ptruint; var addressstring: string; var bytestring: string; var opcodestring: string; var parameterstring: string; var specialstring: string);
 
       procedure synchronize;
-      procedure queue;
 
       procedure pushFunction(L: PLua_state=nil);
 
@@ -153,7 +150,7 @@ implementation
 
 uses
   luahandler, LuaByteTable, MainUnit, disassemblerviewunit,
-  hexviewunit, d3dhookUnit, LuaClass, debuggertypedefinitions, memscan,
+  hexviewunit, d3dhookUnit, luaclass, debuggertypedefinitions, memscan,
   symbolhandler, symbolhandlerstructs, menus, BreakpointTypeDef;
 
 resourcestring
@@ -348,8 +345,6 @@ var
   paramcount: integer;
   i: integer;
 begin
-  selfdestructing:=true;
-
   //no locking here (should already be obtained by the caller)
   PushFunction(syncvm);
   if synchronizeparam>0 then
@@ -370,15 +365,6 @@ begin
 
   lua_pcall(syncvm, paramcount,1,0);
 
-  free;
-end;
-
-procedure TLuaCaller.queue;
-begin
-  selfdestructing:=true;
-
-  PushFunction(syncvm);
-  lua_pcall(syncvm, 0,0,0);
   free;
 end;
 
@@ -437,9 +423,9 @@ begin
     begin
       PushFunction;
       luaclass_newClass(L, sender);
-      lua_pushinteger(L, integer(closeaction));
 
-      if lua_pcall(L, 2,1,0)=0 then //procedure(sender, closeaction)  lua_pcall returns 0 if success
+
+      if lua_pcall(L, 1,1,0)=0 then //procedure(sender)  lua_pcall returns 0 if success
       begin
         if lua_gettop(L)>0 then
         begin
@@ -1791,19 +1777,14 @@ var
 begin
   result:=0;
   parameters:=lua_gettop(L);
-  if parameters>=1 then
+  if parameters=1 then
   begin
     m.code:=lua_touserdata(L, lua_upvalueindex(1));
     m.data:=lua_touserdata(L, lua_upvalueindex(2));
     sender:=lua_toceuserdata(L, 1);
-
-    if parameters>=2 then
-      closeaction:=TCloseAction(lua_tointeger(L,2))
-    else
-      closeaction:=cahide;
-
     lua_pop(L, lua_gettop(L));
 
+    closeaction:=caHide;
     TCloseEvent(m)(sender, closeaction);
 
     lua_pushinteger(L, integer(closeaction));

@@ -86,12 +86,7 @@ type TSavedScantype= (fs_advanced,fs_addresslist);
 //type TValueType= (vt_byte,vt_word, vt_dword, vt_single, vt_double, vt_int64, vt_all);     //todo: Make compatible with the rest of ce's vartype
 
 
-type
-
-  ESavedScanException = class(Exception);   //debugger can ignore this
-  ESavedScanExceptionBad = class(Exception);
-
-  TSavedScanHandler = class
+type TSavedScanHandler = class
   private
     SavedScanmemoryFS: TFileStream;
     SavedScanaddressFS: TFileStream;
@@ -102,7 +97,7 @@ type
     addresslistmemory: pointer;  //can be an array of regions, an array of pointers or an array of tbitaddress definitions
     addresslistoffset: qword; //offset into the savedscanaddressFS file
     SavedScanmemory: pointer;
-
+    SavedScanMemoryOffset: qword; //the offset in the SavedScanmemoryFS file
 
     maxnumberofregions: integer;
     scandir: string;
@@ -118,12 +113,7 @@ type
     end;
 
     currentRegion: integer;
-    currentSubRegion: QWORD; //offset into the current region (governed by buffersize)
     Deinitialized: boolean; //if set do not lookup pointers
-
-    reinitializeLater: boolean;
-    reinitializeTimeout: qword;
-
     procedure cleanup;
     function loadIfNotLoadedRegion(p: pointer): pointer;
 
@@ -135,26 +125,20 @@ type
     lastFail: integer;
     AllowRandomAccess: boolean; //set this if you wish to allow random access through the list. (EXTREMELY INEFFICIENT IF IT HAPPENS, addresslist purposes only)
     AllowNotFound: boolean; //set this if you wish to return nil instead of an exception if the address can't be found in the list
-
-    memscan: TObject;
     function getpointertoaddress(address:ptruint;valuetype:TVariableType; ct: TCustomType; recallifneeded: boolean=true): pointer;
-    function getStringFromAddress(address: ptruint; out r: string; Hexadecimal: boolean=false; Signed: boolean=false; allVT: TVariableType=vtAll; allCustomType: TCustomType=nil): boolean;
 
     procedure deinitialize;
     procedure reinitialize;
 
-    property name: string read savedresultsname;
 
-
-    constructor create(scandir: string; savedresultsname: string; reinitializeLaterOnFailure: boolean=false);
+    constructor create(scandir: string; savedresultsname: string);
     destructor destroy; override;
 end;
 
 
 implementation
 
-uses Math, globals, memscan, lua, lauxlib, lualib, LuaClass, LuaObject,
-  LuaHandler, byteinterpreter;
+uses Math, globals;
 
 resourcestring
   rsMaxaddresslistcountIs0MeansTheAddresslistIsBad = 'maxaddresslistcount is 0 (Means: the addresslist is bad)';
@@ -206,13 +190,12 @@ end;
 
 procedure TSavedScanHandler.loadCurrentRegionMemory;
 {Loads the memory region designated by the current region}
-var
-  pm: ^TArrMemoryRegion;
+var pm: ^TArrMemoryRegion;
 begin
   pm:=addresslistmemory;
+  SavedScanmemoryfs.position:=ptruint(pm[currentRegion].startaddress);
 
-  SavedScanmemoryfs.position:=ptruint(pm^[currentRegion].startaddress)+currentSubRegion;
-  savedscanmemoryfs.readbuffer(SavedScanmemory^, integer(min(qword(buffersize+64), qword(pm^[currentRegion].memorysize-currentSubRegion))));
+  savedscanmemoryfs.readbuffer(SavedScanmemory^, pm[currentRegion].memorysize);
 
 end;
 
@@ -300,51 +283,10 @@ begin
 
   if currentaddresslistcount=0 then
   begin
-    raise ESavedScanException.create(rsMaxaddresslistcountIs0MeansTheAddresslistIsBad+' (savedscanaddressfs.size='+inttostr(savedscanaddressfs.size)+')');
+    raise exception.create(rsMaxaddresslistcountIs0MeansTheAddresslistIsBad+' (savedscanaddressfs.size='+inttostr(savedscanaddressfs.size)+')');
   end;
 
   LastAddressAccessed.index:=0; //reset the index
-end;
-
-function TSavedScanHandler.getStringFromAddress(address: ptruint; out r: string; Hexadecimal: boolean=false; Signed: boolean=false; allVT: TVariableType=vtAll; allCustomType: TCustomType=nil): boolean;
-var
-  p: pointer;
-  ms: TMemScan;
-
-  vtype: TVariableType;
-  ct: TCustomType;
-begin
-  result:=false;
-  if memscan=nil then exit;
-
-
-  ms:=TMemscan(memscan);
-
-  p:=getpointertoaddress(address, ms.VarType, ms.Customtype);
-  if p<>nil then
-  begin
-    if ms.vartype=vtAll then
-    begin
-      vtype:=allVT;
-      ct:=allCustomType;
-    end
-    else
-    begin
-      if allVT=vtAll then
-      begin
-        vtype:=ms.VariableType;
-        ct:=ms.Customtype;
-      end
-      else
-      begin
-        vtype:=allVT;
-        ct:=allCustomType;
-      end;
-    end;
-
-    r:=readAndParsePointer(address, p, vtype, ct, hexadecimal, Signed);
-    result:=true;
-  end;
 end;
 
 function TSavedScanHandler.getpointertoaddress(address:ptruint;valuetype:TVariableType; ct: Tcustomtype; recallifneeded: boolean=true): pointer;
@@ -369,27 +311,8 @@ begin
 
   if Deinitialized then
   begin
-    if reinitializeLater and (gettickcount64>reinitializeTimeout) then  //if has to reinitialize check if enough time has passed and try again
-    begin
-      try
-        reinitialize;
-        //success
-        reinitializeLater:=false;
-        deinitialized:=false;
-      except
-        deinitialized:=true;
-        reinitializeLater:=true;
-        reinitializeTimeout:=GetTickCount64+1000;
-        lastFail:=1;
-        exit;
-      end;
-
-    end
-    else
-    begin
-      lastFail:=1;
-      exit;
-    end;
+    lastFail:=1;
+    exit;
   end;
 
   if AllowRandomAccess then //no optimization if random access is used
@@ -410,27 +333,22 @@ begin
 
     pm:=addresslistmemory;
 
-    if AllowRandomAccess and (currentregion>=0) and (address<pm^[currentregion].baseaddress+currentSubRegion) then //out of order access. Start from scratch
-    begin
+    if AllowRandomAccess and (currentregion>=0) and (address<pm[currentregion].baseaddress) then //out of order access. Start from scratch
       currentRegion:=-1;
-      currentSubRegion:=0;
-    end;
 
 
     //if no region is set or the current region does not fall in the current list
-    if (currentRegion=-1) or (address>pm^[currentregion].baseaddress+pm^[currentregion].memorysize) or (address>pm^[currentregion].baseaddress+currentSubRegion+buffersize) then
+    if (currentRegion=-1) or (address>pm[currentregion].baseaddress+pm[currentregion].memorysize) then
     begin
-      //find the startregion, because it's a sequential read just go through it in order
-      if (currentRegion=-1) or (address>pm^[currentregion].baseaddress+pm^[currentregion].memorysize) then
-        inc(currentRegion);
-
-      while (address>pm[currentregion].baseaddress+pm^[currentregion].memorysize) and (currentregion<maxnumberofregions) do
+      //find the startregion, becaue it's a sequential read just go through it in order
+      inc(currentRegion);
+      while (address>pm[currentregion].baseaddress+pm[currentregion].memorysize) and (currentregion<maxnumberofregions) do
         inc(currentRegion);
 
       if currentregion>=maxnumberofregions then
       begin
         if AllowNotFound = false then
-          raise ESavedScanException.create(Format(rsFailureInFindingInThePreviousScanResults, [inttohex(address, 8)]))
+          raise exception.create(Format(rsFailureInFindingInThePreviousScanResults, [inttohex(address, 8)]))
         else
         begin
           lastFail:=2;
@@ -438,15 +356,13 @@ begin
         end;
       end;
 
-      currentSubRegion:=address-pm^[currentregion].baseaddress; //read from the requested address if a subregion  (skips stuff we don't need)
-
       loadCurrentRegionMemory;
     end;
 
 
 
 
-    result:=pointer(ptruint(savedscanmemory)+(address-(pm^[currentregion].baseaddress+currentSubRegion)));
+    result:=pointer(ptruint(savedscanmemory)+(address-pm[currentregion].baseaddress));
     exit;
 
   end
@@ -535,7 +451,7 @@ begin
           exit(getpointertoaddress(address, valuetype, ct, false));
         end
         else
-          raise ESavedScanException.create(rsInvalidOrderOfCallingGetpointertoaddress);
+          raise exception.create(rsInvalidOrderOfCallingGetpointertoaddress);
       end;
 
       if pa[currentaddresslistcount-1]<address then
@@ -559,7 +475,7 @@ begin
                 exit(getpointertoaddress(address, valuetype, ct, false));
               end
               else
-                raise ESavedScanException.create(e.message);
+                raise exception.create(e.message);
             end;
           end;
         end;
@@ -615,7 +531,7 @@ begin
 
       //not found
       if not AllowNotFound then
-        raise ESavedScanException.create(Format(rsFailureInFindingInTheFirstScanResults, [inttohex(address, 8)]));
+        raise exception.create(Format(rsFailureInFindingInTheFirstScanResults, [inttohex(address, 8)]));
     end
     else
     begin
@@ -636,7 +552,7 @@ begin
           exit(getpointertoaddress(address, valuetype, ct, false));
         end
         else
-          raise ESavedScanExceptionBad.create(rsInvalidOrderOfCallingGetpointertoaddress);
+          raise exception.create(rsInvalidOrderOfCallingGetpointertoaddress);
       end;
 
       if pab[currentaddresslistcount-1].address<address then
@@ -659,7 +575,7 @@ begin
               exit(getpointertoaddress(address, valuetype, ct, false));
             end
             else
-              raise ESavedScanExceptionBad.create(e.message);
+              raise exception.create(e.message);
           end;
         end;
 
@@ -708,7 +624,7 @@ begin
   end;
 
   if not AllowNotFound then
-    raise ESavedScanExceptionBad.create(Format(rsFailureInFindingInThePreviousScanResults, [inttohex(address, 8)]));
+    raise exception.create(Format(rsFailureInFindingInThePreviousScanResults, [inttohex(address, 8)]));
 
 end;
 
@@ -730,7 +646,7 @@ begin
     try
       SavedScanaddressFS:=tfilestream.Create(scandir+'ADDRESSES.'+savedresultsname, fmopenread or fmsharedenynone);
     except
-      raise ESavedScanException.Create(rsNoFirstScanDataFilesFound);
+      raise exception.Create(rsNoFirstScanDataFilesFound);
     end;
     SavedScanaddressFS.ReadBuffer(datatype,7);
 
@@ -744,20 +660,19 @@ begin
       SavedScanaddressFS.ReadBuffer(addresslistmemory^, (SavedScanaddressFS.Size-7));
 
 
-      //find the max region and split up into bitesize chunks
+      //find the max region
       pm:=addresslistmemory;
 
       p:=0;
       for i:=0 to maxnumberofregions-1 do
       begin
-        maxregionsize:=max(maxregionsize, integer(min(qword(buffersize+64+MaxCustomTypeSize), qword(pm^[i].memorysize))));
+        maxregionsize:=max(maxregionsize, integer(pm[i].memorysize));
         pm[i].startaddress:=pointer(p); //set the offset in the file (if it wasn't set already)
         inc(p, pm[i].MemorySize);
       end;
 
 
       currentRegion:=-1;
-      currentSubRegion:=0;
     end
     else
     begin
@@ -772,9 +687,9 @@ begin
 
     try
       SavedScanmemoryFS:=Tfilestream.Create(scandir+'MEMORY.'+savedresultsname,fmOpenRead or fmsharedenynone);
-      getmem(SavedScanmemory, maxregionsize+512); //extra just to be safe for custom types that misreport size
+      getmem(SavedScanmemory, maxregionsize);
     except
-      raise ESavedScanException.Create(rsNoFirstScanDataFilesFound);
+      raise exception.Create(rsNoFirstScanDataFilesFound);
     end;
 
     deinitialized:=false;
@@ -785,12 +700,12 @@ begin
       //clean up and raise the exception
       log('Error during TSavedScanHandler.InitializeScanHandler:'+e.Message);
       cleanup;
-      raise ESavedScanException.Create(e.Message);
+      raise exception.Create(e.Message);
     end;
  end;
 end;
 
-constructor TSavedScanHandler.create(scandir: string; savedresultsname: string; reinitializeLaterOnFailure: boolean=false);
+constructor TSavedScanHandler.create(scandir: string; savedresultsname: string);
 begin
   inherited Create;
 
@@ -800,22 +715,7 @@ begin
 
   self.scandir:=scandir;
   self.savedresultsname:=savedresultsname;
-
-  try
-    InitializeScanHandler;
-  except
-    on e:exception do
-    begin
-      if reinitializeLaterOnFailure then
-      begin
-        Deinitialized:=true;
-        reinitializeLater:=true;
-        reinitializeTimeout:=gettickcount64+1000;
-      end
-      else
-        raise;
-    end;
-  end;
+  InitializeScanHandler;
 end;
 
 destructor TSavedScanHandler.destroy;
@@ -850,7 +750,6 @@ procedure TSavedScanHandler.deinitialize;
 begin
   cleanup;
   Deinitialized:=true;
-  reinitializeLater:=false;
 end;
 
 procedure TSavedScanHandler.reinitialize;
@@ -858,58 +757,6 @@ begin
   InitializeScanHandler;
   deinitialized:=false;
 end;
-
-
-//---------------LUA-------------------
-function savedscanhandler_getStringFromAddress(L: PLua_State): integer; cdecl;
-var
-  address: ptruint;
-  ssh: TSavedScanHandler;
-  r: string;
-  hexadecimal, signed: boolean;
-begin
-  result:=0;
-  ssh:=luaclass_getClassObject(L);
-  if lua_gettop(L)>=1 then
-  begin
-    try
-      address:=lua_toaddress(L,1);
-    except
-      on e: exception do
-      begin
-        lua_pushnil(L);
-        lua_pushstring(L, e.Message);
-        exit(2);
-      end;
-    end;
-
-    if lua_Gettop(L)>=2 then
-      hexadecimal:=lua_toboolean(L,2)
-    else
-      hexadecimal:=false;
-
-    if lua_getProperty(L)>=3 then
-      signed:=lua_toboolean(L,3)
-    else
-      signed:=false;
-
-    if ssh.getStringFromAddress(address,r, hexadecimal, signed) then
-      lua_pushstring(L,r)
-    else
-      lua_pushnil(L);
-
-    result:=1;
-  end;
-end;
-
-procedure savedscanhandler_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
-begin
-  object_addMetaData(L, metatable, userdata);
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getStringFromAddress', savedscanhandler_getStringFromAddress);
-end;
-
-initialization
-  luaclass_register(TSavedScanHandler, savedscanhandler_addMetaData);
 
 end.
 

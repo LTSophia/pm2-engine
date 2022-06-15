@@ -5,7 +5,7 @@ unit LuaGroupbox;
 interface
 
 uses
-  Classes, SysUtils, lua, lualib, lauxlib, stdctrls, controls, betterControls;
+  Classes, SysUtils, lua, lualib, lauxlib, stdctrls;
 
   procedure initializeLuaGroupbox;
   procedure groupbox_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
@@ -16,15 +16,13 @@ uses luaclass, luahandler, pluginexports, LuaWinControl;
 
 function createGroupBox(L: Plua_State): integer; cdecl;
 var parameters: integer;
-  f: TWinControl;
-  p: TGroupBox;
+  f,p: pointer;
 begin
   result:=0;
   if lua_gettop(L)>=1 then
   begin
-    f:=lua_toceuserdata(L, 1);
-    p:=tgroupbox.Create(f);
-    p.parent:=f;
+    f:=lua_toceuserdata(L, -1);
+    p:=ce_createGroupBox(f);
 
     lua_pop(L, lua_gettop(L));
 

@@ -1,7 +1,7 @@
 object frmMemoryViewEx: TfrmMemoryViewEx
-  Left = 869
+  Left = -68
   Height = 401
-  Top = 247
+  Top = 250
   Width = 620
   Caption = 'Graphical Memory View '
   ClientHeight = 401
@@ -13,7 +13,7 @@ object frmMemoryViewEx: TfrmMemoryViewEx
   OnResize = FormResize
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.6.4.0'
+  LCLVersion = '2.0.8.0'
   object Panel1: TPanel
     Left = 0
     Height = 289
@@ -64,7 +64,7 @@ object frmMemoryViewEx: TfrmMemoryViewEx
       Height = 23
       Hint = 'Number of bytes a row exists out'
       Top = 15
-      Width = 71
+      Width = 72
       Anchors = [akTop, akLeft, akRight]
       OnChange = edtPitchChange
       ParentShowHint = False
@@ -78,7 +78,7 @@ object frmMemoryViewEx: TfrmMemoryViewEx
       Left = 5
       Height = 15
       Top = 0
-      Width = 71
+      Width = 72
       BorderSpacing.Left = 5
       Caption = 'Pixels per line'
       ParentColor = False
@@ -129,7 +129,7 @@ object frmMemoryViewEx: TfrmMemoryViewEx
       Left = 5
       Height = 15
       Top = 114
-      Width = 25
+      Width = 24
       BorderSpacing.Top = 2
       Caption = 'Type'
       ParentColor = False

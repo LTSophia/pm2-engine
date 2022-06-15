@@ -9,7 +9,7 @@ This unit will hold some global variables (previously cefuncproc.pas)
 interface
 
 uses
-  Classes, SysUtils, commonTypeDefs, syncobjs, Graphics, betterControls;
+  Classes, SysUtils, commonTypeDefs, syncobjs, Graphics;
 
 //type TUnexpectedExceptionAction=(ueaIgnore, ueaBreak, ueaBreakIfInRegion);
 
@@ -38,9 +38,7 @@ var
   networkRPMCacheTimeout: single=1.0;
 
   systemtype: integer;
-  {$if defined(CPU386) or defined(CPUX86_64)}
   old8087CW: word;  //you never know...
-  {$endif}
   ProcessSelected: Boolean;
   //ProcessID: Dword; //deperecated
   //ProcessHandle: Thandle;
@@ -158,7 +156,6 @@ var
 
   luagc_MinSize: dword;
 
-  SystemSupportsWritableExecutableMemory: boolean={$ifdef windows}true{$else}false{$endif};
   SkipVirtualProtectEx: boolean;
   alwaysforceload: boolean;
 
@@ -171,15 +168,6 @@ var
   {$ifdef USELAZFREETYPE}
   UseOriginalRenderingSystem: boolean;
   {$endif}
-
-  dbvmbp_options: record
-    TriggerCOW:boolean;
-    TargetedProcessOnly:boolean;
-    KernelmodeBreaks: boolean;
-  end;
-  DBVMWatchBPActive: boolean;
-
-  forceCR3VirtualQueryEx: boolean;
 
 
 

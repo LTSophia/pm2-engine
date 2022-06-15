@@ -13,7 +13,7 @@ uses
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs,disassembler,{$ifndef net}NewKernelHandler,{$endif}CEFuncProc, ExtCtrls, StdCtrls,
-  ComCtrls, LResources, LCLProc, Menus, strutils, OldRegExpr, RegExpr, Clipbrd, betterControls;
+  ComCtrls, LResources, LCLProc, Menus, strutils, OldRegExpr, RegExpr, Clipbrd;
 
 type
   TAssemblyScanResultFoundEvent=procedure(address: ptruint; s:string) of object;

@@ -13,7 +13,7 @@ uses
   dialogs, JvDesignSurface, DOM, typinfo, LResources, JvDesignImp, JvDesignUtils,
   graphics, math, xmlread,xmlwrite, WSStdCtrls, custombase85, PropEdits,
   ComponentEditors, CEListviewItemEditor, TreeViewPropEdit, menus, MenuIntf, LCLProc,
-  Calendar, CECustomButton, betterControls;
+  Calendar;
 
 type TCEPageControl=class(TPageControl);
 type
@@ -603,7 +603,7 @@ type TCEEdit=class(TEdit)
     property TextHintFontStyle: TFontStyle read fTextHintFontStyle write fTextHintFontStyle;
   end;
 
-type TCEForm=class(TForm) //TCustomForm)
+type TCEForm=class(TCustomForm)
   private
     saving: boolean;
     fVisible: boolean;
@@ -622,10 +622,8 @@ type TCEForm=class(TForm) //TCustomForm)
     designsurface: TJvDesignSurface;
     procedure ResyncWithLua(Base: TComponent); overload;
     procedure ResyncWithLua; overload;
-    procedure SaveToStream(s: tstream);
     procedure SaveToFile(filename: string);
     procedure SaveToFileLFM(filename: string);
-    procedure LoadFromStream(s: TStream);
     procedure LoadFromFile(filename: string);
     procedure LoadFromFileLFM(filename: string);
     procedure SaveToXML(Node: TDOMNode; dontdeactivate:boolean=false);
@@ -1236,11 +1234,7 @@ begin
     if active then active:=false;
   end;
 
-  if saveddesign=nil then
-    SaveCurrentStateasDesign;
-
-  if saveddesign=nil then
-    exit; //give up
+  if saveddesign=nil then exit; //nothing to save
 
   //for now use a binarystream instead of xml. the xmlwriter/reader does not support stringlists
   //create a stream for storage
@@ -1369,8 +1363,7 @@ begin
   active:=wasActive;
 end;
 
-
-procedure TCEForm.SaveToStream(s: tstream);
+procedure TCEForm.SaveToFile(filename: string);
 var
   xmldoc: TXMLDocument;
   formnode: TDOMNode;
@@ -1382,20 +1375,7 @@ begin
   SaveCurrentStateasDesign;
   SaveToXML(formnode,true);
 
-  WriteXML(xmldoc, s);
-end;
-
-
-procedure TCEForm.SaveToFile(filename: string);
-var
-  fs: TFilestream;
-begin
-  fs:=TFileStream.Create(filename, fmCreate);
-  try
-    SaveToStream(fs);
-  finally
-    fs.free;
-  end;
+  WriteXML(xmldoc, filename);
 end;
 
 procedure TCEForm.SaveToFileLFM(filename: string);
@@ -1409,13 +1389,13 @@ begin
   ms.Destroy;
 end;
 
-procedure TCEForm.LoadFromStream(s: TStream);
+procedure TCEForm.LoadFromFile(filename: string);
 var
   formnode: TDOMNode;
   xmldoc: TXMLDocument;
 begin
   xmldoc:=nil;
-  ReadXMLFile(xmldoc, s);
+  ReadXMLFile(xmldoc, filename);
 
   if xmldoc<>nil then
   begin
@@ -1428,25 +1408,6 @@ begin
     end
     else
       raise exception.create(rsInvalidFormData);
-  end;
-
-  if ShouldAppsUseDarkMode() then
-    if color=clDefault then
-    begin
-      color:=clWindow;
-      font.color:=clWindowtext;
-    end;
-end;
-
-procedure TCEForm.LoadFromFile(filename: string);
-var
-  fs: TFileStream;
-begin
-  fs:=TFileStream.Create(filename, fmOpenRead);
-  try
-    LoadFromStream(fs);
-  finally
-    fs.free;
   end;
 end;
 
@@ -1465,13 +1426,6 @@ begin
   ms.Destroy;
 
   active:=wasActive;
-
-  if ShouldAppsUseDarkMode() then
-    if color=clDefault then
-    begin
-      color:=clWindow;
-      font.color:=clWindowtext;
-    end;
 end;
 
 procedure TCEForm.paint;
@@ -1483,7 +1437,7 @@ begin
     if color<>clDefault then
       DesignPaintGrid(Canvas, ClientRect, ColorToRGB(color), InvertColor(ColorToRGB(color)), scalex(8,96))
     else
-      DesignPaintGrid(Canvas, ClientRect, clBtnFace,clWindowtext, scalex(8,96));
+      DesignPaintGrid(Canvas, ClientRect, clBtnFace,clBlack, scalex(8,96));
   end;
 end;
 
@@ -1630,20 +1584,6 @@ initialization
   registerclass(TCheckListBox);
   registerclass(TColorDialog);
   registerclass(TColorBox);
-
-  registerclass(TFontDialog);
-  registerclass(TBitBtn);
-  registerclass(TSpeedButton);
-  registerclass(TStaticText);
-  registerclass(TShape);
-  registerclass(TBevel);
-  registerclass(TNotebook); //eww...
-  registerclass(TLabeledEdit);
-  registerclass(TControlBar);
-  registerclass(TFlowPanel);
-  registerclass(TApplicationProperties); //might be usefull...
-  registerclass(TColorListBox);
-
 
 
   RegisterPropertyEditor(ClassTypeInfo(TListItems), TCEListView, 'Items', TCEListViewItemsPropertyEditor);

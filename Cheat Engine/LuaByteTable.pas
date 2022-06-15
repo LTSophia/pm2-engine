@@ -128,7 +128,7 @@ begin
   if lua_gettop(L)=1 then
   begin
     v:=lua_tonumber(L, 1);
-{$ifdef cpux86_64}
+{$ifdef cpu64}
     doubletoextended(@v,@ex[0]);
     CreateByteTableFromPointer(L, @ex[0], 10);
 {$else}
@@ -169,17 +169,13 @@ begin
 end;
 
 function byteTableToWord(L: PLua_state): integer; cdecl;
-var
-  v: word;
+var v: word;
 begin
   result:=0;
-  if lua_gettop(L)>=1 then
+  if lua_gettop(L)=1 then
   begin
     readBytesFromTable(L, 1, @v, sizeof(v));
-    if (lua_gettop(L)>=2) and lua_toboolean(L,2) then
-      lua_pushinteger(L,smallint(v))
-    else
-      lua_pushinteger(L,v);
+    lua_pushinteger(L,v);
     result:=1;
   end;
 end;
@@ -188,14 +184,10 @@ function byteTableToDWord(L: PLua_state): integer; cdecl;
 var v: dword;
 begin
   result:=0;
-  if lua_gettop(L)>=1 then
+  if lua_gettop(L)=1 then
   begin
     readBytesFromTable(L, 1, @v, sizeof(v));
-    if (lua_gettop(L)>=2) and lua_toboolean(L,2) then
-      lua_pushinteger(L,integer(v))
-    else
-      lua_pushinteger(L,v);
-
+    lua_pushinteger(L,v);
     result:=1;
   end;
 end;
@@ -249,7 +241,7 @@ begin
   if lua_gettop(L)=1 then
   begin
 
-{$ifdef cpux86_64}
+{$ifdef cpu64}
     readBytesFromTable(L, 1, @ex[0], 10);
     extendedtodouble(@ex[0],v);
 {$else}

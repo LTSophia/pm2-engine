@@ -1,11 +1,5 @@
-#ifdef _WINDOWS
 #include "stdafx.h"
-#else
-#include "macport.h"
-#endif
-
-#include "PipeServer.h"
-
+#include "pipeserver.h"
 
 
 HANDLE DataCollectorThread;
@@ -50,22 +44,18 @@ typedef enum _THREADINFOCLASS {
     MaxThreadInfoClass
 } THREADINFOCLASS;
 
-#ifdef _WINDOWS
 typedef int (NTAPI *ZWSETINFORMATIONTHREAD)(
     __in HANDLE ThreadHandle,
     __in THREADINFOCLASS ThreadInformationClass,
     __in_bcount(ThreadInformationLength) PVOID ThreadInformation,
     __in ULONG ThreadInformationLength
     );
-#endif
-
 
 
 DWORD WINAPI DataCollectorEntry(LPVOID lpThreadParameter)
 {
 	CPipeServer *pw;
-    
-#ifdef _WINDOWS
+
 #ifdef NDEBUG
 	ZWSETINFORMATIONTHREAD ZwSetInformationThread=(ZWSETINFORMATIONTHREAD)GetProcAddress(GetModuleHandleA("ntdll.dll"), "ZwSetInformationThread");
 	if (ZwSetInformationThread)
@@ -77,13 +67,9 @@ DWORD WINAPI DataCollectorEntry(LPVOID lpThreadParameter)
 		}
 	}
 #endif
-#endif
 
 
 	pw=new CPipeServer();
-    
-   
-    
 	pw->Start();
 
 	DataCollectorThread=0;
@@ -94,40 +80,14 @@ DWORD WINAPI DataCollectorEntry(LPVOID lpThreadParameter)
 	
 	Sleep(1000);
 
-#ifdef _WINDOWS
 	FreeLibraryAndExitThread(g_hInstance, 0);
-#endif
 	return 0;
 }
-
-#ifndef _WINDOWS
-#include <syslog.h>
-void MacPortEntryPoint(void *param)
-{
-    
-    pthread_setname_np("MonoDataCollector Thread");
-    //called by a thread
-    //openlog((char*)"Cheat Engine MDC", 0, LOG_USER);
-    //setlogmask(LOG_UPTO(LOG_DEBUG));
-    //syslog(LOG_NOTICE, (char*)"CELOGX:FUUUCK");
-    
-    //OutputDebugString((char*)"MonoDataCollector for Mac loaded");
-   
-    DataCollectorEntry(param);
-    
-}
-#endif
-
-#ifndef _WINDOWS
-#endif
-
 
 DWORD WINAPI SuicideCheck(LPVOID lpThreadParameter)
 {
 
 	Sleep(5000);
-    
-#ifdef _WINDOWS
 
 	//todo: Figure out a way to detect how to close.
 	//if (shouldKillMyself())
@@ -153,6 +113,4 @@ DWORD WINAPI SuicideCheck(LPVOID lpThreadParameter)
 			FreeLibraryAndExitThread(g_hInstance, -1);
 		}		
 	}
-#endif
-    return 0;
 }

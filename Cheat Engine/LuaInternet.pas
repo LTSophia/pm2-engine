@@ -369,9 +369,9 @@ end;
 function getInternet(L: Plua_State): integer; cdecl;
 begin
   if lua_gettop(l)>0 then
-    luaclass_newClass(L, TWinInternet.create({$ifdef altname}'Cheat Engine'{$else}cename{$endif}+' : luascript-'+Lua_ToString(L,1)))
+    luaclass_newClass(L, TWinInternet.create(cename+' : luascript-'+Lua_ToString(L,1)))
   else
-    luaclass_newClass(L, TWinInternet.create({$ifdef altname}'Cheat Engine'{$else}cename{$endif}+' : luascript'));
+    luaclass_newClass(L, TWinInternet.create(cename+' : luascript'));
 
   result:=1;
 end;
@@ -402,20 +402,14 @@ function wininternet_postURL(L: Plua_State): integer; cdecl;
 var
   i: TWinInternet;
   s: TMemoryStream;
-  param: string;
 begin
   result:=0;
   i:=luaclass_getClassObject(L);
-  if lua_gettop(L)>=1 then
+  if lua_gettop(L)>=2 then
   begin
     s:=TMemoryStream.create;
     try
-      if lua_gettop(L)>=2 then
-        param:=Lua_ToString(L, 2)
-      else
-        param:='';
-
-      if i.postURL(Lua_ToString(L, 1), param, s) then
+      if i.postURL(Lua_ToString(L, 1), Lua_ToString(L, 2), s) then
       begin
         lua_pushlstring(L, s.Memory, s.Size);
         result:=1;

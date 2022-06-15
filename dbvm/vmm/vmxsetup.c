@@ -23,54 +23,14 @@
 #include "common.h"
 
 
-criticalSection setupVMX_lock={.name="setupVMX_lock", .debuglevel=2};
+criticalSection setupVMX_lock;
 
 volatile unsigned char *MSRBitmap;
 volatile unsigned char *IOBitmap;
 
-volatile unsigned char *VMREADBitmap;
-volatile unsigned char *VMWRITEBitmap;
-
-
 int hasEPTsupport=0;
 int TSCHooked=0;
 int hasNPsupport=1;
-
-
-int canToggleCR3Exit=0; //intel only flag
-
-
-#ifdef USENMIFORWAIT
-int canExitOnNMI=0;
-#endif
-
-int hasMTRRsupport;
-MTRRCAP MTRRCapabilities;
-MTRRDEF MTRRDefType;
-
-int has_EPT_1GBsupport;
-int has_EPT_2MBSupport;
-int has_EPT_ExecuteOnlySupport;
-int has_EPT_INVEPTSingleContext;
-int has_EPT_INVEPTAllContext;
-
-int hasUnrestrictedSupport;
-int hasVPIDSupport;
-int canToggleCR3Exit;
-int hasVMCSShadowingSupport;
-
-int has_VPID_INVVPIDIndividualAddress;
-int has_VPID_INVVPIDSingleContext;
-int has_VPID_INVVPIDAllContext;
-int has_VPID_INVVPIDSingleContextRetainingGlobals;
-
-
-
-//AMD
-int has_VGIFSupport;
-int has_NP_1GBsupport;
-int has_NP_2MBsupport;
-
 
 
 extern void realmode_inthooks();
@@ -85,12 +45,8 @@ extern DWORD realmode_inthook_original12;
 extern DWORD realmode_inthook_original15;
 extern WORD realmode_inthook_conventional_memsize;
 
-
-
 void setupVMX_AMD(pcpuinfo currentcpuinfo)
 {
-  UINT64 eax, ebx, ecx,edx; //cpuid values
-
   //setup the vmcb
   Segment_Attribs reg_csaccessrights;
   Segment_Attribs reg_traccessrights UNUSED;
@@ -106,102 +62,40 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
   currentcpuinfo->vmcb->G_PAT=readMSR(0x277);
   //setup a pagebase describing the physical memory
 
+  UINT64 PagePA;
   volatile PPML4 pml4=(PPML4)malloc(4096);
   zeromemory((volatile void*)pml4,4096);
 
 
-  currentcpuinfo->vmcb->N_CR3=VirtualToPhysical((void*)pml4);
+  currentcpuinfo->vmcb->N_CR3=VirtualToPhysical(pml4);
   sendstringf("Setup nCR3 at %6\n", currentcpuinfo->vmcb->N_CR3);
 
   has_NP_1GBsupport=1;
   has_NP_2MBsupport=1;
 
-  //copy the PML4 table and set a new CR3  (PML4 should never change after this, at least not on a global level)
-  PPML4 newpml4=(PPML4)malloc(4096);
-  copymem(newpml4, pml4table, 4096);
+/*
+  volatile PPDPTE_PAE_BS pdptr1=(PPDPTE_PAE_BS)malloc(4096);
+  zeromemory((volatile void*)pdptr1,4096);
 
-  sendstringf("Created new PML4 table at %6 (PA %6)\n", newpml4, VirtualToPhysical((void*)newpml4));
+  *(UINT64 *)(&pml4[0])=(UINT64)VirtualToPhysical(pdptr1);
+  pml4[0].P=1;
+  pml4[0].RW=1;
+  pml4[0].US=1;
 
-
-  *(QWORD*)(&newpml4[510])=currentcpuinfo->vmcb->N_CR3;
-  newpml4[510].P=1;
-  newpml4[510].RW=1;
-
-  *(QWORD*)(&newpml4[511])=VirtualToPhysical((void*)newpml4); //point to this one
-  newpml4[511].P=1;
-  newpml4[511].RW=1;
-
-  asm volatile ("": : :"memory");
-
-  setCR3(VirtualToPhysical((void*)newpml4));
-
-  sendstringf("Set CR3 to %6 . It is now %6\n", VirtualToPhysical((void*)newpml4), getCR3() );
-
-  _invlpg(0xffffff0000000000ULL);
-
-#endif
-
-  currentcpuinfo->vmcb_pending[0]=0;
-  currentcpuinfo->vmcb_pending[1]=0;
-  currentcpuinfo->vmcb_pending[2]=0;
-  currentcpuinfo->vmcb_pending[3]=0;
-  currentcpuinfo->vmcb_pending[4]=0;
-  currentcpuinfo->vmcb_pending[5]=0;
-  currentcpuinfo->vmcb_pending[6]=0;
-  currentcpuinfo->vmcb_pending[7]=0;
-  currentcpuinfo->vmcb_pending[8]=0;
-  currentcpuinfo->vmcb_pending[9]=0;
-  currentcpuinfo->vmcb_pending[10]=0;
-  currentcpuinfo->vmcb_pending[11]=0;
-  currentcpuinfo->vmcb_pending[12]=0;
-  currentcpuinfo->vmcb_pending[13]=0;
-  currentcpuinfo->vmcb_pending[14]=0;
-  currentcpuinfo->vmcb_pending[15]=0;
-
-
-  currentcpuinfo->vmcb_GIF=1;
-  currentcpuinfo->vmcb->InterceptVMRUN=1;
-
-
-  //check if it can virtualize vmload/vmsave/GIF:
-  eax=0x8000000a;
-  _cpuid(&eax, &ebx, &ecx,&edx);
-
-  /*
-  //VMLOAD/VMSAVE (After testing, this can be disabled)
-  if (edx & (1<<15))
+  int i;
+  for (i=0; i<512; i++)
   {
-    sendstringf("Supports Virtualized VMSAVE and VMLOAD\n");
-    currentcpuinfo->vmcb->VirtualizedVMSAVEandVMLOAD=1;
-  }
-  else
-  {
-    currentcpuinfo->vmcb->InterceptVMLOAD=1;
-    currentcpuinfo->vmcb->InterceptVMSAVE=1;
+    *(UINT64 *)(&pdptr1[i])=(QWORD)((QWORD)0x40000000*(QWORD)i);
+    pdptr1[i].P=1;
+    pdptr1[i].RW=1;
+    pdptr1[i].US=1;
+    pdptr1[i].PS=1;
   }
   */
+#endif
 
-  if (edx & (1<<16)) //virtualize GIF
-  {
-    sendstringf("Supports Virtualized GIF\n");
-    has_VGIFSupport=1;
-    currentcpuinfo->vmcb->V_GIF=1;
-    currentcpuinfo->vmcb->V_GIF_ENABLED=1;
-  }
-  else
-  {
-    currentcpuinfo->vmcb->InterceptCLGI=1;
-    currentcpuinfo->vmcb->InterceptSTGI=1;
-  }
-
- // currentcpuinfo->vmcb->InterceptINVLPGA=1;
-
-  //currentcpuinfo->vmcb->InterceptHLT=1;
-
-
-
-  currentcpuinfo->vmcb->GuestASID=1;//+(_rdtsc()% (ebx-1));  //1
-
+  currentcpuinfo->vmcb->InterceptVMRUN=1;
+  currentcpuinfo->vmcb->GuestASID=1;
   currentcpuinfo->vmcb->EFER=0x1500 | (1<<8) | (1<<10);
 
   reg_traccessrights.SegmentAttrib=0;
@@ -278,9 +172,7 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
   currentcpuinfo->vmcb->InterceptVMMCALL=1;
   currentcpuinfo->vmcb->MSR_PROT=1; //some msr's need to be protected
 
-  currentcpuinfo->vmcb->InterceptExceptions=(1<<1) | (1<<3);// | (1<<14); //intercept int1, 3 and 14
-
- // currentcpuinfo->vmcb->InterceptINTR=1;
+  currentcpuinfo->vmcb->InterceptExceptions=1;// | (1<<3);// | (1<<14); //intercept int1, 3 and 14
  // currentcpuinfo->vmcb->InterceptDR0_15Write=(1<<6); //dr6 so I can see what changed
 
 
@@ -301,13 +193,7 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
   {
     int i;
     //allocate a MSR bitmap
-    MSRBitmap=allocateContiguousMemory(2); //
-
-    if (MSRBitmap==NULL)
-    {
-      sendstringf("allocateContiguousMemory failed. MSRBitmap=NULL\n");
-      while(1);
-    }
+    MSRBitmap=malloc(2*4096);
     //fill with 1's (the msr's that have a 1 do not cause an intercept)
 
     //bochsbp();
@@ -316,8 +202,6 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
 
     //Must protect 0xc0010117 (MSRPM_BASE_PA)
     MSRBitmap[0x1000+(0x0117*2)/8]|=3 << ((0x0117*2) % 8);
-
-    MSRBitmap[0x1000+(0x0115*2)/8]|=3 << ((0x0115*2) % 8);
 
     //also 0xc0000080 (EFER)
     //if (hideEFER)
@@ -388,6 +272,7 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
     sendstringf("originalstate->fsbase=%6\n",originalstate->fsbase);
     sendstringf("originalstate->gsbase=%6\n",originalstate->gsbase);
 
+
     currentcpuinfo->vmcb->CR4=originalstate->cr4;
     currentcpuinfo->vmcb->CR3=originalstate->cr3;
     currentcpuinfo->vmcb->CR0=originalstate->cr0;
@@ -457,7 +342,7 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
       currentcpuinfo->vmcb->es_base=0;
       currentcpuinfo->vmcb->fs_base=originalstate->fsbase;
       currentcpuinfo->vmcb->gs_base=originalstate->gsbase;
-      currentcpuinfo->vmcb->tr_base=getSegmentBaseEx(gdt,ldt,originalstate->tr, 1);      
+      currentcpuinfo->vmcb->tr_base=getSegmentBaseEx(gdt,ldt,originalstate->tr, 1);
     }
     else
     {
@@ -783,13 +668,11 @@ int vmx_addSingleSteppingReason(pcpuinfo currentcpuinfo, int reason, int ID)
 int vmx_enableSingleStepMode(void)
 {
   pcpuinfo c=getcpuinfo();
-  //sendstringf("%d Enabling single step mode\n", c->cpunr);
-
+  sendstring("Enabling single step mode\n");
 
   if (isAMD)
   {
-   // sendstringf("%d CS:RIP=%x:%6 RCX=%d\n", c->cpunr, c->vmcb->cs_selector, c->vmcb->RIP);
-
+    sendstring("on an AMD\n");
     //break on external interrupts and exceptions
     c->vmcb->InterceptVINTR=1;
     c->vmcb->InterceptINTR=1;
@@ -798,45 +681,24 @@ int vmx_enableSingleStepMode(void)
     //perhaps enable INTERRUPT_SHADOW?
 
     //mark the intercepts as changed
-    //sendstringf("b c->vmcb->VMCB_CLEAN_BITS=%6\n",c->vmcb->VMCB_CLEAN_BITS);
+    sendstringf("b c->vmcb->VMCB_CLEAN_BITS=%6\n",c->vmcb->VMCB_CLEAN_BITS);
     c->vmcb->VMCB_CLEAN_BITS&=~(1<<0);
     c->vmcb->VMCB_CLEAN_BITS=0;
-   //sendstringf("a c->vmcb->VMCB_CLEAN_BITS=%6\n",c->vmcb->VMCB_CLEAN_BITS);
+    sendstringf("a c->vmcb->VMCB_CLEAN_BITS=%6\n",c->vmcb->VMCB_CLEAN_BITS);
 
     RFLAGS v;
     v.value=c->vmcb->RFLAGS;
-
-    if (c->singleStepping.ReasonsPos==0) //first one
-      c->singleStepping.PreviousTFState=v.TF;
-
     v.TF=1; //single step mode
-    v.RF=1;
-    if (v.IF)
-      c->vmcb->INTERRUPT_SHADOW=1;
-
-    //todo: intercept pushf/popf/iret and the original RF flag state (though for a single step that should have no effect
+    //todo: intercept pushf/popf/iret
 
     c->vmcb->RFLAGS=v.value;
     c->singleStepping.Method=3; //Trap flag
-
-    //turn of syscall, and when syscall is executed, capture the UD, re-enable it, but change the flags mask to keep the TF enabled, and the step after that adjust R11 so that the TF is gone and restore the flags mask.  Then continue as usual;
-    if (c->singleStepping.ReasonsPos==0)
-    {
-      c->singleStepping.PreviousEFER=c->vmcb->EFER;
-      c->singleStepping.PreviousFMASK=c->vmcb->SFMASK;
-      c->singleStepping.LastInstructionWasSyscall=0;
-
-      c->vmcb->EFER&=0xfffffffffffffffeULL;
-      c->vmcb->VMCB_CLEAN_BITS&=~(1<< 5); //efer got changed
-    }
-
 
     return 1;
 
   }
   else
   {
-    sendstring("\n");
 
    /* if ((vmread(vm_entry_interruptioninfo) >> 31)==0)
       vmwrite(vm_guest_interruptability_state,2); //execute at least one instruction
@@ -872,29 +734,22 @@ int vmx_disableSingleStepMode(void)
   int r=0;
   pcpuinfo c=getcpuinfo();
 
-  sendstringf("%d Disabling single step mode\n", c->cpunr);
+  sendstring("Disabling single step mode\n");
 
   if (isAMD)
   {
     //shouldn't be needed but do it anyhow
-
-    sendstringf("%d RFLAGS was %x\n", c->cpunr, c->vmcb->RFLAGS);
-
-
     RFLAGS v;
     v.value=c->vmcb->RFLAGS;
-    v.TF=c->singleStepping.PreviousTFState;  // 0; //single step mode
+    v.TF=0; //single step mode
+    //todo: intercept pushf/popf/iret
 
     c->vmcb->RFLAGS=v.value;
-    sendstringf("%d RFLAGS is %x\n", c->cpunr, c->vmcb->RFLAGS);
-
-
-
     c->singleStepping.Method=0;
 
     c->vmcb->InterceptVINTR=0;
     c->vmcb->InterceptINTR=0;
-    c->vmcb->InterceptExceptions=(1<<1) | (1<<3); // todo: load current exceptions hooks
+    c->vmcb->InterceptExceptions=0; //todo: load current exceptions hooks
 
 
     //mark the intercepts as changed
@@ -902,12 +757,6 @@ int vmx_disableSingleStepMode(void)
     c->vmcb->VMCB_CLEAN_BITS&=~(1<<0);
     c->vmcb->VMCB_CLEAN_BITS=0;
     sendstringf("a c->vmcb->VMCB_CLEAN_BITS=%6\n",c->vmcb->VMCB_CLEAN_BITS);
-
-    c->vmcb->EFER=c->singleStepping.PreviousEFER;
-    c->vmcb->SFMASK=c->singleStepping.PreviousFMASK;
-    c->singleStepping.LastInstructionWasSyscall=0;
-
-    c->vmcb->VMCB_CLEAN_BITS&=~(1<< 5); //efer
 
     return 1;
   }
@@ -943,25 +792,8 @@ int setupEPT(pcpuinfo currentcpuinfo)
   {
     //secondary procbased controls
     QWORD IA32_VMX_SECONDARY_PROCBASED_CTLS=readMSR(IA32_VMX_PROCBASED_CTLS2_MSR); //allowed1/allowed0
-    DWORD old_vm_execution_controls_cpu=vmread(vm_execution_controls_cpu);
-    DWORD new_vm_execution_controls_cpu=old_vm_execution_controls_cpu | SECONDARY_EXECUTION_CONTROLS;
 
-    sendstringf("old_vm_execution_controls_cpu=%x  Want to set it to %6\n",old_vm_execution_controls_cpu, new_vm_execution_controls_cpu);
-    vmwrite(vm_execution_controls_cpu, new_vm_execution_controls_cpu); //activate secondary controls
-
-
-    DWORD current_vm_execution_controls_cpu=vmread(vm_execution_controls_cpu);
-    sendstringf("new_vm_execution_controls_cpu=%x\n",current_vm_execution_controls_cpu);
-
-
-
-
-    if (current_vm_execution_controls_cpu != new_vm_execution_controls_cpu)
-    {
-      sendstringf("Meh...\n");
-      while(1);
-    }
-
+    vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) | SECONDARY_EXECUTION_CONTROLS); //activate secondary controls
 
 
 
@@ -1001,23 +833,15 @@ int setupEPT(pcpuinfo currentcpuinfo)
 
       sendstringf("pml4map is at %6\n", pml4mapPA);
 
-
-      TIA32_VMX_VPID_EPT_CAP eptinfo;
-      eptinfo.IA32_VMX_VPID_EPT_CAP=readMSR(IA32_VMX_EPT_VPID_CAP_MSR);
-
       QWORD eptp=pml4mapPA;
       PEPTP x=(PEPTP)&eptp;
       x->PAGEWALKLENGTH=3;
-
-      if (eptinfo.EPT_writeBackSupport)
-        x->MEMTYPE=6;
-      else
-        x->MEMTYPE=0;
-
+      x->MEMTYPE=0;
 
       vmwrite(vm_eptpointer, eptp);  //and set the EPTP field
 
-
+      TIA32_VMX_VPID_EPT_CAP eptinfo;
+      eptinfo.IA32_VMX_VPID_EPT_CAP=readMSR(IA32_VMX_EPT_VPID_CAP_MSR);
       has_EPT_1GBsupport=eptinfo.EPT_1GBSupport;
       has_EPT_2MBSupport=eptinfo.EPT_2MBSupport;
       has_EPT_ExecuteOnlySupport=eptinfo.EPT_executeOnlySupport;
@@ -1155,12 +979,6 @@ void setup8086WaitForSIPI(pcpuinfo currentcpuinfo, int setupvmcontrols)
       {
         sendstringf("Enabling INVPCID\n");
         secondarycpu|=SPBEF_ENABLE_INVPCID;
-      }
-
-      if ((IA32_VMX_SECONDARY_PROCBASED_CTLS >> 32) & SPBEF_USER_WAIT_AND_PAUSE) //can it enable XSAVES ?
-      {
-        sendstringf("Enabling xsaves\n");
-        secondarycpu|=SPBEF_USER_WAIT_AND_PAUSE;
       }
 
       vmwrite(vm_execution_controls_cpu_secondary, secondarycpu);
@@ -1319,201 +1137,68 @@ void setup8086WaitForSIPI(pcpuinfo currentcpuinfo, int setupvmcontrols)
 
 void vmx_setMSRReadExit(DWORD msrValue)
 {
-  if (isAMD)
-  {
-    /*
-    The MSR permissions bitmap consists of four separate bit vectors of 16
-Kbits (2 Kbytes) each. Each 16 Kbit vector controls guest access to a defined range of 8K MSRs. Each
-MSR is covered by two bits defining the guest read and write access permissions. The lsb of the two
-bits controls read access to the MSR and the msb controls write access. A value of 1 indicates that the
-operation is intercepted. The four separate bit vectors must be packed together and located in two
-contiguous physical pages of memory. If the MSR_PROT intercept is active any attempt to read or
-write an MSR not covered by the MSRPM will automatically cause an intercept.
-
-MSRPM Byte Offset   MSR Range
-000h–7FFh           0000_0000h–0000_1FFFh
-800h–FFFh           C000_0000h–C000_1FFFh
-1000h–17FFh         C001_0000h–C001_1FFFh
-1800h–1FFFh         Reserved
-     */
-    if (msrValue<=0x1fff)
-    {
-      MSRBitmap[(msrValue*2)/8]|=1 << ((msrValue*2) % 8);
-      return;
-    }
-
-    if ((msrValue>=0xc0000000) && (msrValue<=0xc0001fff))
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[0x800+(msrValue*2)/8]|=1 << ((msrValue*2) % 8);
-      return;
-    }
-
-    if ((msrValue>=0xc0010000) && (msrValue<=0xc0011fff))
-    {
-      msrValue=msrValue-0xc0010000;
-      MSRBitmap[0x800+(msrValue*2)/8]|=1 << ((msrValue*2) % 8);
-      return;
-    }
-  }
+  if (msrValue<0xc0000000)
+    MSRBitmap[msrValue/8]|=1 << (msrValue % 8);
   else
   {
-    if (msrValue<0xc0000000)
-      MSRBitmap[msrValue/8]|=1 << (msrValue % 8);
-    else
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[1024+msrValue/8]|=1 << (msrValue % 8);
-    }
+    msrValue=msrValue-0xc0000000;
+    MSRBitmap[1024+msrValue/8]|=1 << (msrValue % 8);
   }
 }
 
 void vmx_removeMSRReadExit(DWORD msrValue)
 {
-  if (isAMD)
-  {
-    if (msrValue<=0x1fff)
-    {
-      MSRBitmap[(msrValue*2)/8]&=~(1 << ((msrValue*2) % 8));
-      return;
-    }
-
-    if ((msrValue>=0xc0000000) && (msrValue<=0xc0001fff))
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[0x800+(msrValue*2)/8]&=~(1 << ((msrValue*2) % 8));
-      return;
-    }
-
-    if ((msrValue>=0xc0010000) && (msrValue<=0xc0011fff))
-    {
-      msrValue=msrValue-0xc0010000;
-      MSRBitmap[0x800+(msrValue*2)/8]&=~(1 << ((msrValue*2) % 8));
-      return;
-    }
-  }
+  if (msrValue<0xc0000000)
+    MSRBitmap[msrValue/8]&=~(1 << (msrValue % 8));
   else
   {
-    if (msrValue<0xc0000000)
-      MSRBitmap[msrValue/8]&=~(1 << (msrValue % 8));
-    else
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[1024+msrValue/8]&=~(1 << (msrValue % 8));
-    }
+    msrValue=msrValue-0xc0000000;
+    MSRBitmap[1024+msrValue/8]&=~(1 << (msrValue % 8));
   }
 }
 
 void vmx_setMSRWriteExit(DWORD msrValue)
 {
-  if (isAMD)
-  {
-    if (msrValue<=0x1fff)
-    {
-      MSRBitmap[(msrValue*2)/8]|=2 << ((msrValue*2) % 8);
-      return;
-    }
-
-    if ((msrValue>=0xc0000000) && (msrValue<=0xc0001fff))
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[0x800+(msrValue*2)/8]|=2 << ((msrValue*2) % 8);
-      return;
-    }
-
-    if ((msrValue>=0xc0010000) && (msrValue<=0xc0011fff))
-    {
-      msrValue=msrValue-0xc0010000;
-      MSRBitmap[0x800+(msrValue*2)/8]|=2 << ((msrValue*2) % 8);
-      return;
-    }
-  }
+  if (msrValue<0xc0000000)
+    MSRBitmap[2048+msrValue/8]|=1 << (msrValue % 8);
   else
   {
-    if (msrValue<0xc0000000)
-      MSRBitmap[2048+msrValue/8]|=1 << (msrValue % 8);
-    else
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[3072+msrValue/8]|=1 << (msrValue % 8);
-    }
+    msrValue=msrValue-0xc0000000;
+    MSRBitmap[3072+msrValue/8]|=1 << (msrValue % 8);
   }
 }
 
 void vmx_removeMSRWriteExit(DWORD msrValue)
 {
-  if (isAMD)
-  {
-    if (msrValue<=0x1fff)
-    {
-      MSRBitmap[(msrValue*2)/8]&=~(2 << ((msrValue*2) % 8));
-      return;
-    }
-
-    if ((msrValue>=0xc0000000) && (msrValue<=0xc0001fff))
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[0x800+(msrValue*2)/8]&=~(2 << ((msrValue*2) % 8));
-      return;
-    }
-
-    if ((msrValue>=0xc0010000) && (msrValue<=0xc0011fff))
-    {
-      msrValue=msrValue-0xc0010000;
-      MSRBitmap[0x800+(msrValue*2)/8]&=~(2 << ((msrValue*2) % 8));
-      return;
-    }
-  }
+  if (msrValue<0xc0000000)
+    MSRBitmap[2048+msrValue/8]&=~(1 << (msrValue % 8));
   else
   {
-    if (msrValue<0xc0000000)
-      MSRBitmap[2048+msrValue/8]&=~(1 << (msrValue % 8));
-    else
-    {
-      msrValue=msrValue-0xc0000000;
-      MSRBitmap[3072+msrValue/8]&=~(1 << (msrValue % 8));
-    }
+    msrValue=msrValue-0xc0000000;
+    MSRBitmap[3072+msrValue/8]&=~(1 << (msrValue % 8));
   }
 }
 
 
-void vmx_enableTSCHook(pcpuinfo currentcpuinfo)
+void vmx_enableTSCHook()
 {
-  if (isAMD)
-  {
-    currentcpuinfo->vmcb->InterceptRDTSC=1;
-    currentcpuinfo->vmcb->InterceptRDTSCP=1;
-  }
-  else
-  {
-    if ((readMSR(IA32_VMX_PROCBASED_CTLS_MSR)>>32) & RDTSC_EXITING)
-      vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) | RDTSC_EXITING);
-
-
-
-  }
+  if ((readMSR(IA32_VMX_PROCBASED_CTLS_MSR)>>32) & RDTSC_EXITING)
+    vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) | RDTSC_EXITING);
 
   vmx_setMSRReadExit(IA32_TIME_STAMP_COUNTER);
   vmx_setMSRWriteExit(IA32_TIME_STAMP_COUNTER);
-  vmx_setMSRWriteExit(IA32_TSC_ADJUST);
 
+  vmx_setMSRWriteExit(IA32_TSC_ADJUST);
 
   TSCHooked=1;
 }
 
-void vmx_disableTSCHook(pcpuinfo currentcpuinfo)
+void vmx_disableTSCHook()
 {
   if (useSpeedhack==0)
   {
-    if (isAMD)
-    {
-      currentcpuinfo->vmcb->InterceptRDTSC=0;
-    }
-    else
-    {
-      if ((readMSR(IA32_VMX_PROCBASED_CTLS_MSR)>>32) & RDTSC_EXITING)
-        vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) & (QWORD)~(QWORD)RDTSC_EXITING);
-    }
+    if ((readMSR(IA32_VMX_PROCBASED_CTLS_MSR)>>32) & RDTSC_EXITING)
+      vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) & (QWORD)~(QWORD)RDTSC_EXITING);
 
     vmx_removeMSRReadExit(IA32_TIME_STAMP_COUNTER);
     vmx_removeMSRWriteExit(IA32_TIME_STAMP_COUNTER);
@@ -1538,11 +1223,6 @@ void setupVMX(pcpuinfo currentcpuinfo)
 
 
   csEnter(&setupVMX_lock);
-
-  char *eptcsname=malloc(32);
-  snprintf(eptcsname,64,"EPTPML4CS %d", currentcpuinfo->cpunr);
-
-  currentcpuinfo->EPTPML4CS.name=eptcsname;
 
 
 //  currentcpuinfo->AvailableVirtualAddress=(UINT64)(currentcpuinfo->cpunr+16) << 28;
@@ -1879,59 +1559,8 @@ void setupVMX(pcpuinfo currentcpuinfo)
 
 
       //needs less interrupt hooks
-#ifdef USENMIFORWAIT      
-      vmwrite(vm_exception_bitmap,  (1<<1) | (1<<2) | (1<<3)); //int1 bp, int3 bp
-#else
-      vmwrite(vm_exception_bitmap,  (1<<1) | (1<<3)); //int1 bp, int3 bp
-#endif
+      vmwrite(vm_exception_bitmap,(1<<1) | (1<<3));
 
-      //todo: check if it can do with less cr3 exits  (can turn that on at runtime)
-      //check the primary procbased capabilities if it can be set to 0
-
-      sendstringf("Checking if it supports CR3 access exit to 0\n");
-
-
-      QWORD procbasedcapabilities;
-      if (readMSR(IA32_VMX_BASIC_MSR) & ((QWORD)1<<55))
-        procbasedcapabilities=readMSR(IA32_VMX_TRUE_PROCBASED_CTLS_MSR);
-      else
-        procbasedcapabilities=readMSR(IA32_VMX_PROCBASED_CTLS_MSR);
-
-      sendstringf("procbasedcapabilities=%6\n", procbasedcapabilities);
-
-      canToggleCR3Exit=((procbasedcapabilities & (PPBEF_CR3LOAD_EXITING | PPBEF_CR3STORE_EXITING))==0); //0 means it can be set to 0
-
-      sendstringf("canToggleCR3Exit=%d\n", canToggleCR3Exit);
-
-      if (canToggleCR3Exit) //turn of cr3 exits
-        IA32_VMX_PROCBASED_CTLS = IA32_VMX_PROCBASED_CTLS & (QWORD)(~(PPBEF_CR3LOAD_EXITING | PPBEF_CR3STORE_EXITING));
-
-
-      if ((IA32_VMX_SECONDARY_PROCBASED_CTLS>>32) & SPBEF_ENABLE_VMCS_SHADOWING )
-      {
-        sendstringf("Supports VMCS shadowing\n");
-        vmwrite(vm_execution_controls_cpu_secondary, vmread(vm_execution_controls_cpu_secondary) | SPBEF_ENABLE_VMCS_SHADOWING);
-        hasVMCSShadowingSupport=1;
-
-        if (VMREADBitmap==NULL)
-        {
-          VMREADBitmap=malloc2(4096);
-          VMWRITEBitmap=malloc2(4096);
-
-          //corresponding VMREAD bit is in bit position x & 7 of the byte at physical address addr | (x » 3).
-          zeromemory(VMREADBitmap, 4096);
-          zeromemory(VMWRITEBitmap, 4096);
-
-
-          //example: VMREADBitmap[0x800 >> 3]|=(1 << (0x800 & 7));
-
-
-        }
-
-        vmwrite(vm_vmread_bitmap_address, VirtualToPhysical(VMREADBitmap));
-        vmwrite(vm_vmwrite_bitmap_address, VirtualToPhysical(VMWRITEBitmap));
-
-      }
     }
     else
     {
@@ -1939,14 +1568,6 @@ void setupVMX(pcpuinfo currentcpuinfo)
       hasUnrestrictedSupport=0;
     }
   }
-
-
-#ifdef USENMIFORWAIT
-  canExitOnNMI=vmx_enablePinBasedFeature(PINBEF_NMI_EXITING);
-#endif
-
-  //vmx_enablePinBasedFeature(EXTERNAL_INTERRUPT_EXITING);
-
 
 
 
@@ -2050,8 +1671,10 @@ void setupVMX(pcpuinfo currentcpuinfo)
 
         if ((IA32_VMX_SECONDARY_PROCBASED_CTLS >> 32) & SPBEF_ENABLE_RDTSCP) //can it enable rdtscp ?
         {
+//#ifndef TSCHOOK
           sendstringf("Enabling rdtscp\n");
           secondarycpu|=SPBEF_ENABLE_RDTSCP;
+//#endif
         }
 
 
@@ -2118,12 +1741,6 @@ void setupVMX(pcpuinfo currentcpuinfo)
       vmwrite(vm_guest_cr0, (ULONG)IA32_VMX_CR0_FIXED0 | originalstate->cr0);
       vmwrite(vm_guest_cr3, originalstate->cr3);
       vmwrite(vm_guest_cr4, (ULONG)IA32_VMX_CR4_FIXED0 | originalstate->cr4);
-
-      if (vmread(vm_guest_cr0)!=((ULONG)IA32_VMX_CR0_FIXED0 | originalstate->cr0))
-      {
-        sendstringf("vm_guest_cr0 = %6\n", vmread(vm_guest_cr0));
-        while (1);
-      }
 
       vmwrite(vm_guest_gdtr_base, (UINT64)originalstate->gdtbase);
       vmwrite(vm_guest_gdt_limit, (UINT64)originalstate->gdtlimit);
@@ -2471,7 +2088,6 @@ void setupVMX(pcpuinfo currentcpuinfo)
 
         if (lowregion==-1)
         {
-          nosendchar[getAPICID()]=0;
           sendstringf("No low region:\n");
           sendARD();
           ddDrawRectangle(0,DDVerticalResolution-100,100,100,0xff0000);

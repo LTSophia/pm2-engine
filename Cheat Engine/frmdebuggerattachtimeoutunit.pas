@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, syncobjs, betterControls;
+  ExtCtrls, syncobjs;
 
 type
 
@@ -15,7 +15,6 @@ type
   TfrmDebuggerAttachTimeout = class(TForm)
     Button1: TButton;
     Label1: TLabel;
-    lblStatus: TLabel;
     Timer1: TTimer;
     procedure FormShow(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
@@ -28,8 +27,6 @@ type
 
 
 implementation
-
-uses DebuggerInterfaceAPIWrapper;
 
 { TfrmDebuggerAttachTimeout }
 
@@ -48,9 +45,6 @@ begin
   else
   if r<>wrTimeout then
     modalresult:=mrAbort;
-
-  if CurrentDebuggerInterface<>nil then
-    lblStatus.caption:=CurrentDebuggerInterface.debuggerAttachStatus;
 end;
 
 initialization

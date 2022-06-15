@@ -8,7 +8,7 @@ uses
   {$ifdef windows}
   windows,
   {$endif}
-  Classes, SysUtils, lua, lualib, lauxlib, controls, StdCtrls, ExtCtrls, LuaWinControl, betterControls;
+  Classes, SysUtils, lua, lualib, lauxlib, controls, StdCtrls, ExtCtrls, LuaWinControl;
 
 procedure initializeLuaCombobox;
 

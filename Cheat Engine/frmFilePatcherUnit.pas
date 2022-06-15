@@ -8,7 +8,7 @@ unit frmFilePatcherUnit;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, EditBtn, PEInfoFunctions, PEInfounit, betterControls;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, EditBtn, PEInfoFunctions, PEInfounit;
 
 type
 

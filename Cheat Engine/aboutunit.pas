@@ -11,7 +11,7 @@ uses
   {$ifdef windows}
   windows,shellapi,
   {$endif}LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources, vmxfunctions, NewKernelHandler, betterControls;
+  Dialogs, StdCtrls, ExtCtrls, LResources, vmxfunctions, NewKernelHandler;
 
 type
 
@@ -36,10 +36,10 @@ type
     Label32: TLabel;
     Label33: TLabel;
     Label34: TLabel;
+    Label4: TLabel;
     Label5: TLabel;
     Image1: TImage;
     Button1: TButton;
-    Label6: TLabel;
     Label8: TLabel;
     Label9: TLabel;
     Panel1: TPanel;
@@ -52,7 +52,6 @@ type
     procedure Button1Click(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Button2Click(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure Label4Click(Sender: TObject);
     procedure Label8Click(Sender: TObject);
@@ -77,7 +76,7 @@ uses tlgUnit,MainUnit2, MainUnit, dbvmLoadManual;
 
 
 resourcestring
-  rsYourSystemDOESNOTSupportDBVM = 'Your system does not support DBVM. Perhaps it is already inside a VM';
+  rsYourSystemDOESNOTSupportDBVM = 'Your system DOES NOT support DBVM';
   rsThisMeansThatYouWillNeedANewCpuIntelToBeAbleToUseT = 'This means that you will need a new cpu (intel) to be able to use the advanced dbvm options';
   rsYourSystemIsRunningDBVMVersion = 'Your system is running DBVM version %s (%.0n bytes free (%d pages))';
   rsThisMeansThatYourSystemIsRunningDbvm = 'This means that your system is running dbvm. This means ce will make use of some advanced tools that are otherwise unavailable';
@@ -100,24 +99,13 @@ end;
 
 procedure TAbout.Button2Click(Sender: TObject);
 begin
-
-end;
-
-procedure TAbout.FormCreate(Sender: TObject);
-begin
-  if ShouldAppsUseDarkMode then
-  begin
-    label8.font.color:=clTeal;
-    label9.font.color:=clTeal;
-  end;
+  shellexecute(0,'open','https://www.paypal.com/xclick/business=dark_byte%40hotmail.com&no_note=1&tax=0&lc=US',nil,nil,sw_maximize);
 end;
 
 procedure TAbout.FormShow(Sender: TObject);
 var
     a,b,c,d: dword;
     i: integer;
-    rs: TResourceStream;
-    logopic: tpicture;
 begin
   {$ifdef net}
     groupbox1.Caption:=unit2.CEnorm;
@@ -141,21 +129,6 @@ begin
     label10.AnchorSideTop.Control:=panel4;
 
   UpdateDBVMStatus;
-
-  {$ifdef altname}
-  rs := TResourceStream.Create(HInstance, 'IMAGES_ALT_CELOGO', RT_RCDATA);
-  logopic:=TPicture.Create;
-  logopic.LoadFromStreamWithFileExt(rs,'.PNG');
-  image1.Picture:=logopic;
-  image1.Stretch:=true;
-
-
-  logopic.free;
-  freeandnil(rs);
-  {$endif}
-
-
-
 end;
 
 procedure TAbout.Label4Click(Sender: TObject);
@@ -218,9 +191,9 @@ begin
       end;
     end
     else
-      if frmDBVMLoadManual<>nil then
+      if frmDBVMLoadManual<>nil then 
         frmDBVMLoadManual.SetFocus
-      else
+      else 
         tfrmDBVMLoadManual.create(Application).Show;
   end;
   {$endif}
@@ -234,32 +207,27 @@ var
   dmemfree: double;
   vers: DWORD;
 
-  oldvmx_password1: QWORD;
+  oldvmx_password1: DWORD;
   oldvmx_password2: DWORD;
-  oldvmx_password3: QWORD;
 
 begin
   {$ifdef windows}
   oldvmx_password1:=vmx_password1;
   oldvmx_password2:=vmx_password2;
-  oldvmx_password3:=vmx_password3;
   OutputDebugString('UpdateDBVMStatus');
 
-  if (vmx_password1=0) and (vmx_password2=0) and (vmx_password3=0) then
+  if (vmx_password1=0) and (vmx_password2=0) then
   begin
     OutputDebugString('vmx_password1=0');
     OutputDebugString('vmx_password2=0');
-    OutputDebugString('vmx_password3=0');
     vmx_password1:=$76543210;
     vmx_password2:=$fedcba98;
-    vmx_password3:=$90909090;
   end;
 
   if dbvm_version=0 then
   begin
     vmx_password1:=$76543210;
     vmx_password2:=$fedcba98;
-    vmx_password3:=$90909090;
   end;
 
   if (dbvm_version>0) then
@@ -298,7 +266,6 @@ begin
 
   vmx_password1:=oldvmx_password1;
   vmx_password2:=oldvmx_password2;
-  vmx_password3:=oldvmx_password3;
   {$else}
   lblDBVM.visible:=false;
   {$endif}

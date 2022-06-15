@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, ComCtrls, cesupport, betterControls;
+  StdCtrls, ExtCtrls, ComCtrls, cesupport;
 
 resourcestring
   rsPercentageShown = 'Percentage shown';

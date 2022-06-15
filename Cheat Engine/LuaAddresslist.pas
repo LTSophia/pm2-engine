@@ -78,13 +78,12 @@ function addresslist_getMemoryRecordByDescription(L: PLua_State): integer; cdecl
 var
   addresslist: TAddresslist;
   description: string;
-  paramstart, paramcount: integer;
 begin
   result:=0;
-  addresslist:=luaclass_getClassObject(L, @paramstart, @paramcount);
-  if paramcount>=1 then
+  addresslist:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
   begin
-    description:=Lua_ToString(L,paramstart);
+    description:=Lua_ToString(L,-1);
     luaclass_newClass(L, addresslist.getRecordWithDescription(description));
     result:=1;
   end;
@@ -200,13 +199,13 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'rebuildDescriptionCache', addresslist_rebuildDescriptionCache);
 
 
+
+
   luaclass_addPropertyToTable(L, metatable, userdata, 'Count', addresslist_getCount, nil);
   luaclass_addPropertyToTable(L, metatable, userdata, 'SelectedRecord', addresslist_getSelectedRecord, addresslist_setSelectedRecord);
   luaclass_addPropertyToTable(L, metatable, userdata, 'MemoryRecord', addresslist_getMemoryRecord, nil);
   luaclass_addArrayPropertyToTable(L, metatable, userdata, 'MemoryRecord', addresslist_getMemoryRecord, nil);
   luaclass_setDefaultArrayProperty(L, metatable, userdata, addresslist_getMemoryRecord, nil);
-  luaclass_setDefaultStringArrayProperty(L, metatable, userdata, addresslist_getMemoryRecordByDescription, nil);
-
 end;
 
 procedure initializeLuaAddresslist;

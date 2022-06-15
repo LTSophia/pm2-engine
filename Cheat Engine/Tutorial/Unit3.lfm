@@ -11,7 +11,7 @@ object Form3: TForm3
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '2.0.0.4'
   Visible = True
   object Label1: TLabel
     AnchorSideLeft.Control = Memo1
@@ -99,12 +99,12 @@ object Form3: TForm3
   object Timer1: TTimer
     Interval = 250
     OnTimer = Timer1Timer
-    Left = 8
-    Top = 8
+    left = 8
+    top = 8
   end
   object Timer2: TTimer
     OnTimer = Timer2Timer
-    Left = 408
-    Top = 224
+    left = 408
+    top = 224
   end
 end

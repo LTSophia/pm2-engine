@@ -11,7 +11,7 @@ interface
 
 uses
   {$ifdef darwin}
-  macport, math,
+  macport,
   {$endif}
   {$ifdef windows}
   windows,
@@ -19,7 +19,7 @@ uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, CEFuncProc, NewKernelHandler, Buttons, StdCtrls, ExtCtrls,
   ComCtrls, LResources, Menus, symbolhandler, PEInfoFunctions, commonTypeDefs,
-  Clipbrd, betterControls;
+  Clipbrd;
 
 type
 
@@ -60,6 +60,7 @@ type
     procedure FormShow(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure Panel1Click(Sender: TObject);
   private
     { Private declarations }
     memorycopy: pbytearray;
@@ -71,7 +72,6 @@ type
     procedure ParseFile(loaded: boolean);
   public
     { Public declarations }
-
   end;
 
 function peinfo_getcodesize(header: pointer; headersize: integer=0): dword;
@@ -237,9 +237,7 @@ end;
 function peinfo_getdatabase(header: pointer; headersize: integer=0): ptrUint;
 {$ifdef windows}
 var
-  ImageNTHeader: PImageNtHeaders;
-  Sectionheader: PImageSectionHeader;
-  i: integer;
+    ImageNTHeader: PImageNtHeaders;
 {$endif}
 begin
   result:=0;
@@ -247,9 +245,6 @@ begin
   if (headersize=0) or (PImageDosHeader(header)^._lfanew<=headersize-sizeof(TImageNtHeaders)) then
   begin
     ImageNTHeader:=PImageNtHeaders(ptrUint(header)+PImageDosHeader(header)^._lfanew);
-    if ImageNTHeader.FileHeader.Machine=$8664 then
-      exit;
-
     result:=ImageNTHeader.OptionalHeader.BaseOfData;
   end;
   {$endif}
@@ -456,7 +451,7 @@ begin
       PEItv.Items.addchild(PEHeader,format(rsPEPreferedImagebase ,[ImageNTHeader^.OptionalHeader.ImageBase]));
     end
     else
-      PEItv.Items.addchild(PEHeader,format(rsPEPreferedImagebase2 ,[PImageOptionalHeader64(@ImageNTHeader^.OptionalHeader)^.ImageBase]));
+      PEItv.Items.addchild(PEHeader,format(rsPEPreferedImagebase2 ,[PUINT64(@ImageNTHeader^.OptionalHeader.BaseOfData)^]));
 
 
     PEItv.Items.addchild(PEHeader,format(rsPESectionAllignment ,[ImageNTHeader^.OptionalHeader.SectionAlignment]));
@@ -1013,8 +1008,6 @@ begin
     VirtualFree(loadedmodule,0,MEM_RELEASE);
     loadedmodule:=nil
   end;
-
-  SaveFormPosition(self);
 end;
 
 procedure TfrmPEInfo.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -1098,7 +1091,6 @@ begin
 end;
 
 procedure TfrmPEInfo.FormShow(Sender: TObject);
-var w: integer;
 begin
 
   modulelist.Clear;
@@ -1110,22 +1102,6 @@ begin
   end;
 
   DPIHelper.AdjustSpeedButtonSize(LoadButton);
-  modulelist.height:=canvas.TextHeight('Qj')*10;
-
-  if autosize then //first run
-  begin
-    autosize:=false;
-
-    edtAddress.width:=canvas.TextWidth('DDDDDDDDDDDDD');
-
-
-    clientheight:=label2.top+label2.height*2;
-
-    w:=groupbox2.left+PageControl1.TabRect(3).Right+16;
-    clientwidth:=max(clientwidth, w);
-
-
-  end;
 end;
 
 procedure TfrmPEInfo.Button1Click(Sender: TObject);
@@ -1203,8 +1179,11 @@ end;
 procedure TfrmPEInfo.FormCreate(Sender: TObject);
 begin
   pagecontrol1.TabIndex:=0;
+end;
 
-  LoadFormPosition(self);
+procedure TfrmPEInfo.Panel1Click(Sender: TObject);
+begin
+
 end;
 
 initialization

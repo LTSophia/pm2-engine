@@ -14,17 +14,11 @@ uses
   LCLIntf, LResources, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, StdCtrls, disassembler, ExtCtrls, Menus,
   NewKernelHandler, clipbrd, ComCtrls, fgl, formChangedAddresses, LastDisassembleData,
-  vmxfunctions, betterControls,  Maps, syncobjs;
+  vmxfunctions;
 
 type
   Tcoderecord = class
-  private
-    fhitcount: integer;
-    procedure setHitcount(c: integer);
   public
-    firstSeen: TDateTime;
-    lastSeen: TDateTime;
-    addressString: string;
     address: ptrUint;
     size: integer;
     opcode: string;
@@ -32,7 +26,6 @@ type
    // eax,ebx,ecx,edx,esi,edi,ebp,esp,eip: dword;
     context: TContext;
     armcontext: TARMCONTEXT;
-    arm64context: TARM64CONTEXT;
     stack: record
       savedsize: ptruint;
       stack: pbyte;
@@ -40,13 +33,11 @@ type
 
     dbvmcontextbasic:    PPageEventBasic;
 
-
+    hitcount: integer;
     diffcount: integer;
     LastDisassembleData: TLastDisassembleData;
 
     formChangedAddresses: TfrmChangedAddresses;
-
-    property hitcount: integer read fhitcount write setHitcount;
     procedure savestack;
     constructor create;
     destructor destroy; override;
@@ -67,7 +58,7 @@ type
     procedure addEntriesToList;
   public
     id: integer;
-    fcd: TFoundCodeDialog;
+    fcd: TfoundCodeDialog;
     procedure execute; override;
   end;
   {$endif}
@@ -79,8 +70,6 @@ type
     dbvmMissedEntries: TLabel;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
-    miFindWhatCodeAccesses: TMenuItem;
-    MenuItem4: TMenuItem;
     miFindWhatAccesses: TMenuItem;
     miSaveTofile: TMenuItem;
     mInfo: TMemo;
@@ -103,7 +92,6 @@ type
     N1: TMenuItem;
     Copyselectiontoclipboard1: TMenuItem;
     Splitter1: TSplitter;
-    timerEntryInfoUpdate: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormDeactivate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -124,11 +112,9 @@ type
       Selected: Boolean);
     procedure MenuItem1Click(Sender: TObject);
     procedure miFindWhatAccessesClick(Sender: TObject);
-    procedure miFindWhatCodeAccessesClick(Sender: TObject);
     procedure miSaveTofileClick(Sender: TObject);
     procedure pmOptionsPopup(Sender: TObject);
     procedure Copyselectiontoclipboard1Click(Sender: TObject);
-    procedure timerEntryInfoUpdateTimer(Sender: TObject);
   private
     { Private declarations }
     setcountwidth: boolean;
@@ -146,23 +132,15 @@ type
     procedure moreinfo;
     function getSelection: string;
     procedure setdbvmwatchid(id: integer);
-    procedure ChangedAddressClose(Sender: TObject; var CloseAction: TCloseAction);
   public
     { Public declarations }
+
     addresswatched: ptruint;
     useexceptions: boolean;
     usesdebugregs: boolean;
     multiplerip: boolean;
 
     dbvmwatch_unlock: qword;
-
-
-    addRecord_Address: ptruint;
-    breakpoint: pointer;
-
-    seenAddressListCS: TCriticalSection; //should only be accessed by the debugger thread, but just in case...
-    seenAddressList: TMap; //list for the debugger thread to determine if it should be added to the list
-
     procedure AddRecord;
     procedure setChangedAddressCount(address :ptruint);
     property dbvmwatchid: integer read fdbvmwatchid write setdbvmwatchid;
@@ -180,8 +158,7 @@ implementation
 
 uses CEFuncProc, CEDebugger,debughelper, debugeventhandler, MemoryBrowserFormUnit,
      MainUnit,kerneldebugger, AdvancedOptionsUnit ,formFoundcodeListExtraUnit,
-     MainUnit2, ProcessHandlerUnit, Globals, Parsers, DBK32functions, symbolhandler,
-     DebuggerInterfaceAPIWrapper, DBVMDebuggerInterface, breakpointtypedef;
+     MainUnit2, ProcessHandlerUnit, Globals, Parsers, DBK32functions;
 
 
 
@@ -203,14 +180,14 @@ begin
       i:=dbvm_watch_retrievelog(id, results, size);
       if i=0 then
       begin
-      //  OutputDebugString('TDBVMWatchPollThread returned 0');
-      //  OutputDebugString('results^.numberOfEntries='+inttostr(results^.numberOfEntries));
-      //  OutputDebugString('results^.maxSize='+inttostr(results^.maxSize));
+        //OutputDebugString('TDBVMWatchPollThread returned 0');
+        //OutputDebugString('results^.numberOfEntries='+inttostr(results^.numberOfEntries));
+        //OutputDebugString('results^.maxSize='+inttostr(results^.maxSize));
 
         //process data
         if results^.numberOfEntries>0 then
         begin
-      //    OutputDebugString('calling addEntriesToList');
+         // OutputDebugString('calling addEntriesToList');
           synchronize(addEntriesToList);
           sleep(10);
         end
@@ -221,7 +198,7 @@ begin
       if i=2 then
       begin
         //not enough memory. Allocate twice the needed amount
-     //   outputdebugstring(inttostr(resultsize)+' is too small for the buffer. It needs to be at least '+inttostr(size));
+       // outputdebugstring(inttostr(resultsize)+' is too small for the buffer. It needs to be at least '+inttostr(size));
         freememandnil(results);
 
 
@@ -232,7 +209,7 @@ begin
         continue; //try again, no sleep
       end else
       begin
-        outputdebugstring('dbvm_watch_retrievelog returned '+inttostr(i)+' which is not supported');
+        //outputdebugstring('dbvm_watch_retrievelog returned '+inttostr(i)+' which is not supported');
         exit;
       end;
     end;
@@ -262,7 +239,6 @@ end;
 constructor TCodeRecord.create;
 begin
   formChangedAddresses:=nil;
-  firstseen:=now;
 end;
 
 
@@ -349,8 +325,7 @@ begin
                (basicinfo.R14=TCodeRecord(fcd.foundcodelist.Items[j].data).dbvmcontextbasic^.R14) and
                (basicinfo.R15=TCodeRecord(fcd.foundcodelist.Items[j].data).dbvmcontextbasic^.R15) THEN
             begin
-              TCodeRecord(fcd.foundcodelist.Items[j].data).hitcount:=TCodeRecord(fcd.foundcodelist.Items[j].data).hitcount+basicinfo.count;
-
+              inc(TCodeRecord(fcd.foundcodelist.Items[j].data).hitcount, basicinfo.Count);
               skip:=true;
               break;
             end;
@@ -493,23 +468,12 @@ begin
 end;
 {$ENDIF}
 
-procedure TCodeRecord.setHitcount(c: integer);
-begin
-  fHitcount:=c;
-  lastSeen:=now;
-end;
-
 procedure TCodeRecord.savestack;
 var base: qword;
 begin
   getmem(stack.stack, savedStackSize);
   if processhandler.SystemArchitecture=archarm then
-  begin
-    if processhandler.is64Bit then
-      base:=armcontext.SP
-    else
-      base:=arm64context.SP;
-  end
+    base:=armcontext.SP
   else
     base:=qword(context.{$ifdef cpu64}Rsp{$else}esp{$endif});
 
@@ -521,7 +485,8 @@ begin
   end;
 end;
 
-procedure TFoundCodeDialog.AddRecord;
+
+procedure TFoundCodedialog.AddRecord;
 {
 Invoked by the debugger thread
 It takes the data from the current thread and stores it in the processlist
@@ -540,52 +505,77 @@ var currentthread: TDebugThreadHandler;
 
   d: TDisassembler;
 begin
-  currentthread:=debuggerthread.CurrentThread;
-  address:=addRecord_Address;
-
-  //disassemble to get the opcode and size
-  address2:=address;
-  d:=TDisassembler.Create;
-  opcode:=d.disassemble(address2,desc);
-  ldi:=d.LastDisassembleData;
-  freeandnil(d);
-
-
-  coderecord:=TCoderecord.create;
-  coderecord.address:=address;
-  coderecord.size:=address2-address;
-  coderecord.opcode:=opcode;
-  coderecord.description:=desc;
-  coderecord.context:=currentthread.context^;
-  if processhandler.SystemArchitecture=archARM then
+  //the debuggerthread is idle at this point
+  currentThread:=debuggerthread.CurrentThread;
+  if currentthread<>nil then
   begin
-    if processhandler.is64Bit then
-      coderecord.arm64context:=currentthread.arm64context
+    if processhandler.SystemArchitecture=archARM then
+    begin
+      address:=currentthread.armcontext.PC;
+    end
     else
-      coderecord.armcontext:=currentthread.armcontext;
+    begin
+      address:=currentThread.context.{$ifdef cpu64}Rip{$else}eip{$endif};
+      if usesdebugregs or useexceptions then //find out the previous opcode
+      begin
+        address2:=address;
+        d:=TDisassembler.Create;
+        d.disassemble(address2,desc);
+        if copy(d.LastDisassembleData.opcode,1,3)<>'REP' then
+          address:=previousopcode(address);
 
+        freeandnil(d);
+      end;
+    end;
+
+
+
+    //disassemble to get the opcode and size
+    address2:=address;
+    d:=TDisassembler.Create;
+    opcode:=d.disassemble(address2,desc);
+    ldi:=d.LastDisassembleData;
+
+
+    freeandnil(d);
+
+
+    //check if address is inside the list
+    for i:=0 to foundcodelist.Items.Count-1 do
+      if TCodeRecord(foundcodelist.Items[i].data).address=address then
+      begin
+        //it's already in the list
+        inc(TCodeRecord(foundcodelist.Items[i].data).hitcount);
+        if miFindWhatAccesses.checked then
+          FoundcodeList.items[i].caption:=inttostr(TCodeRecord(foundcodelist.Items[i].data).hitcount)+' ('+inttostr(TCodeRecord(foundcodelist.Items[i].data).diffcount)+')'
+        else
+          FoundcodeList.items[i].caption:=inttostr(TCodeRecord(foundcodelist.Items[i].data).hitcount);
+
+        exit;
+      end;
+
+
+
+    coderecord:=TCoderecord.create;
+    coderecord.address:=address;
+    coderecord.size:=address2-address;
+    coderecord.opcode:=opcode;
+    coderecord.description:=desc;
+    coderecord.context:=currentthread.context^;
+    coderecord.armcontext:=currentthread.armcontext;
+    coderecord.LastDisassembleData:=ldi;
+    coderecord.savestack;
+    coderecord.hitcount:=1;
+
+
+    li:=FoundCodeList.Items.Add;
+    li.caption:='1';
+    li.SubItems.add(opcode);
+    li.data:=coderecord;
+
+    if miFindWhatAccesses.Checked then //add it
+      coderecord.formChangedAddresses:=debuggerthread.FindWhatCodeAccesses(address, self);  //ffffffuuuuuuuuuu. Rebuild again
   end;
-  coderecord.LastDisassembleData:=ldi;
-  coderecord.savestack;
-  coderecord.hitcount:=1;
-
-  seenAddressListCS.Enter;
-  try
-    seenAddressList.Add(address, coderecord);
-  except
-    //should NEVER happen as AddRecord is only called when it's not in the list, but just to be sure...
-  end;
-  seenAddressListCS.Leave;
-
-  li:=FoundCodeList.Items.Add;
-  li.caption:='1';
-  li.SubItems.add(opcode);
-  li.data:=coderecord;
-
-  if miFindWhatAccesses.Checked then //add it
-    coderecord.formChangedAddresses:=debuggerthread.FindWhatCodeAccesses(address, self);  //ffffffuuuuuuuuuu. Rebuild again
-
-  debuggerthread.guiupdate:=true;
 end;
 
 procedure TFoundCodeDialog.stopdbvmwatch;
@@ -613,7 +603,7 @@ begin
   {$endif}
 end;
 
-procedure TFoundCodeDialog.setdbvmwatchid(id: integer);
+procedure TFoundCodedialog.setdbvmwatchid(id: integer);
 begin
   {$IFDEF windows}
   fdbvmwatchid:=id;
@@ -634,7 +624,7 @@ begin
 end;
 
 
-procedure TFoundCodeDialog.setChangedAddressCount(address :ptruint);
+procedure TFoundCodedialog.setChangedAddressCount(address :ptruint);
 var i: integer;
 begin
   for i:=0 to foundcodelist.Items.Count-1 do
@@ -647,14 +637,13 @@ begin
     end;
 end;
 
-procedure TFoundCodeDialog.addInfo(Coderecord: TCoderecord);
+procedure TFoundCodedialog.addInfo(Coderecord: TCoderecord);
 var
   address: ptruint;
   disassembled: array[1..5] of string;
   firstchar: char;
   hexcount: integer;
   temp: string;
-  i: integer;
 begin
   if processhandler.is64Bit then
     hexcount:=16
@@ -685,8 +674,6 @@ begin
 
   minfo.Lines.BeginUpdate;
   try
-    if coderecord.addressString<>'' then minfo.Lines.add(coderecord.addressString+':');
-
     minfo.Lines.Add(disassembled[1]);
     minfo.Lines.Add(disassembled[2]);
     minfo.Lines.Add(disassembled[3]+' <<');
@@ -696,36 +683,24 @@ begin
 
     if processhandler.SystemArchitecture=archarm then
     begin
-      if processhandler.is64Bit then
-      begin
-        for i:=0 to 30 do
-          minfo.Lines.Add(format('X%d=%.8x',[i, coderecord.arm64context.regs.X[i]]));
-
-        minfo.Lines.Add('SP='+inttohex(coderecord.arm64context.SP,8));
-        minfo.Lines.Add('PC='+inttohex(coderecord.arm64context.PC,8));
-        minfo.Lines.Add('PSTATE='+inttohex(coderecord.arm64context.PSTATE,8));
-      end
-      else
-      begin
-        minfo.Lines.Add('R10='+inttohex(coderecord.armcontext.R0,8));
-        minfo.Lines.Add('R11='+inttohex(coderecord.armcontext.R1,8));
-        minfo.Lines.Add('R12='+inttohex(coderecord.armcontext.R2,8));
-        minfo.Lines.Add('R13='+inttohex(coderecord.armcontext.R3,8));
-        minfo.Lines.Add('R14='+inttohex(coderecord.armcontext.R4,8));
-        minfo.Lines.Add('R15='+inttohex(coderecord.armcontext.R5,8));
-        minfo.Lines.Add('R16='+inttohex(coderecord.armcontext.R6,8));
-        minfo.Lines.Add('R17='+inttohex(coderecord.armcontext.R7,8));
-        minfo.Lines.Add('R18='+inttohex(coderecord.armcontext.R8,8));
-        minfo.Lines.Add('R19='+inttohex(coderecord.armcontext.R9,8));
-        minfo.Lines.Add('R10='+inttohex(coderecord.armcontext.R10,8));
-        minfo.Lines.Add('FP='+inttohex(coderecord.armcontext.FP,8));
-        minfo.Lines.Add('IP='+inttohex(coderecord.armcontext.IP,8));
-        minfo.Lines.Add('SP='+inttohex(coderecord.armcontext.SP,8));
-        minfo.Lines.Add('LR='+inttohex(coderecord.armcontext.LR,8));
-        minfo.Lines.Add('PC='+inttohex(coderecord.armcontext.PC,8));
-        minfo.Lines.Add('CPSR='+inttohex(coderecord.armcontext.CPSR,8));
-        minfo.Lines.Add('ORIG_R0='+inttohex(coderecord.armcontext.ORIG_R0,8));
-      end;
+      minfo.Lines.Add('R10='+inttohex(coderecord.armcontext.R0,8));
+      minfo.Lines.Add('R11='+inttohex(coderecord.armcontext.R1,8));
+      minfo.Lines.Add('R12='+inttohex(coderecord.armcontext.R2,8));
+      minfo.Lines.Add('R13='+inttohex(coderecord.armcontext.R3,8));
+      minfo.Lines.Add('R14='+inttohex(coderecord.armcontext.R4,8));
+      minfo.Lines.Add('R15='+inttohex(coderecord.armcontext.R5,8));
+      minfo.Lines.Add('R16='+inttohex(coderecord.armcontext.R6,8));
+      minfo.Lines.Add('R17='+inttohex(coderecord.armcontext.R7,8));
+      minfo.Lines.Add('R18='+inttohex(coderecord.armcontext.R8,8));
+      minfo.Lines.Add('R19='+inttohex(coderecord.armcontext.R9,8));
+      minfo.Lines.Add('R10='+inttohex(coderecord.armcontext.R10,8));
+      minfo.Lines.Add('FP='+inttohex(coderecord.armcontext.FP,8));
+      minfo.Lines.Add('IP='+inttohex(coderecord.armcontext.IP,8));
+      minfo.Lines.Add('SP='+inttohex(coderecord.armcontext.SP,8));
+      minfo.Lines.Add('LR='+inttohex(coderecord.armcontext.LR,8));
+      minfo.Lines.Add('PC='+inttohex(coderecord.armcontext.PC,8));
+      minfo.Lines.Add('CPSR='+inttohex(coderecord.armcontext.CPSR,8));
+      minfo.Lines.Add('ORIG_R0='+inttohex(coderecord.armcontext.ORIG_R0,8));
     end
     else
     begin
@@ -761,30 +736,13 @@ begin
     minfo.lines.add('');
     minfo.lines.add('');
 
-    minfo.lines.add('First seen:'+TimeToStr(coderecord.firstSeen));
-    minfo.lines.add('Last seen:'+TimeToStr(coderecord.lastSeen));
-
-
 
   finally
     minfo.lines.EndUpdate;
   end;
 end;
 
-procedure TFoundCodeDialog.ChangedAddressClose(Sender: TObject; var CloseAction: TCloseAction);
-var i: integer;
-  coderecord: Tcoderecord;
-begin
-  for i:=0 to FoundCodeList.Items.Count-1 do
-  begin
-    coderecord:=TCodeRecord(foundcodelist.items[i].data);
-    if coderecord.formChangedAddresses=sender then
-      coderecord.formChangedAddresses:=nil;
-  end;
-
-end;
-
-procedure TFoundCodeDialog.moreinfo;
+procedure TFoundCodedialog.moreinfo;
 var
   disassembled: array[1..5] of record
     s: string;
@@ -811,8 +769,6 @@ var
 
     offset: integer;
 
-    lbl: TLabel;
-
   d: TDisassembler;
 begin
   if processhandler.is64bit then
@@ -822,7 +778,7 @@ begin
   if itemindex<>-1 then
   begin
     FormFoundCodeListExtra:=TFormFoundCodeListExtra.Create(application);
-    if useexceptions or (currentdebuggerinterface is TDBVMDebugInterface) then
+    if useexceptions then
       FormFoundCodeListExtra.Label18.Visible:=false
     else
       FormFoundCodeListExtra.Label18.Visible:=true;
@@ -832,34 +788,20 @@ begin
     begin
       if not coderecord.formChangedAddresses.visible then //override userdefined positioning
       begin
-        //LCLIntf.GetWindowRect(coderecord.formChangedAddresses.handle, cw);
-        //LCLIntf.GetWindowRect(FormFoundCodeListExtra.handle, ew);
+        LCLIntf.GetWindowRect(coderecord.formChangedAddresses.handle, cw);
+        LCLIntf.GetWindowRect(FormFoundCodeListExtra.handle, ew);
 
-        //coderecord.formChangedAddresses.left:=(ew.Left-(cw.Right-cw.left));
-        //coderecord.formChangedAddresses.top:=FormFoundCodeListExtra.top;
+        coderecord.formChangedAddresses.left:=(ew.Left-(cw.Right-cw.left));
+        coderecord.formChangedAddresses.top:=FormFoundCodeListExtra.top;
 
       end;
 
       coderecord.formChangedAddresses.show;
-      coderecord.formChangedAddresses.AddHandlerClose(ChangedAddressClose);
     end;
 
 
     address:=coderecord.address;
     {$IFDEF windows}
-    if CurrentDebuggerInterface is TDBVMDebugInterface then
-    begin
-      {$ifdef cpu64}
-      if coderecord.context.P2Home<>0 then
-      begin
-        d:=TCR3Disassembler.Create;
-        TCR3Disassembler(d).CR3:=coderecord.context.P2Home;
-      end
-      else
-      {$endif}
-        d:=TDisassembler.Create;
-    end
-    else
     if coderecord.dbvmcontextbasic<>nil then
     begin
       d:=TCR3Disassembler.Create;
@@ -929,10 +871,8 @@ begin
 
     with FormFoundCodeListExtra do
     begin
-      pnlEPTWatch.visible:=false;
-
-      label1.Caption:=disassembled[1].s;
-      label1.tag:=disassembled[1].a;
+      dbvmMissedEntries.Caption:=disassembled[1].s;
+      dbvmMissedEntries.tag:=disassembled[1].a;
 
       Label2.Caption:=disassembled[2].s;
       Label2.tag:=disassembled[2].a;
@@ -948,111 +888,99 @@ begin
 
       if processhandler.SystemArchitecture=archarm then
       begin
-        formfoundcodelistextra.label17.caption:='';
+        //repurpose the x86 32-bit labels
+        lblRAX.caption:=' R0='+IntToHex(coderecord.armcontext.R0,8);
+        lblRDX.caption:=' R1='+IntToHex(coderecord.armcontext.R1,8);
+        lblRBP.caption:=' R2='+IntToHex(coderecord.armcontext.R2,8);
+        lblRBX.caption:=' R3='+IntToHex(coderecord.armcontext.R3,8);
+        lblRSI.caption:=' R4='+IntToHex(coderecord.armcontext.R4,8);
+        lblRSP.caption:=' R5='+IntToHex(coderecord.armcontext.R5,8);
+        lblRCX.caption:=' R6='+IntToHex(coderecord.armcontext.R6,8);
+        lblRDI.caption:=' R7='+IntToHex(coderecord.armcontext.R7,8);
+        lblRIP.caption:=' R8='+IntToHex(coderecord.armcontext.R8,8);
 
-        if processhandler.is64Bit then
-        begin
-          //just start from scratch
-          while pnlRegisters.ControlCount>0 do
-            pnlRegisters.Controls[0].Destroy;
+        lblR9:=tlabel.Create(FormFoundCodeListExtra);
+        lblR9.Top:=lblRCX.top+(lblRCX.top-lblRBX.top);
+        lblR9.left:=lblRCX.left;
+        lblR9.caption:=' R9='+IntToHex(coderecord.armcontext.R9,8);
+        lblR9.parent:=FormFoundCodeListExtra.panel6;
+        lblR9.OnMouseDown:=registerMouseDown;
+        lblR9.OnDblClick:=RegisterDblClick;
+        lblR9.Align:=lblrcx.Align;
 
-          pnlRegisters.ChildSizing.ControlsPerLine:=6;
+        lblR10:=tlabel.Create(FormFoundCodeListExtra);
+        lblR10.Top:=lblRCX.top+(lblRCX.top-lblRBX.top);
+        lblR10.left:=lblRDI.left;
+        lblR10.caption:='R10='+IntToHex(coderecord.armcontext.R10,8);
+        lblR10.parent:=FormFoundCodeListExtra.panel6;
+        lblR10.OnMouseDown:=registerMouseDown;
+        lblR10.OnDblClick:=RegisterDblClick;
+        lblR10.Align:=lblrcx.Align;
 
-          for i:=0 to 30 do
-          begin
-            lbl:=tlabel.create(FormFoundCodeListExtra);
-            lbl.Caption:=format('X%d=%.8x',[i,coderecord.arm64context.regs.X[i]]);
-            lbl.parent:=pnlRegisters;
-            lbl.OnMouseDown:=registerMouseDown;
-            lbl.OnDblClick:=RegisterDblClick;
-          end;
+        lblR11:=tlabel.Create(FormFoundCodeListExtra);
+        lblR11.Top:=lblRCX.top+(lblRCX.top-lblRBX.top);
+        lblR11.left:=lblRIP.left;
+        lblR11.caption:=' FP='+IntToHex(coderecord.armcontext.FP,8);
+        lblR11.parent:=FormFoundCodeListExtra.panel6;
+        lblR11.OnMouseDown:=registerMouseDown;
+        lblR11.OnDblClick:=RegisterDblClick;
+        lblR11.Align:=lblrcx.Align;
+                //new row
+        lblR12:=tlabel.Create(FormFoundCodeListExtra);
+        lblR12.Top:=lblR9.top+(lblRCX.top-lblRBX.top);
+        lblR12.left:=lblRCX.left;
+        lblR12.caption:=' IP='+IntToHex(coderecord.armcontext.IP,8);
+        lblR12.parent:=FormFoundCodeListExtra.panel6;
+        lblR12.OnMouseDown:=registerMouseDown;
+        lblR12.OnDblClick:=RegisterDblClick;
+        lblR12.Align:=lblrcx.Align;
 
-          lbl:=tlabel.create(FormFoundCodeListExtra);
-          lbl.Caption:=format('SP=%.8x',[coderecord.arm64context.SP]);
-          lbl.parent:=pnlRegisters;
-          lbl.OnMouseDown:=registerMouseDown;
-          lbl.OnDblClick:=RegisterDblClick;
+        lblR13:=tlabel.Create(FormFoundCodeListExtra);
+        lblR13.Top:=lblR9.top+(lblRCX.top-lblRBX.top);
+        lblR13.left:=lblRDI.left;
+        lblR13.caption:=' SP='+IntToHex(coderecord.armcontext.SP,8);
+        lblR13.parent:=FormFoundCodeListExtra.panel6;
+        lblR13.OnMouseDown:=registerMouseDown;
+        lblR13.OnDblClick:=RegisterDblClick;
+        lblR13.Align:=lblrcx.Align;
 
-          lbl:=tlabel.create(FormFoundCodeListExtra);
-          lbl.Caption:=format('PC=%.8x',[coderecord.arm64context.PC]);
-          lbl.parent:=pnlRegisters;
-          lbl.OnMouseDown:=registerMouseDown;
-          lbl.OnDblClick:=RegisterDblClick;
+        lblR14:=tlabel.Create(FormFoundCodeListExtra);
+        lblR14.Top:=lblR9.top+(lblRCX.top-lblRBX.top);
+        lblR14.left:=lblRIP.left;
+        lblR14.caption:=' LR='+IntToHex(coderecord.armcontext.LR,8);
+        lblR14.parent:=FormFoundCodeListExtra.panel6;
+        lblR14.OnMouseDown:=registerMouseDown;
+        lblR14.OnDblClick:=RegisterDblClick;
+        lblR14.Align:=lblrcx.Align;
+        //new line
 
-          lbl:=tlabel.create(FormFoundCodeListExtra);
-          lbl.Caption:=format('PSTATE=%.8x',[coderecord.arm64context.PSTATE]);
-          lbl.parent:=pnlRegisters;
-          lbl.OnMouseDown:=registerMouseDown;
-          lbl.OnDblClick:=RegisterDblClick;
-        end
-        else
-        begin
-          //repurpose the x86 32-bit labels
-          lblRAX.caption:=' R0='+IntToHex(coderecord.armcontext.R0,8);
-          lblRDX.caption:=' R1='+IntToHex(coderecord.armcontext.R1,8);
-          lblRBP.caption:=' R2='+IntToHex(coderecord.armcontext.R2,8);
-          lblRBX.caption:=' R3='+IntToHex(coderecord.armcontext.R3,8);
-          lblRSI.caption:=' R4='+IntToHex(coderecord.armcontext.R4,8);
-          lblRSP.caption:=' R5='+IntToHex(coderecord.armcontext.R5,8);
-          lblRCX.caption:=' R6='+IntToHex(coderecord.armcontext.R6,8);
-          lblRDI.caption:=' R7='+IntToHex(coderecord.armcontext.R7,8);
-          lblRIP.caption:=' R8='+IntToHex(coderecord.armcontext.R8,8);
+        lblR15:=tlabel.Create(FormFoundCodeListExtra);
+        lblR15.Top:=lblR12.top+(lblRCX.top-lblRBX.top);
+        lblR15.left:=lblRCX.left;
+        lblR15.caption:=' PC='+IntToHex(coderecord.armcontext.PC,8);
+        lblR15.parent:=FormFoundCodeListExtra.panel6;
+        lblR15.OnMouseDown:=registerMouseDown;
+        lblR15.OnDblClick:=RegisterDblClick;
+        lblR15.Align:=lblrcx.Align;
 
-          lblR9:=tlabel.Create(FormFoundCodeListExtra);
-          lblR9.caption:=' R9='+IntToHex(coderecord.armcontext.R9,8);
-          lblR9.parent:=pnlRegisters;
-          lblR9.OnMouseDown:=registerMouseDown;
-          lblR9.OnDblClick:=RegisterDblClick;
+        lblR16:=tlabel.Create(FormFoundCodeListExtra);
+        lblR16.Top:=lblR12.top+(lblRCX.top-lblRBX.top);
+        lblR16.left:=lblRDI.left;
+        lblR16.caption:=' CPSR='+IntToHex(coderecord.armcontext.CPSR,8);
+        lblR16.parent:=FormFoundCodeListExtra.panel6;
+        lblR16.OnMouseDown:=registerMouseDown;
+        lblR16.OnDblClick:=RegisterDblClick;
+        lblR16.Align:=lblrcx.Align;
 
-          lblR10:=tlabel.Create(FormFoundCodeListExtra);
-          lblR10.caption:='R10='+IntToHex(coderecord.armcontext.R10,8);
-          lblR10.parent:=pnlRegisters;
-          lblR10.OnMouseDown:=registerMouseDown;
-          lblR10.OnDblClick:=RegisterDblClick;
+        lblR17:=tlabel.Create(FormFoundCodeListExtra);
+        lblR17.Top:=lblR12.top+(lblRCX.top-lblRBX.top);
+        lblR17.left:=lblRIP.left;
+        lblR17.caption:=' ORIG_R0='+IntToHex(coderecord.armcontext.ORIG_R0,8);
+        lblR17.parent:=FormFoundCodeListExtra.panel6;
+        lblR17.OnMouseDown:=registerMouseDown;
+        lblR17.OnDblClick:=RegisterDblClick;
+        lblR17.Align:=lblrcx.Align;
 
-          lblR11:=tlabel.Create(FormFoundCodeListExtra);
-          lblR11.caption:=' FP='+IntToHex(coderecord.armcontext.FP,8);
-          lblR11.parent:=pnlRegisters;
-          lblR11.OnMouseDown:=registerMouseDown;
-          lblR11.OnDblClick:=RegisterDblClick;
-                  //new row
-          lblR12:=tlabel.Create(FormFoundCodeListExtra);
-          lblR12.caption:=' IP='+IntToHex(coderecord.armcontext.IP,8);
-          lblR12.parent:=pnlRegisters;
-          lblR12.OnMouseDown:=registerMouseDown;
-          lblR12.OnDblClick:=RegisterDblClick;
-
-          lblR13:=tlabel.Create(FormFoundCodeListExtra);
-          lblR13.caption:=' SP='+IntToHex(coderecord.armcontext.SP,8);
-          lblR13.parent:=pnlRegisters;
-          lblR13.OnMouseDown:=registerMouseDown;
-          lblR13.OnDblClick:=RegisterDblClick;
-
-          lblR14:=tlabel.Create(FormFoundCodeListExtra);
-          lblR14.caption:=' LR='+IntToHex(coderecord.armcontext.LR,8);
-          lblR14.parent:=pnlRegisters;
-          lblR14.OnMouseDown:=registerMouseDown;
-          lblR14.OnDblClick:=RegisterDblClick;
-          //new line
-
-          lblR15:=tlabel.Create(FormFoundCodeListExtra);
-          lblR15.caption:=' PC='+IntToHex(coderecord.armcontext.PC,8);
-          lblR15.parent:=pnlRegisters;
-          lblR15.OnMouseDown:=registerMouseDown;
-          lblR15.OnDblClick:=RegisterDblClick;
-
-          lblR16:=tlabel.Create(FormFoundCodeListExtra);
-          lblR16.caption:=' CPSR='+IntToHex(coderecord.armcontext.CPSR,8);
-          lblR16.parent:=pnlRegisters;
-          lblR16.OnMouseDown:=registerMouseDown;
-          lblR16.OnDblClick:=RegisterDblClick;
-
-          lblR17:=tlabel.Create(FormFoundCodeListExtra);
-          lblR17.caption:=' ORIG_R0='+IntToHex(coderecord.armcontext.ORIG_R0,8);
-          lblR17.parent:=pnlRegisters;
-          lblR17.OnMouseDown:=registerMouseDown;
-          lblR17.OnDblClick:=RegisterDblClick;
-        end;
         {Constraints.MinHeight:=panel6.top+(lblR17.top+lblR17.height)+16+panel5.height;
         if height<Constraints.MinHeight then
           height:=Constraints.MinHeight;   }
@@ -1151,20 +1079,18 @@ begin
           lblR15.Align:=lblrcx.Align;
           lblR15.Color:=lblRAX.Color;
 
-          if (currentdebuggerinterface is TDBVMDebugInterface) and (coderecord.context.P2Home<>0) then
-          begin
-            lblR16:=tlabel.Create(FormFoundCodeListExtra);
-            lblR16.caption:=' CR3='+IntToHex(coderecord.context.P2Home,8);
-            lblR16.parent:=FormFoundCodeListExtra.pnlRegisters;
-            lblR16.OnMouseDown:=registerMouseDown;
-            lblR16.OnDblClick:=RegisterDblClick;
-            lblR16.Align:=lblrcx.Align;
-            lblR16.Color:=lblRAX.Color;
-          end;
+
 
           lblRBP.BringToFront;
           lblRSP.BringToFront;
           lblRIP.BringToFront;
+
+
+     {     Constraints.MinHeight:=panel6.top+(lblR15.top+lblR15.height)+16+panel5.height;
+          if height<Constraints.MinHeight then
+            height:=Constraints.MinHeight;     }
+  //        if panel6.clientheight<lblR15.top+lblR15.height then //make room
+  //          height:=height+(lblR15.top+lblR15.height)-(lblRDI.top+lblRDI.height);
         end;
         {$endif}
 
@@ -1176,7 +1102,6 @@ begin
           lblVirtualAddress.caption:=format('Virtual Address=%.8x',[coderecord.dbvmcontextbasic^.VirtualAddress]);
           lblFSBase.caption:=format('FS Base=%.8x',[coderecord.dbvmcontextbasic^.FSBASE]);
           lblGSBase.caption:=format('GS Base=%.8x',[coderecord.dbvmcontextbasic^.GSBASE]);
-          lblGSBaseKernel.caption:=format('GS Base Kernel=%.8x',[coderecord.dbvmcontextbasic^.GSBASE_KERNEL]);
           lblCR3.caption:=format('CR3=%.8x',[coderecord.dbvmcontextbasic^.CR3]);
         end
         else
@@ -1228,8 +1153,7 @@ begin
           end;
         end; *)
 
-        if processhandler.SystemArchitecture=archX86 then
-          formfoundcodelistextra.probably:=addresswatched-offset;
+        formfoundcodelistextra.probably:=addresswatched-offset;
       end
       else
       begin
@@ -1331,9 +1255,6 @@ begin
 
   countsortdirection:=1;
   addresssortdirection:=1;
-
-  seenAddressList:=tmap.Create(ituPtrSize,sizeof(pointer));
-  seenAddressListCS:=TCriticalSection.Create;
 end;
 
 procedure TFoundCodeDialog.FormDeactivate(Sender: TObject);
@@ -1344,6 +1265,7 @@ end;
 procedure TFoundCodeDialog.FormDestroy(Sender: TObject);
 var i: integer;
     cr: Tcoderecord;
+    x: array of integer;
     s: string;
 begin
   stopDBVMWatch();
@@ -1360,19 +1282,17 @@ begin
         exit;
       end;
       cr.formChangedAddresses.Close;
+      freeandnil(cr.formChangedAddresses);
     end;
 
     FoundCodeList.Items[i].data:=nil;
     freeandnil(cr);
   end;
 
+  setlength(x,1);
+  x[0]:=FoundCodeList.Columns[0].Width;
 
-
-  FoundCodeList.Clear;
-  timerEntryInfoUpdate.Enabled:=false;
-
-  freeandnil(seenAddressList);
-  freeandnil(seenAddressListCS);
+  saveformposition(self,x);
 end;
 
 procedure TFoundCodeDialog.FormShow(Sender: TObject);
@@ -1410,36 +1330,12 @@ end;
 
 procedure TFoundCodeDialog.FormClose(Sender: TObject;
   var Action: TCloseAction);
-var
-  x: array of integer;
 begin
-  if miFindWhatAccesses.Checked then
-    miFindWhatAccesses.Click; //unchecks it
-
-
   if btnOK.caption=strStop then
     if debuggerthread<>nil then
       debuggerthread.CodeFinderStop(self);
 
-
-
-  if breakpoint<>nil then
-  begin
-    action:=caHide; //don't free. Only when the breakpoint is fully gone free it
-    dec(pbreakpoint(breakpoint)^.referencecount);
-  end
-  else
-    action:=caFree;
-
-  setlength(x,1);
-  x[0]:=FoundCodeList.Columns[0].Width;
-  saveformposition(self,x);
-
-  try
-    //rename so that the next created dialog can have this name
-    self.name:=self.name+'_tobedeleted'+inttohex(random(65535),4)+inttohex(random(65535),4)+inttohex(random(65535),4)+inttohex(random(65535),4)+'_'+inttohex(GetTickCount64,1);
-  except
-  end;
+  action:=caFree;
 end;
 
 procedure TFoundCodeDialog.btnReplacewithnopsClick(Sender: TObject);
@@ -1464,27 +1360,20 @@ begin
         coderecord:=TcodeRecord(foundcodelist.items[j].data);
         codelength:=coderecord.size;
         //add it to the codelist
-
-        try
-          advancedoptions.AddToCodeList(coderecord.address,coderecord.size,false, foundcodelist.SelCount>1);
-        except
-          //already in the list, undo
-        end;
-
-        for i:=0 to AdvancedOptions.count-1 do
+        if advancedoptions.AddToCodeList(coderecord.address,coderecord.size,true, foundcodelist.SelCount>1) then
         begin
-          advancedoptions.lvCodelist.ClearSelection;
-          if symhandler.getAddressFromName(AdvancedOptions.entries[i].code.symbolname,false)=coderecord.address then
-          begin
-            advancedoptions.lvCodelist.selected:=advancedoptions.lvCodelist.Items[i];
-            advancedoptions.lvCodelist.Items[i].Selected:=true;
-            if AdvancedOptions.entries[i].code.changed then
-              advancedoptions.miRestoreWithOriginalClick(advancedoptions.miRestoreWithOriginal)
-            else
-              advancedoptions.miReplaceWithNopsClick(advancedoptions.miReplaceWithNops);
-          end;
-        end;
+          setlength(nops,codelength);
+          for i:=0 to codelength-1 do
+            nops[i]:=$90;  // $90=nop
 
+
+          zeromemory(@mbi,sizeof(mbi));
+
+
+          RewriteCode(processhandle,coderecord.address,@nops[0],codelength);
+
+
+        end;
       end;
     end;
   end;
@@ -1664,20 +1553,10 @@ begin
     begin
       coderecord:=TCodeRecord(foundcodelist.items[i].data);
       if coderecord.formChangedAddresses<>nil then
-      begin
-        coderecord.formChangedAddresses.Close; //brings reference count to 0, so will autodestroy
-        coderecord.formChangedAddresses:=nil;
-      end;
+        freeandnil(coderecord.formChangedAddresses);
     end;
 
   end;
-end;
-
-procedure TFoundCodeDialog.miFindWhatCodeAccessesClick(Sender: TObject);
-var a: ptruint;
-begin
-  if foundcodelist.ItemIndex<>-1 then
-    MemoryBrowser.findWhatthisCodeAccesses(TcodeRecord(foundcodelist.items[foundcodelist.itemindex].data).address);
 end;
 
 function TFoundCodeDialog.getSelection:string;
@@ -1712,7 +1591,6 @@ begin
   Showthisaddressinthedisassembler1.enabled:=foundcodelist.itemindex<>-1;
   Addtothecodelist1.enabled:=foundcodelist.selcount>0;
   MoreInfo1.Enabled:=foundcodelist.itemindex<>-1;
-  miFindWhatCodeAccesses.enabled:=foundcodelist.itemindex<>-1;
 
   Copyselectiontoclipboard1.enabled:=foundcodelist.selcount>0;
   miSaveTofile.enabled:=Copyselectiontoclipboard1.Enabled;
@@ -1721,40 +1599,6 @@ end;
 procedure TFoundCodeDialog.Copyselectiontoclipboard1Click(Sender: TObject);
 begin
   clipboard.AsText:=getSelection;
-end;
-
-procedure TFoundCodeDialog.timerEntryInfoUpdateTimer(Sender: TObject);
-var
-  i: integer;
-  starttime: qword;
-  c: FoundCodeUnit.TCodeRecord;
-  updateAddressString: boolean;
-
-  news: string;
-begin
-  starttime:=GetTickCount64;
-  updateAddressString:=true;
-  for i:=0 to foundcodelist.Items.Count-1 do
-  begin
-    c:=FoundCodeUnit.TCodeRecord(foundcodelist.items[i].data);
-    if c<>nil then
-    begin
-      if updateAddressString and (c.addressString='') then
-        c.addressString:=symhandler.getNameFromAddress(c.address);
-
-      if gettickcount64-starttime>250 then updateAddressString:=false; //next time better
-
-      if miFindWhatAccesses.checked then
-        news:=inttostr(c.hitcount)+' ('+inttostr(TCodeRecord(foundcodelist.Items[i].data).diffcount)+')'
-      else
-        news:=inttostr(c.hitcount);
-
-      if FoundcodeList.items[i].caption<>news then
-        FoundcodeList.items[i].caption:=news;
-
-    end;
-  end;
-
 end;
 
 initialization

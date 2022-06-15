@@ -176,7 +176,7 @@ begin
       struct.fillFromDotNetAddressData(al);
 
       if changename then
-        struct.setName(al.typedata.classname);
+        struct.setName(al.classname);
     end;
 
 

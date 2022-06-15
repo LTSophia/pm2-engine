@@ -11,7 +11,6 @@
 #include "msrnames.h"
 #include "vmmhelper.h"
 #include "main.h"
-#include "vmxsetup.h"
 
 #ifdef ULTIMAPDEBUG
 
@@ -60,22 +59,16 @@ void ultimap_disable(pcpuinfo currentcpuinfo)
 
     currentcpuinfo->Ultimap.Active=0;
   }
-
-  if (canToggleCR3Exit)
-    vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) | PPBEF_CR3LOAD_EXITING | PPBEF_CR3STORE_EXITING);
 }
 
 void ultimap_setup(pcpuinfo currentcpuinfo, QWORD CR3, QWORD DEBUGCTL, QWORD DS_AREA)
 {
-  if (canToggleCR3Exit)
-    vmwrite(vm_execution_controls_cpu, vmread(vm_execution_controls_cpu) | PPBEF_CR3LOAD_EXITING | PPBEF_CR3STORE_EXITING);
-
-  currentcpuinfo->Ultimap.CR3=CR3;
-  currentcpuinfo->Ultimap.DEBUGCTL=DEBUGCTL;
-  currentcpuinfo->Ultimap.DS_AREA=DS_AREA;
-  currentcpuinfo->Ultimap.Active=1;
-  currentcpuinfo->Ultimap.OriginalDebugCTL=vmread(vm_guest_IA32_DEBUGCTL);
-  currentcpuinfo->Ultimap.OriginalDS_AREA=readMSR(IA32_DS_AREA);
+      currentcpuinfo->Ultimap.CR3=CR3;
+      currentcpuinfo->Ultimap.DEBUGCTL=DEBUGCTL;
+      currentcpuinfo->Ultimap.DS_AREA=DS_AREA;
+      currentcpuinfo->Ultimap.Active=1;
+      currentcpuinfo->Ultimap.OriginalDebugCTL=vmread(vm_guest_IA32_DEBUGCTL);
+      currentcpuinfo->Ultimap.OriginalDS_AREA=readMSR(IA32_DS_AREA);
 }
 
 void ultimap_handleCR3Change(pcpuinfo currentcpuinfo, QWORD oldcr3, QWORD newcr3)

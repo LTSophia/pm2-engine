@@ -16,7 +16,7 @@ uses
   {$ifdef windows}
   jwawindows, windows,
   {$endif}
-  Classes, SysUtils, CEFuncProc, syncobjs, guisafecriticalsection, NewKernelHandler, Globals, maps;
+  Classes, SysUtils, CEFuncProc, syncobjs, NewKernelHandler, Globals, maps;
 {$endif}
 
 
@@ -66,42 +66,21 @@ type
 
   TDotNetMethodArray=array of TDotNetMethod;
 
-  TDotNetMethodParameter=record
-    name: widestring;
-    ctype: dword;
-    sequencenr: dword;
-  end;
-
-  TDotNetMethodParameters=array of TDotNetMethodParameter;
-
-  TTypeDefInfo=record
-    token: dword;
-    module: uint64;
-  end;
 
   TFieldInfo=record
-    token: dword;
     offset: dword;
     fieldtype: dword;
     name: widestring;
-    fieldTypeClassName: widestring;
-    isStatic: boolean;
   end;
 
-  TTypeData=record
+  TAddressData=record
+    startaddress: ptruint;
     objecttype: dword;
     elementtype: dword; //the data type of elements if this is an array
     countoffset, elementsize, firstelementoffset: ulong32; //misc data for objecttype = array or szarray
 
     classname: widestring;
     fields: array of TFieldInfo;
-  end;
-  PTypeData=^TTypeData;
-
-
-  TAddressData=record
-    startaddress: ptruint;
-    typedata: TTypeData;
   end;
 
   type COR_TYPEID=record
@@ -127,10 +106,9 @@ type
     fSupportsDotNet4_5: boolean;
 
     pHandle: THandle;
-    pipecs: TGuiSafeCriticalSection;  //guisafecriticalsection?
+    pipecs: TCriticalsection;
     procedure Read(var o; size: integer);
     procedure Write(const o; size: integer);
-    procedure ReadTypeData(var typedata: TTypeData);
   public
     constructor create;
     destructor destroy; override;
@@ -142,15 +120,11 @@ type
     procedure EnumDomains(var domains: TDotNetDomainArray);
     procedure EnumModuleList(hDomain: UINT64; var Modules: TDotNetModuleArray);
     procedure EnumTypeDefs(hModule: UINT64; var TypeDefs: TDotNetTypeDefArray);
-    procedure GetMethodParameters(hModule: UINT64; methoddef: DWORD; var MethodParameters: TDotNetMethodParameters);
     procedure GetTypeDefMethods(hModule: UINT64; typedef: DWORD; var Methods: TDotNetMethodArray);
-    procedure GetTypeDefData(hModule: UINT64; typedef: DWORD; var fielddata: TTypeData);
-    procedure GetTypeDefParent(hModule: UINT64; typedef: DWORD; var parentinfo: TTypeDefInfo);
     procedure GetAddressData(address: UINT64; var addressdata: TAddressData);
-    function  EnumAllObjects: TDOTNETObjectList;
-    procedure EnumAllObjectsOfType(hModule: UINT64; typedef: DWORD; list: Tlist);
+    function EnumAllObjects: TDOTNETObjectList;
     procedure freeNETObjectList(list: TDOTNETObjectList);
-  published
+
     property Connected: boolean read fConnected;
     property Attached: boolean read fAttached;
     property SupportsDotNet4_5: boolean read fSupportsDotNet4_5;
@@ -170,10 +144,7 @@ const
   CMD_GETTYPEDEFMETHODS=6;
   CMD_GETADDRESSDATA=7;
   CMD_GETALLOBJECTS=8;
-  CMD_GETTYPEDEFFIELDS=9;
-  CMD_GETMETHODPARAMETERS=10;
-  CMD_GETTYPEDEFPARENT=11;
-  CMD_GETALLOBJECTSOFTYPE=12;
+
 
 procedure TDotNetPipe.freeNETObjectList(list: TDOTNETObjectList);
 var
@@ -198,7 +169,6 @@ begin
   freeandnil(list);
 end;
 
-
 function TDotNetPipe.EnumAllObjects: TDOTNETObjectList;
 var
   msg: byte;
@@ -209,8 +179,6 @@ var
   o: TDotNetObject;
   stringlength: DWORD;
 begin
-  if fconnected=false then exit(nil);
-
   msg:=CMD_GETALLOBJECTS;
 
 
@@ -222,20 +190,16 @@ begin
 
     while not done do
     begin
-
-
       read(o.startaddress,sizeof(o.startaddress));
       read(o.size, sizeof(o.size));
       read(o.typeid,sizeof(o.typeid));
       read(stringlength, sizeof(stringlength));
-      getmem(o.classname, stringlength+4);
+      getmem(o.classname, stringlength+2);
       read(o.classname^,stringlength);
       o.classname[stringlength div 2]:=#0;
 
       if (o.startaddress=0) and (o.size=0) and (o.typeid.token1=0) and (o.typeid.token2=0) and (stringlength=0) then //end of list marker
-      begin
         break;
-      end;
 
 
       r.Add(o.startaddress,o);
@@ -248,46 +212,13 @@ begin
   result:=r;
 end;
 
-procedure TDotNetPipe.EnumAllObjectsOfType(hModule: UINT64; typedef: DWORD; list: Tlist);
+procedure TDotNetPipe.GetAddressData(address: UINT64; var addressdata: TAddressData);
 var
   msg: packed record
     command: byte;
-    hModule: UINT64;
-    typedef: uint32;
-  end;
-  msgsize: integer;
-
-  a: qword;
-begin
-  list.clear;
-  if fConnected=false then
-    exit;
-
-
-  msg.command:=CMD_GETALLOBJECTSOFTYPE;
-  msg.hModule:=hModule;
-  msg.typedef:=typedef;
-
-  pipecs.enter;
-  try
-    msgsize:=sizeof(msg);
-    write(msg, msgsize);
-
-    repeat
-      read(a,8);
-      if a<>0 then
-        list.Add(pointer(a));
-    until a=0;
-  finally
-    pipecs.leave;
+    address: UINT64;
   end;
 
-
-end;
-
-
-procedure TDotNetPipe.ReadTypeData(var typedata: TTypeData);
-var
   classnamesize: dword;
   cname: pwidechar;
 
@@ -299,172 +230,11 @@ var
 
   fi: TFieldInfo;
   inserted: boolean;
-  isStatic: byte;
-begin
-  read(typedata.objecttype, sizeof(typedata.objecttype));
-
-  if typedata.objecttype=$ffffffff then exit;
-
-
-  //array support patch by justa_dude
-  if (typedata.objecttype=ELEMENT_TYPE_ARRAY) or (typedata.objecttype=ELEMENT_TYPE_SZARRAY) then
-  begin
-    typedata.classname := 'Array';
-    read(typedata.elementtype, sizeof(typedata.elementtype));
-    read(typedata.countoffset, sizeof(typedata.countoffset));
-    read(typedata.elementsize, sizeof(typedata.elementsize));
-    read(typedata.firstelementoffset, sizeof(typedata.firstelementoffset));
-    if typedata.elementtype=$FFFFFFFF then //we couldn't determine the array shape
-    begin
-      typedata.elementtype := ELEMENT_TYPE_VOID;
-      typedata.elementsize := 0;
-    end
-  end
-  else //then //if true then //addressdata.objecttype=ELEMENT_TYPE_CLASS then
-  begin
-    read(classnamesize, sizeof(classnamesize));
-    if classnamesize>0 then
-    begin
-      getmem(cname, classnamesize+4);
-      read(cname[0], classnamesize);
-      cname[classnamesize div 2]:=#0;
-      typedata.classname:=cname;
-
-      FreeMemAndNil(cname);
-    end;
-
-    read(fieldcount, sizeof(fieldcount));
-    setlength(typedata.fields, fieldcount);
-
-    for i:=0 to fieldcount-1 do
-    begin
-      read(fi.token, sizeof(dword));
-      read(fi.offset, sizeof(dword));
-      read(fi.fieldtype, sizeof(dword));
-
-      read(isStatic,1);
-      fi.isStatic:=isstatic<>0;
-
-      read(fieldnamesize, sizeof(fieldnamesize));
-      getmem(fieldname, fieldnamesize+4);
-      read(fieldname[0], fieldnamesize);
-      fieldname[fieldnamesize div 2]:=#0;
-      fi.name:=fieldname;
-      FreeMemAndNil(fieldname);
-
-
-      //FieldTypeClassName
-      read(classnamesize, sizeof(classnamesize));
-      getmem(cname, classnamesize+4);
-      read(cname[0], classnamesize);
-      cname[classnamesize div 2]:=#0;
-      fi.FieldTypeClassName:=cname;
-      FreeMemAndNil(cname);
-
-
-      //sort while adding
-      inserted:=false;
-      for j:=0 to i-1 do
-      begin
-        if fi.offset<typedata.fields[j].offset then //insert it before this one
-        begin
-          //shift this one and all subsequent items
-          for k:=i-1 downto j do
-            typedata.fields[k+1]:=typedata.fields[k];
-
-          typedata.fields[j]:=fi;
-          inserted:=true;
-          break;
-        end;
-      end;
-      if not inserted then
-        typedata.fields[i]:=fi;
-
-    end;
-  end;
-end;
-
-procedure TDotNetPipe.GetTypeDefParent(hModule: UINT64; typedef: DWORD; var parentinfo: TTypeDefInfo);
-var
-  msg: packed record
-    command: byte;
-    hModule: UINT64;
-    typedef: uint32;
-  end;
-  msgsize: integer;
-begin
-  if fConnected=false then
-  begin
-    parentinfo.module:=0;
-    parentinfo.token:=0;
-    exit;
-  end;
-
-  
-  msg.command:=CMD_GETTYPEDEFPARENT;
-  msg.hModule:=hModule;
-  msg.typedef:=typedef;
-  pipecs.enter;
-  try
-    msgsize:=sizeof(msg);
-    write(msg, msgsize);
-    read(parentinfo.module,8);
-    read(parentinfo.token,8);
-  finally
-    pipecs.leave;
-  end;
-
-end;
-
-procedure TDotNetPipe.GetTypeDefData(hModule: UINT64; typedef: DWORD; var fielddata: TTypeData);
-var
-  msg: packed record
-    command: byte;
-    hModule: UINT64;
-    typedef: uint32;
-  end;
-  msgsize: integer;
-begin
-  if fConnected=false then
-  begin
-    fielddata.classname:='';
-    setlength(fielddata.fields,0);
-    exit;
-  end;
-
-  msg.command:=CMD_GETTYPEDEFFIELDS;
-  msg.hModule:=hModule;
-  msg.typedef:=typedef;
-
-
-
-
-
-  pipecs.enter;
-  try
-    msgsize:=sizeof(msg);
-    write(msg, msgsize);
-    readTypeData(fielddata);
-  finally
-    pipecs.leave;
-  end;
-
-end;
-
-procedure TDotNetPipe.GetAddressData(address: UINT64; var addressdata: TAddressData);
-var
-  msg: packed record
-    command: byte;
-    address: UINT64;
-  end;
-
-
 begin
   if fConnected=false then
   begin
     addressdata.startaddress:=0;
-    addressdata.typedata.classname:='';
-    setlength(addressdata.typedata.fields,0);
+    setlength(addressdata.fields,0);
     exit;
   end;
 
@@ -479,83 +249,78 @@ begin
 
     read(addressdata.startaddress, sizeof(addressdata.startaddress));
     if addressdata.startaddress<>0 then
-      readTypeData(addressdata.typedata);
-
-
-
-  finally
-    pipecs.leave;
-  end;
-end;
-
-procedure TDotNetPipe.GetMethodParameters(hModule: UINT64; methoddef: DWORD; var MethodParameters: TDotNetMethodParameters);
-var
-  msg: packed record
-    command: byte;
-    hModule: UINT64;
-    methoddef: dword;
-  end;
-  msgsize: integer;
-
-  count: dword;
-  paramnamesize: dword;
-  paramname: pwidechar;
-
-  fieldtype: dword;
-  sequencenr: dword;
-  i,j,k: integer;
-  temp: TDotNetMethodParameter;
-begin
-  msg.command:=CMD_GETMETHODPARAMETERS;
-  msg.hModule:=hmodule;
-  msg.methoddef:=methoddef;
-  pipecs.enter;
-  try
-    msgsize:=sizeof(msg);
-    write(msg, msgsize);
-
-    read(count, sizeof(count));
-    setlength(methodparameters, count);
-
-    for i:=0 to count-1 do
     begin
-      //read the parameters
-      read(paramnamesize, sizeof(paramnamesize));
-      getmem(paramname, paramnamesize+4);
-      try
-        read(paramname[0], paramnamesize);
-        paramname[paramnamesize div 2]:=#0;
-        temp.name:=paramname;
-      finally
-        FreeMemAndNil(paramname);
-      end;
+      read(addressdata.objecttype, sizeof(addressdata.objecttype));
 
-      read(temp.ctype, sizeof(temp.ctype));
-      read(temp.sequencenr, sizeof(temp.sequencenr));
-
-      if (paramnamesize=0) and (temp.sequencenr=$ffffffff) then continue;
-
-      for j:=0 to i-1 do
+      //array support patch by justa_dude
+      if (addressdata.objecttype=ELEMENT_TYPE_ARRAY) or (addressdata.objecttype=ELEMENT_TYPE_SZARRAY) then
       begin
-        if temp.sequencenr<methodparameters[j].sequencenr then
+        addressdata.classname := 'Array';
+        read(addressdata.elementtype, sizeof(addressdata.elementtype));
+        read(addressdata.countoffset, sizeof(addressdata.countoffset));
+        read(addressdata.elementsize, sizeof(addressdata.elementsize));
+        read(addressdata.firstelementoffset, sizeof(addressdata.firstelementoffset));
+        if addressdata.elementtype=$FFFFFFFF then //we couldn't determine the array shape
         begin
-          //insert before here, first shift the bigger one right
-          for k:=i downto j+1 do
-            methodparameters[k]:=methodparameters[k-1];
+          addressdata.elementtype := ELEMENT_TYPE_VOID;
+          addressdata.elementsize := 0;
+        end
+      end
+      else //then //if true then //addressdata.objecttype=ELEMENT_TYPE_CLASS then
+      begin
+        read(classnamesize, sizeof(classnamesize));
+        if classnamesize>0 then
+        begin
+          getmem(cname, classnamesize+2);
+          read(cname[0], classnamesize);
+          cname[classnamesize div 2]:=#0;
+          addressdata.classname:=cname;
 
-          methodparameters[j]:=temp;
-          temp.ctype:=$FFFFFFFF; //mark as added
-          break;
+          FreeMemAndNil(cname);
+        end;
+
+        read(fieldcount, sizeof(fieldcount));
+        setlength(addressdata.fields, fieldcount);
+
+        for i:=0 to fieldcount-1 do
+        begin
+          read(fi.offset, sizeof(dword));
+          read(fi.fieldtype, sizeof(dword));
+
+          read(fieldnamesize, sizeof(fieldnamesize));
+          getmem(fieldname, fieldnamesize+2);
+          read(fieldname[0], fieldnamesize);
+          fieldname[fieldnamesize div 2]:=#0;
+          fi.name:=fieldname;
+          FreeMemAndNil(fieldname);
+
+          //sort while adding
+          inserted:=false;
+          for j:=0 to i-1 do
+          begin
+            if fi.offset<addressdata.fields[j].offset then //insert it before this one
+            begin
+              //shift this one and all subsequent items
+              for k:=i-1 downto j do
+                addressdata.fields[k+1]:=addressdata.fields[k];
+
+              addressdata.fields[j]:=fi;
+              inserted:=true;
+              break;
+            end;
+          end;
+          if not inserted then
+            addressdata.fields[i]:=fi;
+
         end;
       end;
 
-      if temp.ctype<>$FFFFFFFF then
-        methodparameters[i]:=temp;
     end;
+
+
   finally
     pipecs.leave;
   end;
-
 end;
 
 procedure TDotNetPipe.GetTypeDefMethods(hModule: UINT64; typedef: DWORD; var Methods: TDotNetMethodArray);
@@ -573,7 +338,6 @@ var
   methodnamesize: dword;
 
   SecondaryCodeBlocks: ULONG32;
-  msgsize: integer;
 begin
   if fConnected=false then
   begin
@@ -587,8 +351,7 @@ begin
 
   pipecs.enter;
   try
-    msgsize:=sizeof(msg);
-    write(msg, msgsize);
+    write(msg, sizeof(msg));
 
     read(numberofmethods, sizeof(numberofmethods));
     setlength(methods, numberofmethods);
@@ -597,7 +360,7 @@ begin
       read(methods[i].token, sizeof(methods[i].token));
 
       read(methodnamesize, sizeof(methodnamesize));
-      getmem(mname, methodnamesize+4);
+      getmem(mname, methodnamesize+2);
       try
         read(mname[0], methodnamesize);
         mname[methodnamesize div 2]:=#0;
@@ -614,7 +377,7 @@ begin
       read(SecondaryCodeBlocks, sizeof(SecondaryCodeBlocks));
       setlength(methods[i].SecondaryNativeCode, SecondaryCodeBlocks);
       for j:=0 to SecondaryCodeBlocks-1 do
-        read(methods[i].SecondaryNativeCode[j], sizeof(TNativeCode));   //7FFB82FA1D00
+        read(methods[i].SecondaryNativeCode[j], sizeof(TNativeCode));
     end;
 
 
@@ -656,7 +419,7 @@ begin
     begin
       read(typedefs[i].token, sizeof(ULONG32));
       read(typedefnamesize, sizeof(typedefnamesize));
-      getmem(typedefname, typedefnamesize+4);
+      getmem(typedefname, typedefnamesize+2);
 
       try
         read(typedefname[0], typedefnamesize);
@@ -712,7 +475,7 @@ begin
       read(Modules[i].hModule, sizeof(UINT64));
       read(Modules[i].baseaddress, sizeof(UINT64));
       read(namelength, sizeof(namelength));
-      getmem(name, namelength+4);
+      getmem(name, namelength+2);
       try
         Read(name[0], namelength);
         name[namelength div 2]:=#0;
@@ -802,7 +565,7 @@ begin
       read(domains[i].hDomain, sizeof(uint64));
       read(namelength, sizeof(namelength));
 
-      getmem(name, namelength+4);
+      getmem(name, namelength+2);
       try
         Read(name[0], namelength);
         name[namelength div 2]:=#0;
@@ -1007,7 +770,7 @@ end;
 
 constructor TDotNetPipe.create;
 begin
-  pipecs:=TGUISafeCriticalsection.create;
+  pipecs:=TCriticalsection.create;
   inherited create;
 end;
 
@@ -1019,7 +782,5 @@ begin
   inherited destroy;
 end;
 
-
 end.
-
 

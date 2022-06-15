@@ -1,39 +1,40 @@
 object frmStackView: TfrmStackView
   Left = 714
-  Height = 211
+  Height = 264
   Top = 479
-  Width = 374
+  Width = 468
   BorderStyle = bsSizeToolWin
   Caption = 'Stack View'
-  ClientHeight = 211
-  ClientWidth = 374
+  ClientHeight = 264
+  ClientWidth = 468
+  DesignTimePPI = 120
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '2.0.0.4'
   object lvStack: TListView
     Left = 0
-    Height = 211
+    Height = 264
     Top = 0
-    Width = 374
+    Width = 468
     Align = alClient
     AutoWidthLastColumn = True
     Columns = <    
       item
         Caption = 'Address'
         MinWidth = 2
-        Width = 70
+        Width = 88
       end    
       item
         Caption = 'Value'
         MinWidth = 2
-        Width = 90
+        Width = 112
       end    
       item
         Caption = 'Secondary'
-        Width = 210
+        Width = 264
       end>
     HideSelection = False
     MultiSelect = True
@@ -49,8 +50,8 @@ object frmStackView: TfrmStackView
   object PopupMenu1: TPopupMenu
     Images = svImageList
     OnPopup = PopupMenu1Popup
-    Left = 108
-    Top = 84
+    left = 135
+    top = 105
     object miAddESP: TMenuItem
       AutoCheck = True
       Caption = '(esp+*)'
@@ -145,8 +146,8 @@ object frmStackView: TfrmStackView
   object FindDialog1: TFindDialog
     Options = [frDown, frHideMatchCase, frHideWholeWord, frHideUpDown, frHideEntireScope, frHidePromptOnReplace]
     OnFind = FindDialog1Find
-    Left = 208
-    Top = 88
+    left = 260
+    top = 110
   end
   object ColorDialog1: TColorDialog
     Color = clWhite
@@ -172,12 +173,12 @@ object frmStackView: TfrmStackView
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
-    Left = 104
-    Top = 152
+    left = 130
+    top = 190
   end
   object svImageList: TImageList
-    Left = 308
-    Top = 86
+    left = 385
+    top = 108
     Bitmap = {
       4C69040000001000000010000000606060C4808080E0808080E0808080E08080
       80E0808080E0808080E0777777E098989856FFFFFF00FFFFFF00FFFFFF00FFFF

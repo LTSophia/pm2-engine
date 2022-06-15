@@ -12,7 +12,7 @@ uses lclproc,
      windows,
      {$endif}
      classes, sysutils,LCLIntf,checklst,menus,dialogs,CEFuncProc,
-     NewKernelHandler, graphics, syncobjs, commonTypeDefs, betterControls;
+     NewKernelHandler, graphics, syncobjs, commonTypeDefs;
 
 const CurrentPluginVersion=6;
 
@@ -913,7 +913,7 @@ var pluginhandler: TPluginhandler;
 
 implementation
 
-uses {$ifndef macstandalone}MainUnit,{$endif}memorybrowserformunit,formsettingsunit, pluginexports, SynHighlighterAA,
+uses MainUnit,memorybrowserformunit,formsettingsunit, pluginexports, SynHighlighterAA,
      {$ifdef windows}DBK32functions,{$endif} luahandler, processhandlerunit
      {$ifdef windows}, BetterDLLSearchPath{$endif}, dotnethost, PEInfoFunctions, luaclass;
 
@@ -1877,7 +1877,7 @@ begin
 
   //pointers to the address that contains the pointers to the functions
   {$ifdef windows}
-  exportedfunctions.ReadProcessMemory:=@@ReadProcessMemoryActual;
+  exportedfunctions.ReadProcessMemory:=@@ReadProcessMemory;
   exportedfunctions.WriteProcessMemory:=@@WriteProcessMemoryActual;
   exportedfunctions.GetThreadContext:=@@GetThreadContext;
   exportedfunctions.SetThreadContext:=@@SetThreadContext;
@@ -1891,7 +1891,7 @@ begin
   exportedfunctions.StopRegisterChange:=nil; //@@StopRegisterChange;
   exportedfunctions.VirtualProtect:=@@VirtualProtect;
   exportedfunctions.VirtualProtectEx:=@@VirtualProtectEx;
-  exportedfunctions.VirtualQueryEx:=@@VirtualQueryExActual;
+  exportedfunctions.VirtualQueryEx:=@@VirtualQueryEx;
   exportedfunctions.VirtualAllocEx:=@@VirtualAllocEx;
   exportedfunctions.CreateRemoteThread:=@@CreateRemoteThread;
   exportedfunctions.OpenThread:=@@OpenThread;

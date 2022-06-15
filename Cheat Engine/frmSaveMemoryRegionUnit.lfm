@@ -1,24 +1,25 @@
 object frmSaveMemoryRegion: TfrmSaveMemoryRegion
-  Left = 846
-  Height = 280
-  Top = 349
+  Left = 585
+  Height = 274
+  Top = 328
   Width = 274
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'Save memoryregion'
-  ClientHeight = 280
+  ClientHeight = 274
   ClientWidth = 274
+  OnCreate = FormCreate
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.0.4'
+  LCLVersion = '2.0.8.0'
   object Panel1: TPanel
     Left = 0
-    Height = 234
+    Height = 228
     Top = 0
     Width = 274
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 234
+    ClientHeight = 228
     ClientWidth = 274
     TabOrder = 0
     object Label1: TLabel
@@ -33,7 +34,7 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
     end
     object lbRegions: TListBox
       Left = 0
-      Height = 219
+      Height = 213
       Top = 15
       Width = 172
       Align = alClient
@@ -44,13 +45,14 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
     end
     object Panel4: TPanel
       Left = 172
-      Height = 219
+      Height = 213
       Top = 15
       Width = 102
       Align = alRight
+      Anchors = [akRight, akBottom]
       AutoSize = True
       BevelOuter = bvNone
-      ClientHeight = 219
+      ClientHeight = 213
       ClientWidth = 102
       TabOrder = 1
       object Label2: TLabel
@@ -71,7 +73,7 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
         Left = 6
         Height = 15
         Top = 40
-        Width = 13
+        Width = 12
         Caption = 'To'
         ParentColor = False
       end
@@ -120,7 +122,7 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
   object Panel2: TPanel
     Left = 0
     Height = 46
-    Top = 234
+    Top = 228
     Width = 274
     Align = alBottom
     AutoSize = True
@@ -136,7 +138,10 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
       Top = 27
       Width = 235
       Caption = 'Don''t include Cheat Engine header in file'
+      Checked = True
+      OnChange = DontIncludeChange
       OnClick = DontIncludeClick
+      State = cbChecked
       TabOrder = 0
     end
     object Panel3: TPanel
@@ -163,7 +168,6 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
         AutoSize = True
         Caption = 'Save'
         Constraints.MinWidth = 75
-        Default = True
         OnClick = Button1Click
         TabOrder = 0
       end
@@ -185,10 +189,22 @@ object frmSaveMemoryRegion: TfrmSaveMemoryRegion
       end
     end
   end
+  object sbOpenProcess: TSpeedButton
+    Left = 3
+    Height = 30
+    Hint = 'Select a process to open'
+    Top = 3
+    Width = 30
+    BorderSpacing.Around = 3
+    ImageIndex = 7
+    ImageWidth = 23
+    ShowHint = True
+    ParentFont = False
+    ParentShowHint = False
+  end
   object SaveDialog1: TSaveDialog
-    DefaultExt = '.CEM'
-    Filter = 'Cheat Engine Memory file(*.CEM)|*.CEM|All files(*.*)|*.*'
-    FilterIndex = 0
+    DefaultExt = '.PM2'
+    Filter = 'PMD2 file(*.PM2)|*.PM2|All files(*.*)|*.*'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
     left = 72
     top = 32

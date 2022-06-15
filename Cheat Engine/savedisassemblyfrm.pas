@@ -7,7 +7,7 @@ interface
 uses
   LCLIntf, LResources, Messages, LMessages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, symbolhandler, symbolhandlerstructs, disassembler,
-  StdCtrls, ComCtrls, ActnList, Clipbrd, ExtCtrls, strutils, Parsers, betterControls;
+  StdCtrls, ComCtrls, ActnList, Clipbrd, ExtCtrls, strutils, Parsers;
 
 type
   TfrmSavedisassembly = class;
@@ -89,9 +89,8 @@ var oldaddress, currentaddress: ptrUint;
     addresslength: integer;
 begin
   disassembler:=TDisassembler.Create;
-  disassembler.showmodules:=memorybrowser.miShowModuleAddresses.checked;
-  disassembler.showsymbols:=memorybrowser.miShowSymbols.Checked;
-  disassembler.showsections:=memorybrowser.miShowSectionAddresses.checked;
+  disassembler.showmodules:=memorybrowser.Showmoduleaddresses1.checked;
+  disassembler.showsymbols:=memorybrowser.Showsymbols1.Checked;
 
   currentaddress:=startaddress;
 

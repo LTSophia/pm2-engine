@@ -8,20 +8,13 @@ This unit hold the DebuggerInterface currently used, and overrides the default w
 interface
 
 uses
-  Classes, SysUtils, {$ifdef windows}windows,{$endif} debuggerinterface, newkernelhandler{$ifdef darwin}, macport, macportdefines{$endif};
+  Classes, SysUtils, {$ifdef windows}windows,{$endif} debuggerinterface, newkernelhandler{$ifdef darwin}, macport{$endif};
 
 function WaitForDebugEvent(var lpDebugEvent: TDebugEvent; dwMilliseconds: DWORD): BOOL;
 function ContinueDebugEvent(dwProcessId: DWORD; dwThreadId: DWORD; dwContinueStatus: DWORD): BOOL;
-function SetThreadContext(hThread: THandle; const lpContext: TContext; isFrozenThread: Boolean=false): BOOL; overload;
-function SetThreadContext(hThread: THandle; const lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL; overload;
-function SetThreadContext(hThread: THandle; const lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL; overload;
-function GetThreadContext(hThread: THandle; var lpContext: TContext; isFrozenThread: Boolean=false): BOOL; overload;
-function GetThreadContext(hThread: THandle; var lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL; overload;
-function GetThreadContext(hThread: THandle; var lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL; overload;
+function SetThreadContext(hThread: THandle; const lpContext: TContext; isFrozenThread: Boolean=false): BOOL;
+function GetThreadContext(hThread: THandle; var lpContext: TContext; isFrozenThread: Boolean=false): BOOL;
 function GetThreadContextArm(hThread: THandle; var lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL;
-function SetThreadContextArm(hThread: THandle; const lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL;
-function GetThreadContextArm64(hThread: THandle; var lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL;
-function SetThreadContextArm64(hThread: THandle; const lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL;
 
 function DebugActiveProcess(dwProcessId: DWORD): WINBOOL;
 function DebugActiveProcessStop(dwProcessID: DWORD): WINBOOL;
@@ -48,8 +41,6 @@ begin
     result:=false;
 end;
 
-
-
 function SetThreadContext(hThread: THandle; const lpContext: TContext; isFrozenThread: Boolean=false): BOOL;
 begin
   if CurrentDebuggerInterface<>nil then
@@ -58,64 +49,12 @@ begin
     result:=NewKernelHandler.SetThreadContext(hThread, lpcontext);
 end;
 
-function SetThreadContext(hThread: THandle; const lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL;
-begin
-  result:=SetThreadContextArm(hThread, lpContext, isFrozenThread);
-end;
-
-function SetThreadContext(hThread: THandle; const lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL;
-begin
-  result:=SetThreadContextArm64(hThread, lpContext, isFrozenThread);
-end;
-
-
-
-
-
-
-function GetThreadContextArm(hThread: THandle; var lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL;
-begin
-  if CurrentDebuggerInterface<>nil then
-    result:=CurrentDebuggerInterface.GetThreadContextArm(hThread, lpContext, isFrozenThread)
-  else
-    result:=false;
-end;
-
-function SetThreadContextArm(hThread: THandle; const lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL;
+function SetThreadContextArm(hThread: THandle; const lpContext: TArmContext; isFrozenThread: Boolean=false): BOOL;
 begin
   if CurrentDebuggerInterface<>nil then
     result:=CurrentDebuggerInterface.SetThreadContextArm(hThread, lpContext, isFrozenThread)
   else
-    result:=false; //not yet implemented.  ceserver uses it's own setbreakpoint, for now , and I do not support arm32 for darwin(macos)
-end;
-
-function GetThreadContextArm64(hThread: THandle; var lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL;
-begin
-  if CurrentDebuggerInterface<>nil then
-    result:=CurrentDebuggerInterface.GetThreadContextArm64(hThread, lpContext, isFrozenThread)
-  else
-  begin
-    {$ifdef darwin}
-    result:=macport.GetThreadContextArm64(hThread, lpContext);
-    {$else}
     result:=false;
-    {$endif}
-
-  end;
-end;
-
-function SetThreadContextArm64(hThread: THandle; const lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL;
-begin
-  if CurrentDebuggerInterface<>nil then
-    result:=CurrentDebuggerInterface.SetThreadContextArm64(hThread, lpContext, isFrozenThread)
-  else
-  begin
-    {$ifdef darwin}
-    result:=macport.SetThreadContextArm64(hThread, lpContext);
-    {$else}
-    result:=false;
-    {$endif}
-  end;
 end;
 
 function GetThreadContext(hThread: THandle; var lpContext: TContext; isFrozenThread: Boolean=false): BOOL;
@@ -126,14 +65,12 @@ begin
     result:=NewKernelHandler.GetThreadContext(hThread, lpContext);
 end;
 
-function GetThreadContext(hThread: THandle; var lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL; overload;
+function GetThreadContextArm(hThread: THandle; var lpContext: TARMCONTEXT; isFrozenThread: Boolean=false): BOOL;
 begin
-  result:=GetThreadContextArm(hThread, lpContext, isFrozenThread);
-end;
-
-function GetThreadContext(hThread: THandle; var lpContext: TARM64CONTEXT; isFrozenThread: Boolean=false): BOOL; overload;
-begin
-  result:=GetThreadContextArm64(hThread, lpContext, isFrozenThread);
+  if CurrentDebuggerInterface<>nil then
+    result:=CurrentDebuggerInterface.GetThreadContextArm(hThread, lpContext, isFrozenThread)
+  else
+    result:=false;
 end;
 
 function DebugActiveProcess(dwProcessId: DWORD): WINBOOL;

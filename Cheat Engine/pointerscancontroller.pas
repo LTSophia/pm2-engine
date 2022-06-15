@@ -9,7 +9,7 @@ uses
   {$ifdef windows}windows,{$endif}
   LCLIntf, LCLType, Classes, SysUtils, StdCtrls, ComCtrls, Sockets, syncobjs,
   resolve, math, pointervaluelist,PointerscanWorker, PointerscanStructures,
-  pointeraddresslist, PointerscanresultReader, cefuncproc, NewKernelHandler,
+  pointeraddresslist, PointerscanresultReader, cefuncproc, newkernelhandler,
   zstream, PointerscanConnector, PointerscanNetworkStructures, {$ifdef windows}WinSock2,{$endif}
   CELazySocket, AsyncTimer, MemoryStreamReader, commonTypeDefs, NullStream, SyncObjs2;
 
@@ -139,8 +139,6 @@ type
     wasidle: boolean; //state of isIdle since last call to waitForAndHandleNetworkEvent
 
     newProgressbarLabel: string;
-
-    fShouldQuit: boolean;
     procedure UpdateProgressbarLabel; //synced
 
     procedure InitializeCompressedPtrVariables;
@@ -361,6 +359,19 @@ type
     overflowqueuecs: Tcriticalsection;
     overflowqueue: TDynPathQueue; //this queue will hold a number of paths that the server/worker received too many. (e.g a request for paths was made, but by the time the paths are received, the pathqueue is full again) It's accessed by the controller thread only
 
+     {
+    distributedScanning: boolean; //when set to true this will open listening port where other scanners can connect to
+    distributedport: word; //port used to listen on if distributed scanning is enabled
+    distributedScandataDownloadPort: word;
+
+    distributedWorker: boolean; //set if it's a worker connecting to a server
+    distributedServer: string;
+
+    broadcastThisScanner: boolean;
+    potentialWorkerList: array of THostAddr;
+
+    workersPathPerSecondTotal: qword;
+    workersPointersfoundTotal: qword;     }
 
     outofdiskspace: boolean;
 
@@ -414,7 +425,6 @@ type
     procedure TerminateAndSaveState;
     procedure execute_nonInitializer;
     procedure execute; override;
-    procedure Terminate; //terminate is not overridable but this works for simple stuff, like the pointermap generator quit flag
     constructor create(suspended: boolean);
     destructor destroy; override;
 
@@ -2051,6 +2061,17 @@ begin
 
       end;
 
+      //wait till all workers are in isdone state
+      {
+      if distributedScanning then
+      begin
+        if not distributedWorker then
+          launchServer; //everything is configured now and the scanners are active
+
+        alldone:=not doDistributedScanningLoop;
+      end;  }
+
+
 
       while (not alldone) do
       begin
@@ -2431,7 +2452,7 @@ begin
       begin
         childnodes[i].iConnectedTo:=false; //no reconnect
         if force then
-          handleChildException(i, 'forced disconnect')
+          handleChildException(childid, 'forced disconnect')
         else
         begin
           childnodes[i].takePathsAndDisconnect:=true;
@@ -4533,19 +4554,20 @@ begin
 
       progressbar.Position:=0;
       try
-        pointerlisthandler:=TReversePointerListHandler.Create(startaddress,stopaddress,not unalligned,progressbar, noreadonly, MustBeClassPointers, acceptNonModuleClasses, useStacks, stacksAsStaticOnly, threadstacks, stacksize, mustStartWithBase, BaseStart, BaseStop, includeSystemModules, RegionFilename, @fShouldQuit);
+
+        pointerlisthandler:=TReversePointerListHandler.Create(startaddress,stopaddress,not unalligned,progressbar, noreadonly, MustBeClassPointers, acceptNonModuleClasses, useStacks, stacksAsStaticOnly, threadstacks, stacksize, mustStartWithBase, BaseStart, BaseStop, includeSystemModules, RegionFilename);
+
+
         progressbar.position:=100;
 
-        if terminated then
-        begin
-          fOnScanDone(self, false,'');
-          exit;
-        end;
+
+
+
       except
         on e: exception do
         begin
           haserror:=true;
-          errorString:=rsFailureCopyingTargetProcessMemory + '('+e.message+')';
+          errorString:=rsFailureCopyingTargetProcessMemory;
 
           if assigned(fOnScanDone) then
             fOnScanDone(self, haserror, errorstring);
@@ -5388,12 +5410,6 @@ begin
 
   savestate:=true;
   terminate;
-end;
-
-procedure TPointerscancontroller.Terminate;
-begin
-  fShouldQuit:=true;
-  tthread(self).Terminate;
 end;
 
 constructor TPointerscanController.create(suspended: boolean);

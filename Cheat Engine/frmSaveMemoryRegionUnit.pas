@@ -8,14 +8,16 @@ uses
   {$ifdef darwin}
   macport,
   {$endif}
-  LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms, symbolhandler,
-  Dialogs, StdCtrls, NewKernelHandler, CEFuncProc, ExtCtrls, LResources, Menus, betterControls;
+  LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  symbolhandler, Dialogs, StdCtrls, NewKernelHandler, CEFuncProc, ExtCtrls,
+  LResources, Menus, Buttons;
 
 type
 
   { TfrmSaveMemoryRegion }
 
   TfrmSaveMemoryRegion = class(TForm)
+    sbOpenProcess: TSpeedButton;
     smrImageList: TImageList;
     miClearList: TMenuItem;
     Panel1: TPanel;
@@ -36,8 +38,10 @@ type
     Button3: TButton;
     procedure Button2Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure DontIncludeChange(Sender: TObject);
     procedure DontIncludeClick(Sender: TObject);
     procedure Button3Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure lbRegionsDblClick(Sender: TObject);
     procedure miClearListClick(Sender: TObject);
@@ -53,12 +57,12 @@ var
 
 implementation
 
-uses ProcessHandlerUnit, Parsers, mainunit2;
+uses ProcessHandlerUnit, Parsers;
 
 resourcestring
   rsPleaseAddAtLeastOneAddressRegionToTheList = 'Please add at least one address region to the list';
   rsNotAllTheMemoryWasReadableIn = 'Not all the memory was readable in';
-  rsNoStartAddress = 'If you don''t include the header data you''ll have to specify the startaddress yourself when loading the file(That means '+strCheatEngine+' won''t fill in the '
+  rsNoStartAddress = 'If you don''t include the header data you''ll have to specify the startaddress yourself when loading the file(That means Cheat Engine wont fill in the '
     +'startaddress text field when loaded for you)';
   rsIsNotAValidAddress = '%s is not a valid address';
 
@@ -168,14 +172,14 @@ begin
 
 end;
 
+procedure TfrmSaveMemoryRegion.DontIncludeChange(Sender: TObject);
+begin
+
+end;
+
 procedure TfrmSaveMemoryRegion.DontIncludeClick(Sender: TObject);
 begin
-  if not alreadywarned then
-  if DontInclude.Checked then
-  begin
-    alreadywarned:=true;
-    messagedlg(rsNoStartAddress, mtInformation, [mbok], 0);
-  end;
+  DontInclude.Checked:=true;
 end;
 
 procedure TfrmSaveMemoryRegion.Button3Click(Sender: TObject);
@@ -204,6 +208,11 @@ begin
 
   dontinclude.Enabled:=lbregions.Items.Count<=1;
   if lbregions.Items.Count>1 then dontinclude.Checked:=false;
+
+end;
+
+procedure TfrmSaveMemoryRegion.FormCreate(Sender: TObject);
+begin
 
 end;
 
@@ -242,6 +251,7 @@ begin
   end;
 
 end;
+
 
 initialization
   {$i frmSaveMemoryRegionUnit.lrs}

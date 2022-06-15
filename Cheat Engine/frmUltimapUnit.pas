@@ -14,7 +14,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   DBK32functions, NewKernelHandler, cefuncproc, AvgLvlTree, ExtCtrls, ComCtrls,
   math,  symbolhandler, maps, Menus, disassembler, multicpuexecution, syncobjs,
-  genericHotkey, HotKeys, frmHotkeyExUnit, frmSelectionlistunit, commonTypeDefs, betterControls;
+  genericHotkey, HotKeys, frmHotkeyExUnit, frmSelectionlistunit, commonTypeDefs;
 
 
 
@@ -190,14 +190,14 @@ implementation
 
 {$R *.lfm}
 
-uses MemoryBrowserFormUnit, vmxfunctions, ProcessHandlerUnit, AdvancedOptionsUnit, mainunit2;
+uses MemoryBrowserFormUnit, vmxfunctions, ProcessHandlerUnit, AdvancedOptionsUnit;
 
 resourcestring
   rsUUOld = 'old=';
   rsUUNew = ' new=';
   rsUUErrorDuringMap = 'Error during map';
   rsUUSorryButThisFeatureIsOnlyAvailableOnIntelCpus = 'Sorry, but this feature is only available on intel cpu''s';
-  rsUUPleaseRunThe64bitVersionOfCheatEngineToMakeUseOfThisFeature = 'Please run the 64-bit version of '+strCheatEngine+' to make use of this feature';
+  rsUUPleaseRunThe64bitVersionOfCheatEngineToMakeUseOfThisFeature = 'Please run the 64-bit version of Cheat Engine to make use of this feature';
   rsUUThisFunctionNeedsAtLeast200BytesForTheHeaderOfTheBuffer = 'This function needs at least 200 bytes for the header of the buffer';
   rsUUTheMaximumNumberOfWorkersIs64 = 'The maximum number of workers is 64';
   rsUUPause = 'Pause';
@@ -740,7 +740,7 @@ begin
     isretdisassembler.disassemble(a, x);
     isret:=iscalldisassembler.LastDisassembleData.isret;
 
-    rettable.Add(address, isret);
+    callTable.Add(address, isret);
   end;
 
   result:=isret;
@@ -964,8 +964,8 @@ end;
 
 procedure TfrmUltimap.ListView1Data(Sender: TObject; Item: TListItem);
 begin
-  item.caption:=symhandler.getNameFromAddress(validlist[item.Index].toAddress, true, true, false);
-  item.SubItems.Add(symhandler.getNameFromAddress(validlist[item.Index].lastFromAddress, true, true, false));
+  item.caption:=symhandler.getNameFromAddress(validlist[item.Index].toAddress, true, true);
+  item.SubItems.Add(symhandler.getNameFromAddress(validlist[item.Index].lastFromAddress, true, true));
   item.SubItems.Add(IntToStr(validlist[item.Index].count));
 
 {$ifdef predictlog}

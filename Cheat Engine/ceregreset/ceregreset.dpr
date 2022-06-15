@@ -18,8 +18,6 @@ uses
   windows,
   registry;
 
-const regname: string={$ifdef altname}'Runtime Modifier'{$else}'Cheat Engine'{$endif};
-
 
 procedure DeleteFullRegKey(reg: Tregistry; keyname: string);
 var i: integer;
@@ -31,11 +29,7 @@ begin
   if r.OpenKey(reg.CurrentPath+'\'+keyname, false) then
   begin
     s:=tstringlist.create;
-    try
-      r.GetKeyNames(s);
-    except
-      exit;
-    end;
+    r.GetKeyNames(s);
     for i:=0 to s.count-1 do
       DeleteFullRegKey(r, s[i]);
 
@@ -79,7 +73,7 @@ begin
     reg.RootKey:=HKEY_CURRENT_USER;
 
     //check that a custom type exists
-    if reg.OpenKey('\Software\'+regname, false) then
+    if reg.OpenKey('\Software\Cheat Engine', false) then
     begin
       //get rid of individual things
       names:=tstringlist.create;
@@ -110,7 +104,7 @@ begin
             end;
 
             reg.closekey;
-            reg.OpenKey('\Software\'+regname, false);
+            reg.OpenKey('\Software\Cheat Engine', false);
           end;
 
           if needsToSaveStuff=false then
@@ -129,10 +123,10 @@ begin
     end;
 
     if needsToSaveStuff=false then
-      reg.DeleteKey('\Software\'+regname); //get rid of the whole key
+      reg.DeleteKey('\Software\Cheat Engine'); //get rid of the whole key
 
     if not silent then
-      messagebox(0,pchar('Successfully reset the settings of '+regname),'Registry Reset',0);
+      messagebox(0,'Successfully reset the settings of Cheat Engine','Registry Reset',0);
 
     reg.free;
   except

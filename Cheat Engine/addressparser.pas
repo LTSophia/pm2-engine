@@ -51,7 +51,7 @@ function getaddress(S: string):ptrUint; //for old code
 
 implementation
 
-uses memorybrowserformunit, StrUtils;
+uses memorybrowserformunit;
 
 
 procedure TAddressParser.seperator;
@@ -94,8 +94,6 @@ procedure TAddressParser.aregister;
 var tmp: ptruint;
     tmps: string;
     c: Pcontext;
-    xregnrstr: string;
-    xregnr: integer;
 begin
 
   tmp:=0;
@@ -105,67 +103,40 @@ begin
   else
     c:=@memorybrowser.lastdebugcontext;
 
-  if tmps[1] in ['X','Y'] then
-  begin
-    if tmps.Substring(1,2)='MM' then
-    begin
-      inc(ch,3);
-      xregnrstr:='';
-      while str[ch] in ['0'..'9'] do
-      begin
-        xregnrstr:=xregnrstr+str[ch];
-        inc(ch);
-      end;
-
-      xregnr:=xregnrstr.ToInteger;
-
-      setlength(total,length(total)+1);
-      total[length(total)-1]:=1;  //value
-
-      setlength(values,length(values)+1);
-      values[length(values)-1]:=pptruint(@c^.{$ifdef cpu64}FltSave.XmmRegisters[xregnr]{$else}ext.XMMRegisters[xregnr]{$endif})^;
-    end
-    else
-      raise exception.Create(rsAPThisIsNotAValidAddress);
-
-  end
+  if tmps='EAX' then tmp:=c.{$ifdef cpu64}rax{$else}eax{$endif} else
+  if tmps='EBX' then tmp:=c.{$ifdef cpu64}rbx{$else}ebx{$endif} else
+  if tmps='ECX' then tmp:=c.{$ifdef cpu64}rcx{$else}ecx{$endif} else
+  if tmps='EDX' then tmp:=c.{$ifdef cpu64}rdx{$else}edx{$endif} else
+  if tmps='ESI' then tmp:=c.{$ifdef cpu64}rsi{$else}esi{$endif} else
+  if tmps='EDI' then tmp:=c.{$ifdef cpu64}rdi{$else}edi{$endif} else
+  if tmps='EBP' then tmp:=c.{$ifdef cpu64}rbp{$else}ebp{$endif} else
+  if tmps='ESP' then tmp:=c.{$ifdef cpu64}rsp{$else}esp{$endif} else
+  if tmps='EIP' then tmp:=c.{$ifdef cpu64}rip{$else}eip{$endif}
+  {$ifdef cpu64}
   else
+  if tmps='RAX' then tmp:=c.rax else
+  if tmps='RBX' then tmp:=c.rbx else
+  if tmps='RCX' then tmp:=c.rcx else
+  if tmps='RDX' then tmp:=c.rdx else
+  if tmps='RSI' then tmp:=c.rsi else
+  if tmps='RDI' then tmp:=c.rdi else
+  if tmps='RBP' then tmp:=c.rbp else
+  if tmps='RSP' then tmp:=c.rsp else
+  if tmps='RIP' then tmp:=c.rip else
+  if tmps='R10' then tmp:=c.r10 else
+  if tmps='R11' then tmp:=c.r11 else
+  if tmps='R12' then tmp:=c.r12 else
+  if tmps='R13' then tmp:=c.r13 else
+  if tmps='R14' then tmp:=c.r14 else
+  if tmps='R15' then tmp:=c.r15 else
   begin
+    tmps:=copy(str,ch,2);
+    if tmps='R8' then tmp:=c.r8 else
+    if tmps='R9' then tmp:=c.r9;
+  end
+  {$endif}
+  ;
 
-    if tmps='EAX' then tmp:=c^.{$ifdef cpu64}rax{$else}eax{$endif} else
-    if tmps='EBX' then tmp:=c^.{$ifdef cpu64}rbx{$else}ebx{$endif} else
-    if tmps='ECX' then tmp:=c^.{$ifdef cpu64}rcx{$else}ecx{$endif} else
-    if tmps='EDX' then tmp:=c^.{$ifdef cpu64}rdx{$else}edx{$endif} else
-    if tmps='ESI' then tmp:=c^.{$ifdef cpu64}rsi{$else}esi{$endif} else
-    if tmps='EDI' then tmp:=c^.{$ifdef cpu64}rdi{$else}edi{$endif} else
-    if tmps='EBP' then tmp:=c^.{$ifdef cpu64}rbp{$else}ebp{$endif} else
-    if tmps='ESP' then tmp:=c^.{$ifdef cpu64}rsp{$else}esp{$endif} else
-    if tmps='EIP' then tmp:=c^.{$ifdef cpu64}rip{$else}eip{$endif}
-    {$ifdef cpu64}
-    else
-    if tmps='RAX' then tmp:=c^.rax else
-    if tmps='RBX' then tmp:=c^.rbx else
-    if tmps='RCX' then tmp:=c^.rcx else
-    if tmps='RDX' then tmp:=c^.rdx else
-    if tmps='RSI' then tmp:=c^.rsi else
-    if tmps='RDI' then tmp:=c^.rdi else
-    if tmps='RBP' then tmp:=c^.rbp else
-    if tmps='RSP' then tmp:=c^.rsp else
-    if tmps='RIP' then tmp:=c^.rip else
-    if tmps='R10' then tmp:=c^.r10 else
-    if tmps='R11' then tmp:=c^.r11 else
-    if tmps='R12' then tmp:=c^.r12 else
-    if tmps='R13' then tmp:=c^.r13 else
-    if tmps='R14' then tmp:=c^.r14 else
-    if tmps='R15' then tmp:=c^.r15 else
-    begin
-      tmps:=copy(str,ch,2);
-      if tmps='R8' then tmp:=c^.r8 else
-      if tmps='R9' then tmp:=c^.r9;
-    end
-    {$endif}
-    ;
-  end;
   setlength(total,length(total)+1);
   total[length(total)-1]:=1;  //value
 
@@ -346,8 +317,7 @@ begin
     'A'..'D' :  value;
     'E'      :  E;
     'F'      :  value;
-    'R','X','Y': aregister;
-
+    'R'      :  aregister;
     '+','-','*' :  seperator;
     else        raise exception.Create(rsAPThisIsNotAValidAddress);
 
@@ -367,25 +337,7 @@ end;
 function TAddressParser.getBaseAddress(s: string):ptruint;
 var maxvalue: ptruint;
     i: integer;
-    part: string;
 begin
-  //strip of the +XXXX part if XXXX is a hexadecimal value
-  i:=RPos('+',s);
-  if i>0 then
-  begin
-    part:=copy(s,i+1);
-    try
-      strtoint('$'+part);
-      //still here so yes
-      s:=copy(s,1,i-1);
-      exit(getAddress(s,true));
-    except
-
-    end;
-  end;
-
-  //still here, use the 'old' method
-
   getaddress(s, true);
   maxvalue:=0;
   for i:=0 to length(values)-1 do

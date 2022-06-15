@@ -35,8 +35,6 @@
   #include <sys/user.h>
 #endif
 
-#include <sys/uio.h>
-
 
 
 #define VQE_PAGEDONLY 1
@@ -47,10 +45,9 @@
 typedef struct
 {
   unsigned long long baseAddress;
-  int part;
-  int is64bit;
   int moduleSize;
   char *moduleName;
+
 } ModuleListEntry, *PModuleListEntry;
 
 typedef struct
@@ -127,12 +124,10 @@ typedef struct {
 typedef struct {
   int ReferenceCount;
   int pid;
-  int is64bit;
   int mapfd; //file descriptor for /proc/pid/maps
   char *path;
   char *maps;
   int mem;
-  int memrw; //Readwrite when set
   int hasLoadedExtension; //set to true if the ceserver extension has been loaded in this process
   int neverForceLoadExtension; //set to true if you don't want to force load the module (if it's loaded, use it, but don't use the injection method)
   pthread_mutex_t extensionMutex;
@@ -149,6 +144,9 @@ typedef struct {
 
   int debuggerServer; //sockets for communicating with the debugger thread by local threads
   int debuggerClient;
+
+
+
 
   pthread_mutex_t debugEventQueueMutex; //probably not necessary as all queue operations are all done in the debuggerthread of the process
 
@@ -186,36 +184,12 @@ typedef struct _regDR6
 #endif
 
 
-/*
-//just declaring this works as well, but going for a dynamic load method in case of an earlier libc that doesn't export it
-ssize_t process_vm_readv(pid_t pid,
-                                const struct iovec *local_iov,
-                                unsigned long liovcnt,
-                                const struct iovec *remote_iov,
-                                unsigned long riovcnt,
-                                unsigned long flags);
 
-       ssize_t process_vm_writev(pid_t pid,
-                                 const struct iovec *local_iov,
-                                 unsigned long liovcnt,
-                                 const struct iovec *remote_iov,
-                                 unsigned long riovcnt,
-                                 unsigned long flags);
-                                 */
-
-typedef ssize_t (*PROCESS_VM_READV)(pid_t pid, const struct iovec *local_iov, unsigned long liovcnt, const struct iovec *remote_iov, unsigned long riovcnt, unsigned long flags);
-typedef ssize_t (*PROCESS_VM_WRITEV)(pid_t pid, const struct iovec *local_iov, unsigned long liovcnt, const struct iovec *remote_iov, unsigned long riovcnt, unsigned long flags);
-
-
-extern PROCESS_VM_READV process_vm_readv;
-extern PROCESS_VM_WRITEV process_vm_writev;
 
 
 void CloseHandle(HANDLE h);
 BOOL Process32Next(HANDLE hSnapshot, PProcessListEntry processentry);
 BOOL Process32First(HANDLE hSnapshot, PProcessListEntry processentry);
-BOOL Module32First(HANDLE hSnapshot, PModuleListEntry moduleentry);
-BOOL Module32Next(HANDLE hSnapshot, PModuleListEntry moduleentry);
 HANDLE CreateToolhelp32Snapshot(DWORD dwFlags, DWORD th32ProcessID);
 HANDLE OpenProcess(DWORD pid);
 int VirtualQueryEx(HANDLE hProcess, void *lpAddress, PRegionInfo rinfo, char *mapsline);
@@ -230,9 +204,6 @@ int WaitForDebugEventNative(PProcessData p, PDebugEvent devent, int tid, int tim
 int WaitForDebugEvent(HANDLE hProcess, PDebugEvent devent, int timeout);
 int ContinueFromDebugEvent(HANDLE hProcess, int tid, int ignoresignal);
 int GetDebugPort(HANDLE hProcess);
-
-int getArchitecture(HANDLE hProcess);
-
 
 int SetBreakpoint(HANDLE hProcess, int tid, int debugreg, void *address, int bptype, int bpsize);
 int RemoveBreakpoint(HANDLE hProcess, int tid, int debugreg, int wasWatchpoint);
@@ -257,9 +228,7 @@ extern pthread_mutex_t debugsocketmutex;
 #endif
 
 int debug_log(const char * format , ...); 
-uintptr_t safe_ptrace(int request, pid_t pid, void * addr, void * data);
-extern int ATTACH_TO_ACCESS_MEMORY;
-extern int ATTACH_TO_WRITE_MEMORY;
+long safe_ptrace(int request, pid_t pid, void * addr, void * data);
 extern int MEMORY_SEARCH_OPTION;
 extern int ATTACH_PID;
 extern unsigned char SPECIFIED_ARCH;

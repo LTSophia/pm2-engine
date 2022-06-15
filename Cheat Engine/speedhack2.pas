@@ -34,8 +34,8 @@ resourcestring
 constructor TSpeedhack.create;
 var i: integer;
     script: tstringlist;
-
-    disableinfo: TDisableInfo;
+    AllocArray: TCEAllocArray;
+    exceptionlist: TCEExceptionListArray;
     x: ptrUint;
 //      y: dword;
     a,b: ptrUint;
@@ -163,11 +163,11 @@ begin
       if symhandler.getAddressFromName('vdso.clock_gettime', true,err)>0 then //prefered
         fname:='vdso.clock_gettime'
       else
-      if symhandler.getAddressFromName('libc.clock_gettime', true, err)>0 then //seen this on android
-        fname:='libc.clock_gettime'
-      else
       if symhandler.getAddressFromName('librt.clock_gettime', true, err)>0 then //secondary
         fname:='librt.clock_gettime'
+      else
+      if symhandler.getAddressFromName('libc.clock_gettime', true, err)>0 then //seen this on android
+        fname:='libc.clock_gettime'
       else
       if symhandler.getAddressFromName('clock_gettime', true, err)>0 then //really nothing else ?
         fname:='clock_gettime'
@@ -187,7 +187,7 @@ begin
           generateAPIHookScript(script, fname, 'new_clock_gettime', 'real_clock_gettime');
 
           try
-           // Clipboard.AsText:=script.text;
+            //Clipboard.AsText:=script.text;
             autoassemble(script,false);
           except
           end;
@@ -273,23 +273,19 @@ begin
       //  Clipboard.AsText:=script.text;
       {$endif}
 
-      disableinfo:=TDisableInfo.create;
       try
-        disableinfo:=TDisableInfo.create;
-        try
-          autoassemble(script,false,true,false,false,disableinfo);
-          //clipboard.AsText:=script.text;
+        setlength(AllocArray,0);
 
-          //fill in the address for the init region
-          for i:=0 to length(disableinfo.allocs)-1 do
-            if disableinfo.allocs[i].varname='init' then
-            begin
-              initaddress:=disableinfo.allocs[i].address;
-              break;
-            end;
-        finally
-          disableinfo.free;
-        end;
+        autoassemble(script,false,true,false,false,AllocArray, exceptionlist);
+        //clipboard.AsText:=script.text;
+
+        //fill in the address for the init region
+        for i:=0 to length(AllocArray)-1 do
+          if AllocArray[i].varname='init' then
+          begin
+            initaddress:=AllocArray[i].address;
+            break;
+          end;
 
 
       except

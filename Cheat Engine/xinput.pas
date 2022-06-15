@@ -232,9 +232,6 @@ var
   c: TWinControl;
   h: THandle;
   s: XINPUT_STATE;
-
-  fgw: thandle;
-  pid: dword;
 begin
   if not assigned(XInputGetKeystroke) then exit;
 
@@ -242,26 +239,19 @@ begin
   begin
     if XInputGetState(0,s)=0 then
     begin
-      fgw:=GetForegroundWindow;
-      if GetWindowThreadProcessId(fgw, pid)<>0 then
+      i:=XInputGetKeystroke(0,0,@ks);
+      if i=ERROR_SUCCESS then
       begin
-        if pid=GetCurrentProcessId then
+        c:=screen.ActiveControl;
+        if c<>nil then
         begin
-          i:=XInputGetKeystroke(0,0,@ks);
-          if i=ERROR_SUCCESS then
-          begin
-            c:=screen.ActiveControl;
-            if c<>nil then
-            begin
-              h:=screen.ActiveControl.Handle;
+          h:=screen.ActiveControl.Handle;
 
-              if (ks.Flags or XINPUT_KEYSTROKE_KEYDOWN)=XINPUT_KEYSTROKE_KEYDOWN then
-                SendMessage(h, WM_KEYDOWN, ks.VirtualKey, 0);
+          if (ks.Flags or XINPUT_KEYSTROKE_KEYDOWN)=XINPUT_KEYSTROKE_KEYDOWN then
+            SendMessage(h, WM_KEYDOWN, ks.VirtualKey, 0);
 
-              if (ks.Flags or XINPUT_KEYSTROKE_KEYUP)=XINPUT_KEYSTROKE_KEYUP then
-                SendMessage(h, WM_KEYUP, ks.VirtualKey, 0);
-            end;
-          end;
+          if (ks.Flags or XINPUT_KEYSTROKE_KEYUP)=XINPUT_KEYSTROKE_KEYUP then
+            SendMessage(h, WM_KEYUP, ks.VirtualKey, 0);
         end;
       end;
 

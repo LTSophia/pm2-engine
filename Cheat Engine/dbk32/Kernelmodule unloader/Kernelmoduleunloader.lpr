@@ -118,12 +118,9 @@ var f,driverdat: textfile;
     dataloc: string;
     apppath: pchar;
 
-
-    deletedService: boolean;
 {$R *.res}
 
 begin
-  deletedService:=false;
   kernel32dll:=loadlibrary('kernel32.dll');
   loadlibrary('user32.dll');
   loadlibrary('comctl32.dll');
@@ -180,7 +177,6 @@ begin
 
         ok:=ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok2:=DeleteService(hService);
-        if ok2 then deletedService:=true;
       end;
 
       hservice:=OpenService(hSCManager, 'DRIVER1111', SERVICE_ALL_ACCESS);
@@ -199,7 +195,6 @@ begin
 
         ok:=ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok2:=DeleteService(hService);
-        if ok2 then deletedService:=true;
       end;
 
 
@@ -224,7 +219,6 @@ begin
 
         ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok:=DeleteService(hService);
-        if ok then deletedService:=true;
 
         CloseServiceHandle(hservice);
       end;
@@ -251,7 +245,6 @@ begin
 
         ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok:=DeleteService(hService);
-        if ok then deletedService:=true;
 
         CloseServiceHandle(hservice);
       end;
@@ -277,7 +270,6 @@ begin
 
         ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok:=DeleteService(hService);
-        if ok then deletedService:=true;
 
         CloseServiceHandle(hservice);
       end;
@@ -286,8 +278,8 @@ begin
       hService := OpenService(hSCManager, 'CEDRIVER55', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
-        outputdebugstring('Opened service CEDRIVER55');
-        hDevice := FileCreate('\\.\CEDRIVER55'); { *Converted from CreateFile*  }
+        outputdebugstring('Opened service CEDRIVER52');
+        hDevice := FileCreate('\\.\CEDRIVER52'); { *Converted from CreateFile*  }
 
         if hdevice<>INVALID_HANDLE_VALUE then
         begin
@@ -303,43 +295,6 @@ begin
 
         ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok:=DeleteService(hService);
-        if ok then deletedService:=true;
-
-        CloseServiceHandle(hservice);
-      end;
-
-      hService := OpenService(hSCManager, 'CEDRIVER60', SERVICE_ALL_ACCESS);
-      if hservice<>0 then
-      begin
-        outputdebugstring('Opened service CEDRIVER60');
-        s:='CEDRIVER60';
-        hDevice := CreateFile(pchar('\\.\'+s),
-                              GENERIC_READ or GENERIC_WRITE,
-                              FILE_SHARE_READ or FILE_SHARE_WRITE,
-                              nil,
-                              OPEN_EXISTING,
-                              FILE_FLAG_OVERLAPPED,
-                              0);
-
-
-        //hDevice := FileCreate('\\.\CEDRIVER60'); { *Converted from CreateFile*  }
-
-        if hdevice<>INVALID_HANDLE_VALUE then
-        begin
-          //unhook (in case it was protecting something)
-          outputdebugstring('Calling disableglobaldebug');
-          foreachcpu(disableGlobalDebug,nil);
-
-          outputdebugstring('calling disableInterruptHooks');
-          foreachcpu(disableInterruptHooks,nil);
-
-          FileClose(hdevice); { *Converted from CloseHandle*  }
-        end else ok:=false;
-
-        ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
-        ok:=DeleteService(hService);
-
-        if ok then deletedService:=true;
 
         CloseServiceHandle(hservice);
       end;
@@ -406,7 +361,7 @@ begin
       end;
 
       try
-        s:='CEDRIVER73';
+        s:='CEDRIVER60';
         getmem(apppath,250);
         GetModuleFileName(0,apppath,250);
 
@@ -452,7 +407,6 @@ begin
 
         ControlService(hService, SERVICE_CONTROL_STOP, serviceStatus);
         ok:=DeleteService(hService);
-        if ok then deletedService:=true;
 
         CloseServiceHandle(hservice);
       end else
@@ -483,7 +437,7 @@ begin
   outputdebugstring('near the end');
   if not setup then
   begin
-    if deletedService then
+    if ok or ok2 then
       messagebox(0,'The driver is successfully unloaded.','dbk32.sys unloaded',MB_ICONINFORMATION or MB_OK)
     else
       messagebox(0,'The driver failed to unload or is already unloaded. If you think it''s still loaded then reboot and run the unloader again.','DBK32.sys unloader',MB_ICONERROR or MB_OK)

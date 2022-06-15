@@ -70,55 +70,12 @@ var v: qword;
     d: double;
     x: PTRUINT;
 
-    i,j: integer;
+    i: integer;
     ba: PByteArray;
 
     b: tbytes;
     us: Widestring;
-
-    gs: array of string;
-
-    vs: string;
-    offsetstring: string;
-    offset: integer;
 begin
-  if variabletype=vtGrouped then //parse the groupscan result string and pass each entry to this function again
-  begin
-    //value="type[offset]:value type[offset]:value type[offset]:value"
-    gs:=value.Split([' ']); //gs[0]="type[offset]:value" gs[1]="type[offset]:value"
-
-    for i:=0 to length(gs)-1 do
-    begin
-      j:=pos(']',gs[i]);
-      if j<=0 then exit;
-      if j>=length(gs[i]) then exit;
-      if gs[i][j+1]<>':' then exit; //has to have a ]:
-
-      if (length(gs[i])>=6) and (gs[i][2]='[') then
-      begin
-        case gs[i][1] of
-          '1': variabletype:=vtByte;
-          '2': variabletype:=vtWord;
-          '4': variabletype:=vtDword;
-          '8': variabletype:=vtQword;
-          's': variabletype:=vtSingle;
-          'd': variabletype:=vtDouble;
-          else exit;
-        end;
-
-        //get the offset
-        offsetstring:=copy(gs[i],3, j-3);
-        offset:=HexStrToInt64(offsetstring);
-        value:=copy(gs[i],j+2); //everything after the :
-
-        ParseStringAndWriteToAddress(value,address+offset,variabletype);
-      end
-      else exit;
-    end;
-
-    exit;
-  end;
-
   if hexadecimal and (variabletype in [vtsingle, vtDouble]) then
   begin
     if variabletype=vtSingle then
@@ -272,14 +229,6 @@ begin
       end;
     end;
 
-    vtPointer:
-    begin
-      if processhandler.is64Bit then
-        result:=symhandler.getNameFromAddress(PQWord(@buf[0])^)
-      else
-        result:=symhandler.getNameFromAddress(PDWord(@buf[0])^);
-    end;
-
     vtSingle:
     begin
       if showashexadecimal then
@@ -302,15 +251,6 @@ begin
       CopyMemory(s, buf, bytesize);
       s[bytesize]:=#0;
 
-      {$ifdef darwin}
-      //sanitize so it's nothing strange. Sorry for asian users, but mac's shrivel up and die when they look at wrongly formatted text
-      for i:=0 to bytesize-1 do
-      begin
-        if not inrange(ord(s[i]),32,127) then
-          s[i]:='.';
-      end;
-      {$endif}
-
       if variableType=vtCodePageString then
         result:=WinCPToUTF8(s)
       else
@@ -321,20 +261,6 @@ begin
     begin
       getmem(ws, bytesize+2);
       copymemory(ws, buf, bytesize);
-
-      {$ifdef darwin}
-      //sanitize so it's nothing strange. Sorry for asian users, but mac's shrivel up and die when they look at wrongly formatted text
-      for i:=0 to bytesize-1 do
-      begin
-        if i mod 2=0 then
-        begin
-          if not inrange(pbytearray(ws)[i],32,127) then
-            pbytearray(ws)[i]:=ord('.');
-        end
-        else
-          pbytearray(ws)[i]:=0;
-      end;
-      {$endif}
 
       try
         pbytearray(ws)[bytesize+1]:=0;
@@ -416,12 +342,6 @@ begin
         result:=readAndParsePointer(address, @buf[0], variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
     end;
 
-    vtPointer:
-    begin
-      if ReadProcessMemory(processhandle,pointer(address),@buf[0],processhandler.pointersize,x) then
-        result:=readAndParsePointer(address, @buf[0], variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
-    end;
-
     vtSingle:
     begin
       if ReadProcessMemory(processhandle,pointer(address),@buf[0],4,x) then
@@ -491,11 +411,6 @@ begin
       end;
     end;
   end;
-
-  {$ifdef darwin}
-  if result='' then
-    result:=' ';
-  {$endif}
 end;
 
 
@@ -554,7 +469,7 @@ begin
 
       if clean then result:='' else result:='(pointer)';
 
-      result:=result+symhandler.getNameFromAddress(a,true,true, false);
+      result:=result+symhandler.getNameFromAddress(a,true,true);
 
 //      result:='(pointer)'+inttohex(pqword(buf)^,16) else result:='(pointer)'+inttohex(pdword(buf)^,8);
     end;
@@ -710,13 +625,13 @@ begin
       if processhandler.is64bit then
       begin
         if (address mod 8) = 0 then
-          val('$'+symhandler.getNameFromAddress(pqword(@buf[0])^,true,true,false, nil,nil,8,false),v,e)
+          val('$'+symhandler.getNameFromAddress(pqword(@buf[0])^,true,true,nil,nil,8,false),v,e)
         else
           e:=0;
       end
       else
       begin
-        val('$'+symhandler.getNameFromAddress(pdword(@buf[0])^,true,true,false, nil,nil,8,false),v,e);
+        val('$'+symhandler.getNameFromAddress(pdword(@buf[0])^,true,true,nil,nil,8,false),v,e);
       end;
 
       if e>0 then //named

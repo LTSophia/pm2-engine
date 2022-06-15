@@ -13,7 +13,7 @@ uses
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ComCtrls,{$ifndef net}NewKernelHandler,{$endif}CEFuncProc,
-  ExtCtrls, Menus, Clipbrd, LResources, commonTypeDefs, symbolhandler, betterControls;
+  ExtCtrls, Menus, Clipbrd, LResources, commonTypeDefs, symbolhandler;
 
 type TCodeCaveScanner=class(tthread)
   private

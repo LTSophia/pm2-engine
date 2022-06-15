@@ -10,13 +10,13 @@ interface
 
 uses
   {$ifdef darwin}
-  macport, math,
+  macport,
   {$endif}
   {$ifdef windows}
   windows,
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, cefuncproc, ComCtrls, LResources, NewKernelHandler, commonTypeDefs, betterControls;
+  Dialogs, StdCtrls, ExtCtrls, cefuncproc, ComCtrls, LResources, NewKernelHandler, commonTypeDefs;
 
 resourcestring
   rsFPPExtended = 'Extended (default)';
@@ -45,7 +45,6 @@ type
     { Private declarations }
     context: PContext;
     contextCopy: TContext;
-    loadedFormPosition: boolean;
     procedure ValueDoubleClick(sender: TObject);
   public
     { Public declarations }
@@ -54,7 +53,7 @@ type
   end;
 
 
-{$ifdef cpux86_64}
+{$ifdef cpu64}
 procedure doubletoextended(float64:pointer; outextended:pointer); assembler;
 procedure extendedtodouble(float80:pointer;var outdouble:double); assembler;
 {$endif}
@@ -64,9 +63,9 @@ var frmFloatingPointPanel:TfrmFloatingPointPanel;
 
 implementation
 
-uses MemoryBrowserFormUnit, processhandlerunit, debughelper, DPIHelper;
+uses MemoryBrowserFormUnit, processhandlerunit, debughelper;
 
-{$ifdef cpux86_64}
+{$ifdef cpu64}
 //coded by mgr.inz.player
 procedure extendedtodouble(float80:pointer;var outdouble:double); assembler;
   var
@@ -184,7 +183,7 @@ begin
       5: pss^:=StrToFloat(v);
       6:
       begin
-        {$ifdef cpux86_64}
+        {$ifdef cpu64}
         vd:=StrToFloat(v);
         doubleToExtended(@vd, p);
         {$else}
@@ -234,8 +233,6 @@ var i,j: integer;
 
     classic: boolean;
 
-    blocksize: integer;
-
     procedure newLabel(text: string; id: integer);
     begin
       lbl:=tlabel.create(sbData);
@@ -282,6 +279,8 @@ begin
           6: sbData.ChildSizing.ControlsPerLine:=1+1; //extended
         end;
 
+
+
         for i:=0 to 7 do
         begin
           newlabel('ST('+inttostr(i)+'):',-1);
@@ -302,7 +301,7 @@ begin
               begin
                 str:=str+inttohex(pba[j],2);
                 if j<15 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(inttohex(pba[j],2), (i*{$ifdef cpu64}16{$else}10{$endif})+j);
               end;
@@ -312,21 +311,21 @@ begin
 
             1:
             begin
-              mData.Lines.Add(inttohex(pwa[0],4)+'  _  '+inttohex(pwa[1],4)+'  _  '+inttohex(pwa[2],4)+'  _  '+inttohex(pwa[3],4)+'  _  '+inttohex(pwa[4],4){$ifdef cpu64}+'  _  '+inttohex(pwa[5],4)+'  _  '+inttohex(pwa[6],4)+'  _  '+inttohex(pwa[7],4){$endif}); //2byte
+              mData.Lines.Add(inttohex(pwa[0],4)+' _ '+inttohex(pwa[1],4)+' _ '+inttohex(pwa[2],4)+' _ '+inttohex(pwa[3],4)+' _ '+inttohex(pwa[4],4){$ifdef cpu64}+' _ '+inttohex(pwa[5],4)+' _ '+inttohex(pwa[6],4)+' _ '+inttohex(pwa[7],4){$endif}); //2byte
               for j:=0 to {$ifdef cpu64}7{$else}3{$endif} do
                 newLabel(inttohex(pwa[j],4), (i*{$ifdef cpu64}16{$else}10{$endif})+(j*2));
             end;
 
             2:
             begin
-              mData.Lines.Add(inttohex(pda[0],8)+'  _  '+inttohex(pda[1],8){$ifdef cpu64}+'  _  '+inttohex(pda[2],8)+'  _  '+inttohex(pda[3],8){$endif}); //4byte
+              mData.Lines.Add(inttohex(pda[0],8)+' _ '+inttohex(pda[1],8){$ifdef cpu64}+' _ '+inttohex(pda[2],8)+' _ '+inttohex(pda[3],8){$endif}); //4byte
               for j:=0 to {$ifdef cpu64}3{$else}1{$endif} do
                 newLabel(inttohex(pda[j],8), (i*{$ifdef cpu64}16{$else}10{$endif})+(j*4));
             end;
 
             3:
             begin
-              mData.Lines.Add(inttohex(pqa[0],16){$ifdef cpu64}+'  _  '+inttohex(pqa[1],16){$endif}); //8 byte
+              mData.Lines.Add(inttohex(pqa[0],16){$ifdef cpu64}+' _ '+inttohex(pqa[1],16){$endif}); //8 byte
               for j:=0 to {$ifdef cpu64}1{$else}0{$endif} do
                 newLabel(inttohex(pqa[j],17), (i*{$ifdef cpu64}16{$else}10{$endif})+(j*8));
             end;
@@ -347,7 +346,7 @@ begin
 
             6:
             begin
-              {$ifdef cpux86_64}
+              {$ifdef cpu64}
               extendedtodouble(p, d);
               {$else}
               d:=pea[0];
@@ -411,7 +410,7 @@ begin
               begin
                 str:=str+inttohex(pba[j],2);
                 if j<15 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(inttohex(pba[j],2), i*16+j);
               end;
@@ -426,7 +425,7 @@ begin
               begin
                 str:=str+inttohex(pwa[j],4);
                 if j<7 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(inttohex(pwa[j],4), i*16+j*2);
               end;
@@ -443,7 +442,7 @@ begin
               begin
                 str:=str+inttohex(pda[j],8);
                 if j<3 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(inttohex(pda[j],8), i*16+j*4);
               end;
@@ -458,7 +457,7 @@ begin
               begin
                 str:=str+inttohex(pqa[j],16);
                 if j<1 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(inttohex(pqa[j],16), i*16+j*8);
               end;
@@ -473,7 +472,7 @@ begin
               begin
                 str:=str+format('%f',[psa[j]]);
                 if j<3 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(format('%f',[psa[j]]), i*16+j*4);
               end;
@@ -488,7 +487,7 @@ begin
               begin
                 str:=str+format('%f',[pssa[j]]);
                 if j<1 then
-                  str:=str+'  _  ';
+                  str:=str+' _ ';
 
                 newLabel(format('%f',[pssa[j]]), i*16+j*8);
               end;
@@ -506,26 +505,15 @@ begin
 end;
 
 procedure TfrmFloatingPointPanel.FormShow(Sender: TObject);
-var w: integer;
 begin
   if self<>frmFloatingPointPanel then //only show the new one on the memview version
   begin
     cbClassicView.checked:=true;
-    //cbClassicView.visible:=false;
+    cbClassicView.visible:=false;
   end;
 
   mData.Font.Height:=GetFontData(font.Handle).Height;
   UpdatedContext;
-
-  AdjustComboboxSize(cbContextSection, canvas);
-  AdjustComboboxSize(cbDisplayType, canvas);
-
-  w:=max(cbContextSection.Width, cbDisplayType.width)+16;
-  cbContextSection.width:=w;
-  cbDisplayType.width:=w;
-
-  if loadedFormPosition=false then
-    width:=max(width, canvas.TextWidth('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'));
 end;
 
 procedure TfrmFloatingPointPanel.FormDestroy(Sender: TObject);
@@ -556,11 +544,7 @@ end;
 procedure TfrmFloatingPointPanel.FormCreate(Sender: TObject);
 begin
   cbDisplayType.ItemIndex:=4;
-  loadedFormPosition:=LoadFormPosition(self);
-  sbdata.font.color:=clWindowtext;
-
-  mdata.font.Name:='Courier New';
-//  mdata.font.size:=;
+  LoadFormPosition(self);
 end;
 
 initialization

@@ -5,8 +5,8 @@ unit Unit1;
 interface
 
 uses
-  {$ifdef windows}windows, {$endif}LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources{,tlhelp32, XPMan}, betterControls;
+  windows, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, LResources{,tlhelp32, XPMan};
 
 type
 
@@ -43,7 +43,7 @@ resourcestring
   rsFirstStepTooHardBetterGiveUpNow =
     'First step too hard? Go to forum.cheatengine.org, then click on "Tutorials" for helpful guides!';
 
-  rsTutorial1='Welcome to the Cheat Engine Tutorial (v3.6)'+#13#10+
+  rsTutorial1='Welcome to the Cheat Engine Tutorial (v3.4)'+#13#10+
               ''+#13#10+
               'This tutorial will teach you the basics of cheating in video games. It will also show you foundational aspects of using Cheat Engine (or CE for short). Follow the steps below to get started.'+#13#10+
               ''+#13#10+
@@ -135,8 +135,7 @@ begin
   forms.Application.ShowButtonGlyphs:=sbgNever;
   randomize;
 
-  caption:=altnamer(caption);
-  memo1.lines.text:=altnamer(rsTutorial1);
+  memo1.lines.text:=rsTutorial1;
 
   font.size:=12;
 

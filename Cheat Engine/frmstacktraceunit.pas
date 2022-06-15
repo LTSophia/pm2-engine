@@ -13,7 +13,7 @@ uses
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs,NewKernelHandler, CEFuncProc, ComCtrls,CEDebugger, KernelDebugger,
-  Menus, LResources, debughelper, symbolhandler, betterControls;
+  Menus, LResources, debughelper, symbolhandler;
 
 type
 
@@ -159,8 +159,6 @@ var
 
     found: boolean;
     i: integer;
-
-    li: TListitem;
     {$endif}
 begin
 {$ifdef windows}
@@ -216,12 +214,11 @@ begin
     while stackwalk64(machinetype,processhandle,threadhandle,@stackframe,cp, rpm64 ,function_table_access_routine64, get_module_base_routine64,nil) do
     begin
 
-      li:=listview1.Items.Add;
-      li.data:=pointer(stackframe.AddrReturn.Offset);
-      li.caption:=symhandler.getNameFromAddress(stackframe.AddrPC.Offset, true, true, false);
-      li.SubItems.add(inttohex(stackframe.AddrStack.Offset,8));
-      li.SubItems.add(inttohex(stackframe.AddrFrame.Offset,8));
-      li.SubItems.add(symhandler.getNameFromAddress(stackframe.AddrReturn.Offset,true,true, false));
+
+      listview1.Items.Add.Caption:=symhandler.getNameFromAddress(stackframe.AddrPC.Offset, true, true);
+      listview1.items[listview1.Items.Count-1].SubItems.add(inttohex(stackframe.AddrStack.Offset,8));
+      listview1.items[listview1.Items.Count-1].SubItems.add(inttohex(stackframe.AddrFrame.Offset,8));
+      listview1.items[listview1.Items.Count-1].SubItems.add(symhandler.getNameFromAddress(stackframe.AddrReturn.Offset,true,true));
 
       a:=stackframe.Params[0];
       b:=stackframe.Params[1];
@@ -270,11 +267,7 @@ end;
 procedure TfrmStacktrace.ListView1DblClick(Sender: TObject);
 begin
   if listview1.Selected<>nil then
-  begin
     memorybrowser.disassemblerview.TopAddress:=symhandler.getAddressFromName(listview1.Selected.Caption);
-    if memorybrowser.visible=false then
-      memorybrowser.show();
-  end;
 end;
 
 procedure TfrmStacktrace.shadowstacktrace(context: _context; stackcopy: pointer; stackcopysize: integer);

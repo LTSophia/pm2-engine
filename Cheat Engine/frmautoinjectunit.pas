@@ -11,149 +11,26 @@ uses
   windows,
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, Menus, MemoryRecordUnit, commonTypeDefs, CustomTypeHandler,
+  StdCtrls, ExtCtrls, Menus, MemoryRecordUnit, commonTypeDefs, customtypehandler,
   disassembler, symbolhandler, symbolhandlerstructs, SynEdit, SynHighlighterCpp,
   SynHighlighterAA, LuaSyntax, SynPluginMultiCaret, SynEditSearch, tablist,
-  SynGutterBase, SynEditMarks, math, SynEditMiscClasses, SynEditTextBase,
-  SynEditTextBuffer, LazSynEditText, SynEditLines, SynEditKeyCmds, betterControls;
+  SynGutterBase, SynEditMarks, math;
 
 
-type
-  TCallbackRoutine=procedure(memrec: TMemoryRecord; script: string; changed: boolean) of object;
-  TCustomCallbackRoutine=procedure(ct: TCustomType; script: string; changed: boolean; lua: boolean) of object;
+type TCallbackRoutine=procedure(memrec: TMemoryRecord; script: string; changed: boolean) of object;
+type TCustomCallbackRoutine=procedure(ct: TCustomType; script:string; changed: boolean; lua: boolean) of object;
 
-  TPlusSynEdit=class(TSynEdit)
-  private
-  public
-    property SLines: TSynEditStrings read GetTextBuffer;
-  end;
+type TScripts=array of record
+                script: string;
+                filename: string;
+                undoscripts: array [0..4] of record
+                               oldscript: string;
+                               startpos: integer;
+                             end;
+                currentundo: integer;
+              end;
 
-  TSynEditPlus = class(TPlusSynEdit)
-  published
-    // inherited properties
-    property Align;
-    property Beautifier;
-    property BlockIndent;
-    property BlockTabIndent;
-    property BorderSpacing;
-    property Anchors;
-    property Constraints;
-    property Color;
-    property Cursor default crIBeam;
-    property OffTextCursor default crDefault;
-    property Enabled;
-    property Font;
-    property Height;
-    property Name;
-    property ParentColor;
-    property ParentFont;
-    property ParentShowHint;
-    property PopupMenu;
-    property ShowHint;
-    property TabOrder;
-    property TabStop default True;
-    property Tag;
-    property Visible;
-    property Width;
-    // inherited events
-    property OnClick;
-    property OnDblClick;
-    property OnTripleClick;
-    property OnQuadClick;
-    property OnDragDrop;
-    property OnDragOver;
-// ToDo Docking
-    property OnEndDock;
-    property OnEndDrag;
-    property OnEnter;
-    property OnExit;
-    property OnKeyDown;
-    property OnKeyPress;
-    property OnKeyUp;
-    property OnMouseDown;
-    property OnMouseMove;
-    property OnMouseUp;
-    property OnClickLink;
-    property OnMouseLink;
-    property OnMouseEnter;
-    property OnMouseLeave;
-    property OnMouseWheel;
-    property OnMouseWheelDown;
-    property OnMouseWheelUp;
-// ToDo Docking
-    property OnStartDock;
-    property OnStartDrag;
-    property OnUTF8KeyPress;
-    // TCustomSynEdit properties
-    property BookMarkOptions;
-    property BorderStyle default bsSingle;
-    property ExtraCharSpacing;
-    property ExtraLineSpacing;
-    property Gutter;
-    property RightGutter;
-    property HideSelection;
-    property Highlighter;
-    property InsertCaret;
-    property InsertMode;
-    property Keystrokes;
-    property MouseActions;
-    property MouseTextActions;
-    property MouseSelActions;
-    property Lines;
-    property MaxLeftChar;
-    property MaxUndo;
-    property Options;
-    property Options2;
-    property MouseOptions;
-    property VisibleSpecialChars;
-    property OverwriteCaret;
-    property ReadOnly;
-    property RightEdge;
-    property RightEdgeColor;
-    property ScrollBars;
-    property SelectedColor;
-    property IncrementColor;
-    property HighlightAllColor;
-    property BracketHighlightStyle;
-    property BracketMatchColor;
-    property FoldedCodeColor;
-    property MouseLinkColor;
-    property LineHighlightColor;
-    property DefaultSelectionMode;
-    property SelectionMode;
-    property TabWidth;
-    property WantTabs;
-    // TCustomSynEdit events
-    property OnChange;
-    property OnChangeUpdating;
-    property OnCutCopy;
-    property OnPaste;
-    property OnClearBookmark;                                                   // djlp 2000-08-29
-    property OnCommandProcessed;
-    property OnDropFiles;
-    property OnGutterClick;
-    property OnPaint;
-    property OnPlaceBookmark;
-    property OnProcessCommand;
-    property OnProcessUserCommand;
-    property OnReplaceText;
-    property OnShowHint;
-    property OnSpecialLineColors; deprecated;
-    property OnSpecialLineMarkup;
-    property OnStatusChange;
-  end;
-
-  TAAScriptTabData=class
-  public
-    script: string;
-    filename: string;
-    undogroups: tlist;
-    carretpos: Tpoint;
-    topline: integer;
-    flags: array of TSynEditStringFlags;
-  end;
-
-  TBooleanArray = Array of Boolean;
+type TBooleanArray = Array of Boolean;
 
 {
 The TDisassemblyLine originates from jgoemat  ( http://forum.cheatengine.org/viewtopic.php?t=566415 )
@@ -161,38 +38,39 @@ Originally it was just an Object but I changed it to a TObject because I think a
 standalone TDisassembler object might be more efficient reducing the amount of
 string parsing
 }
-  TDisassemblyLine = class(TObject)
-    Address: ptrUint;                // actual address value
-    AddressString: String;           // module+offset if specified
-    Comment: String;                 // comment part (second parameter of disassembly)
-    OriginalHexBytes : String;       // original hex from disassembly (grouped)
-    Code: String;                    // code portion of disassembly
-    Size: Integer;                   // number of bytes for this instruction
-    Disassembler: TDisassembler;     // The disassembler used to disassemble (free by caller)
+type TDisassemblyLine = class(TObject)
+  Address: ptrUint;                // actual address value
+  AddressString: String;           // module+offset if specified
+  Comment: String;                 // comment part (second parameter of disassembly)
+  OriginalHexBytes : String;       // original hex from disassembly (grouped)
+  Code: String;                    // code portion of disassembly
+  Size: Integer;                   // number of bytes for this instruction
+  Disassembler: TDisassembler;     // The disassembler used to disassemble (free by caller)
 
-    procedure Init(_address: ptrUint; _mi: TModuleInfo);
-    procedure Shorten(_newsize: Integer); // if we overran our injection point, change to 'db'
-    function IsStarter : Boolean;
-    function IsEnder : Boolean;
-    function IsValid : Boolean;
-    function GetHexBytes : String; // hex bytes with spaces between each byte
-    function GetMaskFlags : TBooleanArray;
-    constructor create;
-    destructor destroy; override;
-  end;
+  procedure Init(_address: ptrUint; _mi: TModuleInfo);
+  procedure Shorten(_newsize: Integer); // if we overran our injection point, change to 'db'
+  function IsStarter : Boolean;
+  function IsEnder : Boolean;
+  function IsValid : Boolean;
+  function GetHexBytes : String; // hex bytes with spaces between each byte
+  function GetMaskFlags : TBooleanArray;
+  constructor create;
+  destructor destroy; override;
+end;
 
-  TAOBFind = Object
-    Address: ptrUint;               // address where AOB was found
-    CodeSize: Integer;              // size of code we will always use
-    Size: Integer;
-    Bytes: Array of Byte;           // bytes we'll read from memory
+type TAOBFind = Object
+  Address: ptrUint;               // address where AOB was found
+  CodeSize: Integer;              // size of code we will always use
+  Size: Integer;
+  Bytes: Array of Byte;           // bytes we'll read from memory
 
-    procedure Init(_address: ptrUint; _codesize: Integer);
-    function IsMatch(var maskBytes: Array Of Byte; var maskFlags : TBooleanArray; startIndex, endIndex: Integer): Boolean;
-  end;
+  procedure Init(_address: ptrUint; _codesize: Integer);
+  function IsMatch(var maskBytes: Array Of Byte; var maskFlags : TBooleanArray; startIndex, endIndex: Integer): Boolean;
+end;
 
-  TScriptMode=(smAutoAssembler, smLua, smGnuAssembler);
+type TScriptMode=(smAutoAssembler, smLua, smGnuAssembler);
 
+type
   TAutoAssemblerTemplateCallback=procedure(script: TStrings; sender: TObject) of object;
   TAutoAssemblerTemplate=record
                            name: string;
@@ -208,31 +86,21 @@ type
 
   TfrmAutoInject = class(TForm)
     aaImageList: TImageList;
-    btnExecute: TButton;
     MainMenu1: TMainMenu;
     File1: TMenuItem;
     menuAOBInjection: TMenuItem;
     menuFullInjection: TMenuItem;
-    MenuItem1: TMenuItem;
-    mi14ByteJMP: TMenuItem;
-    mi5ByteJMP: TMenuItem;
-    N1: TMenuItem;
-    miMoveLeft: TMenuItem;
-    miMoveRight: TMenuItem;
-    miLuaSyntaxCheck: TMenuItem;
-    miRenameTab: TMenuItem;
     miReplace: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
     miRedo: TMenuItem;
     mifindNext: TMenuItem;
-    mifindPrevious: TMenuItem;
     miCallLua: TMenuItem;
     miNewWindow: TMenuItem;
     Panel1: TPanel;
+    Button1: TButton;
     Load1: TMenuItem;
     Panel2: TPanel;
-    Panel3: TPanel;
     ReplaceDialog1: TReplaceDialog;
     Save1: TMenuItem;
     OpenDialog1: TOpenDialog;
@@ -246,10 +114,10 @@ type
     SaveAs1: TMenuItem;
     PopupMenu1: TPopupMenu;
     Coderelocation1: TMenuItem;
-    miNewTab: TMenuItem;
+    New1: TMenuItem;
     N2: TMenuItem;
     Syntaxhighlighting1: TMenuItem;
-    TabMenu: TPopupMenu;
+    closemenu: TPopupMenu;
     Close1: TMenuItem;
     Inject1: TMenuItem;
     Injectincurrentprocess1: TMenuItem;
@@ -264,21 +132,15 @@ type
     undotimer: TTimer;
     View1: TMenuItem;
     AAPref1: TMenuItem;
-    procedure btnExecuteClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure Load1Click(Sender: TObject);
     procedure menuAOBInjectionClick(Sender: TObject);
     procedure menuFullInjectionClick(Sender: TObject);
-    procedure MenuItem1Click(Sender: TObject);
-    procedure miLuaSyntaxCheckClick(Sender: TObject);
-    procedure miMoveLeftClick(Sender: TObject);
-    procedure miMoveRightClick(Sender: TObject);
-    procedure miRenameTabClick(Sender: TObject);
     procedure miReplaceClick(Sender: TObject);
     procedure MenuItem2Click(Sender: TObject);
     procedure MenuItem3Click(Sender: TObject);
     procedure mifindNextClick(Sender: TObject);
-    procedure mifindPreviousClick(Sender: TObject);
     procedure miCallLuaClick(Sender: TObject);
     procedure miNewWindowClick(Sender: TObject);
     procedure miRedoClick(Sender: TObject);
@@ -298,11 +160,12 @@ type
     procedure assemblescreenKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure Coderelocation1Click(Sender: TObject);
-    procedure miNewTabClick(Sender: TObject);
+    procedure New1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure TabMenuPopup(Sender: TObject);
     procedure TabControl1Change(Sender: TObject);
     procedure Syntaxhighlighting1Click(Sender: TObject);
+    procedure TabControl1ContextPopup(Sender: TObject; MousePos: TPoint;
+      var Handled: Boolean);
     procedure Close1Click(Sender: TObject);
     procedure Injectincurrentprocess1Click(Sender: TObject);
     procedure Injectintocurrentprocessandexecute1Click(Sender: TObject);
@@ -316,7 +179,6 @@ type
     procedure miUndoClick(Sender: TObject);
   private
     { Private declarations }
-
     LoadedFormPosition: boolean;
 
     AAHighlighter: TSynAASyn;
@@ -326,8 +188,11 @@ type
     assemblescreenCaret: TSynPluginMultiCaret;
     assembleSearch: TSynEditSearch;
 
-    newtabCount: integer;
+    oldtabindex: integer;
+    scripts: TScripts;
+
     selectedtab: integer;
+
 
     fScriptMode: TScriptMode;
     fCustomTypeScript: boolean;
@@ -339,26 +204,16 @@ type
 
     procedure injectscript(createthread: boolean);
     procedure tlistOnTabChange(sender: TObject; oldselection: integer);
-    procedure tlistOnTabCreate(sender: TObject; index: integer);
-    procedure tlistOnTabDestroy(sender: TObject; index: integer);
-
     procedure setCustomTypeScript(x: boolean);
     procedure gutterclick(Sender: TObject; X, Y, Line: integer; mark: TSynEditMark);
     procedure assemblescreenchange(sender: TObject);
 
     procedure CustomTemplateClick(sender: tobject);
-    function getIsEditing: boolean;
-    function getTabCount: integer;
-    procedure setTabCount(count: integer);
-
-    function getTabScript(index: integer): string;
-    procedure setTabScript(index: integer; script: string);
-
   public
     { Public declarations }
 
-    assemblescreen: TSynEditPlus;
-    tablist: TTablist;
+    assemblescreen: TSynEdit;
+    tlist: TTablist;
 
     editscript: boolean;
     editscript2: boolean;
@@ -370,33 +225,26 @@ type
     CustomTypeCallback: TCustomCallbackroutine;
     injectintomyself: boolean;
 
-    procedure deleteTab(index: integer);
-
     procedure reloadHighlighterSettings;
     procedure addTemplate(id: integer);
     procedure removeTemplate(id: integer);
     procedure loadfile(filename: string);
     property CustomTypeScript: boolean read fCustomTypeScript write setCustomTypeScript;
-    property TabScript[index: integer]: string read getTabScript write setTabScript;
   published
     property ScriptMode: TScriptMode read fScriptMode write setScriptMode;
-    property isEditing: boolean read getIsEditing;
-    property TabCount: integer read getTabCount write setTabCount;
   end;
 
 
 procedure Getjumpandoverwrittenbytes(address,addressto: ptrUINT; jumppart,originalcodepart: tstrings);
 procedure generateAPIHookScript(script: tstrings; address: string; addresstogoto: string; addresstostoreneworiginalfunction: string=''; nameextension:string='0'; targetself: boolean=false);
-procedure GenerateCodeInjectionScript(script: tstrings; addressstring: string; farjmp: boolean=false);
-procedure GenerateAOBInjectionScript(script: TStrings; address: string; symbolname: string; commentradius: integer=10; farjmp: boolean=false);
-procedure GenerateFullInjectionScript(Script: tstrings; address: string; commentradius: integer=10; farjmp: boolean=false);
+procedure GenerateCodeInjectionScript(script: tstrings; addressstring: string);
+procedure GenerateAOBInjectionScript(script: TStrings; address: string; symbolname: string);
+procedure GenerateFullInjectionScript(Script: tstrings; address: string);
 
 function registerAutoAssemblerTemplate(name: string; m: TAutoAssemblerTemplateCallback; shortcut: TShortCut=0): integer;
 procedure unregisterAutoAssemblerTemplate(id: integer);
 
 function GetUniqueAOB(mi: TModuleInfo; address: ptrUint; codesize: Integer; var resultOffset: Integer) : string;
-function GetNextAllocNumber(script: tstrings): integer;
-procedure AddSnapshotAsComment(script: tstrings; address: ptruint; radius: integer=10);
 
 
 procedure ReloadAllAutoInjectHighlighters;
@@ -408,7 +256,7 @@ uses frmAAEditPrefsUnit,MainUnit,memorybrowserformunit,APIhooktemplatesettingsfr
   Globals, Parsers, MemoryQuery, {$ifdef windows}GnuAssembler,{$endif} LuaCaller, SynEditTypes, CEFuncProc,
   StrUtils, types, ComCtrls, LResources, NewKernelHandler, MainUnit2, Assemblerunit,
   autoassembler,  registry, luahandler, memscan, foundlisthelper, ProcessHandlerUnit,
-  frmLuaEngineUnit, frmSyntaxHighlighterEditor, lua, lualib, lauxlib, LuaClass, LuaForm, SymbolListHandler;
+  frmLuaEngineUnit, frmSyntaxHighlighterEditor;
 
 resourcestring
   rsExecuteScript = 'Execute script';
@@ -416,8 +264,8 @@ resourcestring
   rsLUAScript = 'LUA Script';
   rsGNUAScript = 'GNU Assembler Script';
   rsWriteCode = 'Write code';
-  rsCEAFilter = strCheatEngine+' Assembly (*.CEA)|*.CEA|All Files ( *.* )|*.*';
-  rsCEGAFilter = strCheatEngine+' GNU Assembly (*.CEGA)|*.CEGA|All Files ( *.* )|*.*';
+  rsCEAFilter = 'Cheat Engine Assembly (*.CEA)|*.CEA|All Files ( *.* )|*.*';
+  rsCEGAFilter = 'Cheat Engine GNU Assembly (*.CEGA)|*.CEGA|All Files ( *.* )|*.*';
   rsAutoAssembler = 'Auto assembler';
   rsCodeNeedsEnableAndDisable = 'The code needs an [ENABLE] and a [DISABLE] section if you want to use this script as a table entry';
   rsNotAllCodeIsInjectable = 'Not all code is injectable.'#13#10'%s'#13#10'Are you sure you want to edit it to this?';
@@ -437,21 +285,6 @@ resourcestring
   rsFailureLoadingUndercdll = 'Failure loading undercdll';
   rsFailedCreatingCallingStubForScriptLocatedAtAddress = 'Failed creating calling stub for script located at address ';
   rsERRORCouldNotFindUniqueAOBTriedCode = 'ERROR: Could not find unique AOB, tried code "';
-  rsErrorInScript = 'Error in script %s : %s';
-  rsErrorInScriptNoTab = 'Error in script : %s';
-  rsEverythingOk = 'Everything ok';
-  rsRenameTab = 'Rename tab';
-  rsNewNameQuestion = 'What should the new name be?';
-  rsDescribeThatThisCodeWillDisableTheScript = 'code from here till the end of the code will be used to disable the cheat';
-  rsDescribeThatThisCodeWillEnableTheScript = 'code from here to ''[DISABLE]'' will be used to enable the cheat';
-  rsAADescribeAllocatedMemory = 'this is allocated memory, you have read,write'
-    +',execute access';
-  rsPlaceYourCodeHere = 'place your code here';
-  rsAAAOBTemplate_Game = 'Game';
-  rsAAAOBTemplate_Version = 'Version';
-  rsAAAOBTemplate_Date = 'Date';
-  rsAAAOBTemplate_Author = 'Author';
-  rsAAAOBTemplate_blabla = 'This script does blah blah blah';
 
 var
   AutoAssemblerTemplates: TAutoAssemblerTemplates;
@@ -586,11 +419,10 @@ begin
   case mode of
     smLua:
     begin
-      if assemblescreen<>nil then
-        assemblescreen.Highlighter:=LuaHighlighter;
+      assemblescreen.Highlighter:=LuaHighlighter;
 
       //change gui to lua style
-      btnExecute.Caption:=rsExecuteScript;
+      button1.Caption:=rsExecuteScript;
       opendialog1.DefaultExt:='LUA';
       opendialog1.Filter:=rsLuaFilter;
       savedialog1.DefaultExt:='LUA';
@@ -602,24 +434,21 @@ begin
       helpcontext:=19; //c-script help
 
       Syntaxhighlighting1.visible:=true;
-
-      miLuaSyntaxCheck.visible:=true;
     end;
 
     smAutoAssembler:
     begin
-      if assemblescreen<>nil then
-        assemblescreen.Highlighter:=AAHighlighter;
+      assemblescreen.Highlighter:=AAHighlighter;
 
 
       //change gui to autoassembler style
-      btnExecute.caption:=rsWriteCode;
+      button1.caption:=rsWriteCode;
       opendialog1.DefaultExt:='CEA';
       opendialog1.Filter:=rsCEAFilter;
       savedialog1.DefaultExt:='CEA';
       savedialog1.Filter:=rsCEAFilter;
       Assigntocurrentcheattable1.Visible:=true;
-      emplate1.Visible:=processhandler.SystemArchitecture=archX86;
+      emplate1.Visible:=true;
       caption:=rsAutoAssembler;
       inject1.Visible:=false;
       helpcontext:=18; //auto asm help
@@ -629,10 +458,9 @@ begin
 
     smGnuAssembler:
     begin
-      if assemblescreen<>nil then
-        assemblescreen.Highlighter:=nil; //no highlighter for it yet
+      assemblescreen.Highlighter:=nil; //no highlighter for it yet
 
-      btnExecute.Caption:=rsWriteCode;
+      button1.Caption:=rsWriteCode;
       opendialog1.DefaultExt:='CEGA';
       opendialog1.Filter:=rsCEGAFilter;
       savedialog1.DefaultExt:='CEGA';
@@ -653,21 +481,22 @@ begin
 end;
 
 
-procedure TfrmAutoInject.btnExecuteClick(Sender: TObject);
+procedure TfrmAutoInject.Button1Click(Sender: TObject);
 var
-    a,b,i: integer;
+    a,b: integer;
 
-    disableinfo: TDisableInfo;
-
+    aa: TCEAllocArray;
+    exceptionlist: TCEExceptionListArray;
 
     //variables for injectintomyself:
     check: boolean;
+    registeredsymbols: TStringlist;
     errmsg: string;
-
-    sl: TStringlist;
 begin
 {$ifndef standalonetrainerwithassembler}
-  disableinfo:=TDisableInfo.create;
+  registeredsymbols:=tstringlist.Create;
+  registeredsymbols.CaseSensitive:=false;
+  registeredsymbols.Duplicates:=dupIgnore;
 
   case scriptmode of
     smlua:
@@ -685,15 +514,15 @@ begin
 
         //check if both scripts are valid before allowing the edit
 
+        setlength(aa,1);
         getenableanddisablepos(assemblescreen.Lines,a,b);
         if not CustomTypeScript then
           if (a=-1) and (b=-1) then raise exception.create(rsCodeNeedsEnableAndDisable);
 
 
-
         try
-          check:=autoassemble(assemblescreen.lines,false,true,true,injectintomyself,disableinfo,memrec) and
-                 autoassemble(assemblescreen.lines,false,false,true,injectintomyself,disableinfo,memrec);
+          check:=autoassemble(assemblescreen.lines,false,true,true,injectintomyself,aa,exceptionlist,registeredsymbols,memrec) and
+                 autoassemble(assemblescreen.lines,false,false,true,injectintomyself,aa,exceptionlist,registeredsymbols,memrec);
 
           if not check then
             errmsg:=format(rsNotAllCodeIsInjectable,['']);
@@ -722,24 +551,7 @@ begin
       else
       begin
         try
-          disableinfo.ccodesymbols.name:='AA Single Execute';
-
-          autoassemble(assemblescreen.lines,true,true,false,false,disableinfo);
-          if disableinfo.ccodesymbols.count>0 then
-          begin
-            sl:=tstringlist.create;
-            disableinfo.ccodesymbols.GetSymbolList(sl);
-            if MessageDlg('The following C-Code symbols where registered:'+sl.text+#13#10+'Do you wish to keep these?',mtConfirmation, [mbyes,mbno],0)=mryes then
-            begin
-              disableinfo.ccodesymbols.refcount:=0;
-              disableinfo.donotfreeccodedata:=true; //has to be manually deleted
-
-              //the sourcecode lines will stay. You've lost the ability to free this code anyhow
-            end;
-
-            sl.free;
-          end;
-
+          autoassemble(assemblescreen.lines,true);
         except
           on e:exception do
             MessageDlg(e.message,mtError,[mbOK],0);
@@ -757,8 +569,7 @@ begin
     end;
 
   end;
-
-  disableinfo.free;
+  registeredsymbols.free;
 {$endif}
 end;
 
@@ -800,34 +611,6 @@ procedure TfrmAutoInject.mifindNextClick(Sender: TObject);
 begin
   finddialog1.Options:=finddialog1.Options+[frFindNext];
   finddialog1.OnFind(finddialog1);
-end;
-
-procedure TfrmAutoInject.mifindPreviousClick(Sender: TObject);
-begin
-
-  // Reverse Search Direction
-  if (frDown in finddialog1.Options) then
-  begin
-    finddialog1.Options:=finddialog1.Options-[frDown];
-  end
-  else
-  begin
-    finddialog1.Options:=finddialog1.Options+[frDown];
-  end;
-
-  finddialog1.Options:=finddialog1.Options+[frFindNext];
-  finddialog1.OnFind(finddialog1);
-
-  // Change Search Direction back to original
-  if (frDown in finddialog1.Options) then
-  begin
-    finddialog1.Options:=finddialog1.Options-[frDown];
-  end
-  else
-  begin
-    finddialog1.Options:=finddialog1.Options+[frDown];
-  end;
-
 end;
 
 
@@ -987,7 +770,7 @@ begin
 {$endif}
 end;
 
-procedure GenerateCodeInjectionScript(script: tstrings; addressstring: string; farjmp: boolean=false);
+procedure GenerateCodeInjectionScript(script: tstrings; addressstring: string);
 function inttostr(i:int64):string;
 begin
   if i=0 then result:='' else result:=sysutils.IntToStr(i);
@@ -1008,16 +791,7 @@ var
     disablepos: integer;
     enablecode: tstringlist;
     disablecode: tstringlist;
-    jmpsize: integer;
-
-    d: TDisassembler;
 begin
-
-  if not processhandler.is64Bit then
-    farjmp:=false;
-
-  jmpsize:=ifthen(farjmp, 14, 5);
-
   try
     a:=StrToQWordEx('$'+addressstring);
   except
@@ -1026,15 +800,30 @@ begin
 
   c:=a;
 
-  injectnr:=GetNextAllocNumber(script);
+  injectnr:=0;
+  for i:=0 to script.Count-1 do
+  begin
+    j:=pos('alloc(newmem',lowercase(script[i]));
+    if j<>0 then
+    begin
+      x:=copy(script[i],j+12,length(script[i]));
+      x:=copy(x,1,pos(',',x)-1);
+      try
+        k:=strtoint(x);
+        if injectnr<=k then
+          injectnr:=k+1;
+      except
+        inc(injectnr);
+      end;
+    end;
+  end;
+
 
   //disassemble the old code
   setlength(originalcode,0);
   codesize:=0;
 
-
-
-  while codesize<jmpsize do
+  while codesize<5 do
   begin
     setlength(originalcode,length(originalcode)+1);
     originalcode[length(originalcode)-1]:=disassemble(c,x);
@@ -1052,7 +841,7 @@ begin
   try
     with enablecode do
     begin
-      if processhandler.is64bit and (not farjmp) then
+      if processhandler.is64bit then
         add('alloc(newmem'+inttostr(injectnr)+',2048,'+addressstring+') ')
       else
         add('alloc(newmem'+inttostr(injectnr)+',2048)');
@@ -1060,8 +849,8 @@ begin
       add('label(originalcode'+inttostr(injectnr)+')');
       add('label(exit'+inttostr(injectnr)+')');
       add('');
-      add('newmem'+inttostr(injectnr)+': //'+rsAADescribeAllocatedMemory);
-      add('//'+rsPlaceYourCodeHere);
+      add('newmem'+inttostr(injectnr)+': //this is allocated memory, you have read,write,execute access');
+      add('//place your code here');
 
       add('');
       add('originalcode'+inttostr(injectnr)+':');
@@ -1073,14 +862,11 @@ begin
 
       add('');
       add(addressstring+':');
-      if farjmp then
-        add('jmp far newmem'+inttostr(injectnr)+'')
-      else
-        add('jmp newmem'+inttostr(injectnr)+'');
-      if codesize>jmpsize then
+      add('jmp newmem'+inttostr(injectnr)+'');
+      if codesize>5 then
       begin
-        if codesize-jmpsize>1 then
-          add('nop '+inttohex(codesize-jmpsize,1))
+        if codesize-5>1 then
+          add('nop '+inttohex(codesize-5,1))
         else
           add('nop');
       end;
@@ -1151,7 +937,7 @@ begin
     address:=symhandler.getNameFromAddress(a);
 
   if inputquery(rsCodeInjectTemplate, rsOnWhatAddressDoYouWantTheJump, address) then
-    GenerateCodeInjectionScript(assemblescreen.lines, address, (ssCtrl in GetKeyShiftState) or mi14ByteJMP.checked);
+    GenerateCodeInjectionScript(assemblescreen.lines, address);
 end;
 
 procedure TfrmAutoInject.Panel1Resize(Sender: TObject);
@@ -1170,7 +956,7 @@ begin
   if e=-1 then //-2 is 2 or more, so bugged, and >=0 is has one
   begin
     assemblescreen.Lines.Insert(0,'[ENABLE]');
-    assemblescreen.Lines.Insert(1, '//'+rsDescribeThatThisCodeWillEnableTheScript);
+    assemblescreen.Lines.Insert(1,'//code from here to ''[DISABLE]'' will be used to enable the cheat');
     assemblescreen.Lines.Insert(2,'');
   end;
 
@@ -1179,7 +965,7 @@ begin
     assemblescreen.Lines.Add(' ');
     assemblescreen.Lines.Add(' ');
     assemblescreen.Lines.Add('[DISABLE]');
-    assemblescreen.Lines.Add('//'+rsDescribeThatThisCodeWillDisableTheScript);
+    assemblescreen.Lines.Add('//code from here till the end of the code will be used to disable the cheat');
   end;
 {$endif}
 end;
@@ -1192,25 +978,32 @@ end;
 
 
 procedure TfrmAutoInject.Assigntocurrentcheattable1Click(Sender: TObject);
-var
-  a,b: integer;
-  di: TDisableInfo;
+var a,b: integer;
+    aa:TCEAllocArray;
+    exceptionlist:TCEExceptionListArray;
+    registeredsymbols: TStringlist;
 begin
+  registeredsymbols:=tstringlist.Create;
+  registeredsymbols.CaseSensitive:=false;
+  registeredsymbols.Duplicates:=dupIgnore;
 
-  getenableanddisablepos(assemblescreen.Lines,a,b);
-  if (a=-1) and (b=-1) then raise exception.create(rsCodeNeedsEnableAndDisable);
 
-  di:=TDisableInfo.create;
-  if autoassemble(assemblescreen.lines,true,true,true,false,di) and
-     autoassemble(assemblescreen.lines,true,false,true,false,di) then
-  begin
-    //add a entry with type 255
-    mainform.AddAutoAssembleScript(assemblescreen.text);
-  end
-  else showmessage(rsFailedToAddToTableNotAllCodeIsInjectable);
 
-  di.free;
+  try
+    setlength(aa,0);
+    getenableanddisablepos(assemblescreen.Lines,a,b);
+    if (a=-1) and (b=-1) then raise exception.create(rsCodeNeedsEnableAndDisable);
 
+    if autoassemble(assemblescreen.lines,false,true,true,false,aa,exceptionlist,registeredsymbols) and
+       autoassemble(assemblescreen.lines,false,false,true,false,aa,exceptionlist,registeredsymbols) then
+    begin
+      //add a entry with type 255
+      mainform.AddAutoAssembleScript(assemblescreen.text);
+    end
+    else showmessage(rsFailedToAddToTableNotAllCodeIsInjectable);
+  finally
+    freeandnil(registeredsymbols);
+  end;
 end;
 
 procedure Getjumpandoverwrittenbytes(address,addressto: ptrUint; jumppart,originalcodepart: tstrings);
@@ -1290,10 +1083,6 @@ begin
     oldsymhandler:=symhandler;
     symhandler:=selfsymhandler;
     processhandler.processhandle:=processhandle;
-  end
-  else
-  begin
-    processhandle:=processhandler.processhandle;
   end;
 
   try
@@ -1302,7 +1091,6 @@ begin
     d:=TDisassembler.Create;
     d.showmodules:=false;
     d.showsymbols:=false;
-    d.showsections:=false;
 
     setlength(specifier,0);
     setlength(originalcode,0);
@@ -1376,7 +1164,6 @@ begin
       codesize:=a-b;
     end;
 
-
     getmem(originalcodebuffer,codesize);
     if ReadProcessMemory(processhandle,pointer(b), originalcodebuffer, codesize, br) then
     begin
@@ -1391,7 +1178,6 @@ begin
 
     freememandnil(originalcodebuffer);
     originalcodebuffer:=nil;
-
 
 
 
@@ -1551,13 +1337,6 @@ begin
 
     if disablepos<>-1 then
     begin
-      with disablescript do
-      begin
-        add('dealloc(originalcall'+nameextension+')');
-        if processhandler.is64bit then
-          add('dealloc(jumptrampoline)');
-      end;
-
       for i:=0 to disablescript.Count-1 do
         script.Insert(disablepos+i+1,disablescript[i]);
     end;
@@ -1667,7 +1446,7 @@ begin
 
     reg:=tregistry.create;
     try
-      if reg.OpenKey('\Software\'+strCheatEngine+'\Auto Assembler\',false) then
+      if reg.OpenKey('\Software\Cheat Engine\Auto Assembler\',false) then
       begin
         if reg.valueexists('Font.name') then
           assemblescreen.Font.Name:=reg.readstring('Font.name');
@@ -1698,7 +1477,7 @@ begin
   end;
 
   if editscript then
-    btnExecute.Caption:=strOK;
+    button1.Caption:=strOK;
 
   assemblescreen.SetFocus;
 end;
@@ -1945,328 +1724,49 @@ begin
 {$endif}
 end;
 
-function TfrmAutoInject.getTabCount: integer;
-begin
-  if tablist<>nil then
-    result:=tablist.Count
-  else
-    result:=1;
-end;
-
-procedure TfrmAutoInject.setTabCount(count: integer);
-begin
-  if tablist=nil then
-    miNewTab.Click;
-
-  while tablist.Count>count do
-    deleteTab(TabCount-1);
-
-  while tablist.count<count do
-    miNewTab.Click;
-
-  if count=1 then
-    tablist.visible:=false;
-end;
-
-function TfrmAutoInject.getTabScript(index: integer): string;
-begin
-  result:='';
-  if index>=0 then
-  begin
-    if (tablist=nil) and (index=0) then
-      exit(assemblescreen.Lines.Text);
-
-    if index<tablist.count then
-    begin
-      if tablist.SelectedTab=index then
-        exit(assemblescreen.Lines.Text)
-      else
-        exit(TAAScriptTabData(tablist.TabData[index]).script);
-    end;
-  end;
-
-end;
-
-procedure TfrmAutoInject.setTabScript(index: integer; script: string);
-var
-  i: integer;
-  td: TAAScriptTabData;
-begin
-  if index>=0 then
-  begin
-    if (tablist=nil) and (index=0) then
-    begin
-      assemblescreen.Lines.Text:=script;
-      exit;
-    end;
-
-    if index<tablist.count then
-    begin
-      if tablist.SelectedTab=index then
-      begin
-        assemblescreen.Lines.Text:=script;
-        assemblescreen.ClearUndo;
-      end
-      else
-      begin
-        td:=TAAScriptTabData(tablist.TabData[index]);
-        td.script:=script;
-        //clear the undo data for that tab
-        if td.undogroups<>nil then
-        begin
-          for i:=0 to td.undogroups.Count-1 do
-            TSynEditUndoGroup(td.undogroups[i]).Free;
-
-          td.undogroups.clear;
-        end;
-      end;
-    end;
-  end;
-end;
-
-procedure TfrmAutoInject.miNewTabClick(Sender: TObject);
+procedure TfrmAutoInject.New1Click(Sender: TObject);
 var i: integer;
 begin
 {$ifndef standalonetrainerwithassembler}
-  if miNewTab.visible=false then exit;
 
-  if tablist=nil then
+  scripts[length(scripts)-1].script:=assemblescreen.Text;
+  setlength(scripts,length(scripts)+1);
+
+  scripts[length(scripts)-1].script:='';
+  scripts[length(scripts)-1].undoscripts[0].oldscript:='';
+  scripts[length(scripts)-1].currentundo:=0;
+
+  assemblescreen.Text:='';
+
+
+  if length(scripts)=2 then //first time new
   begin
-    tablist:=TTablist.Create(self);
-    tablist.height:=20;
-    tablist.Align:=alTop;
-    tablist.Visible:=false;
-    tablist.OnTabChange:=tlistOnTabChange;
-    tablist.OnTabCreate:=tlistOnTabCreate;
-    tablist.OnTabDestroy:=tlistOnTabDestroy;
-
-
-    tablist.color:=GetRGBColorResolvingParent; //panel2.color;
-
-    tablist.Parent:=panel2;
-
-    tablist.height:=tablist.Canvas.TextHeight('WwJjDdQq')+4;
-    tablist.BorderSpacing.Top:=4;
-    tablist.PopupMenu:=TabMenu;
-
-
-    inc(newtabcount);
-    i:=tablist.AddTab(rsScript1);
+    tlist.AddTab(rsScript1);
+    tlist.Visible:=true;
   end;
 
-  tablist.Visible:=true;
-
-  inc(newtabcount);
-  i:=tablist.AddTab(rsScript+inttostr(newtabCount));
-  tablist.SelectedTab:=i;
+  i:=tlist.AddTab(rsScript+inttostr(length(scripts)));
+  tlist.SelectedTab:=i;
+  oldtabindex:=i;
 {$endif}
 end;
 
 procedure tfrmautoinject.tlistOnTabChange(sender: TObject; oldselection: integer);
-var
-  undolist:  TSynEditUndoList;
-  undoitem: TSynEditUndoItem;
-  undogroup: TSynEditUndoGroup;
-
-  ssl: TSynEditStringList;
-  sel: TSynEditLines;
-  i,j: integer;
-
-  p: tpoint;
-
-
-  l: tlist;
-
 begin
 {$ifndef standalonetrainerwithassembler}
 
-  ssl:=TSynEditStringList(assemblescreen.SLines);
+  scripts[oldselection].script:=assemblescreen.text;
+  scripts[oldselection].filename:=opendialog1.FileName;
 
-  if oldselection>=0 then
-  begin
-    TAAScriptTabData(tablist.TabData[oldselection]).script:=assemblescreen.text;
-    TAAScriptTabData(tablist.TabData[oldselection]).filename:=opendialog1.FileName;
-    TAAScriptTabData(tablist.TabData[oldselection]).topline:=assemblescreen.TopLine;
-    p:=assemblescreen.CaretXY;
-    TAAScriptTabData(tablist.TabData[oldselection]).carretpos:=p;
+  assemblescreen.text:=scripts[tlist.SelectedTab].script;
+  opendialog1.FileName:=scripts[tlist.SelectedTab].filename;
 
-    if ssl is TSynEditStringList then
-    begin
-      if TAAScriptTabData(tablist.TabData[oldselection]).undogroups=nil then
-        TAAScriptTabData(tablist.TabData[oldselection]).undogroups:=tlist.Create;
+  oldtabindex:=tlist.SelectedTab;
 
-      TAAScriptTabData(tablist.TabData[oldselection]).undogroups.Clear;
-
-      repeat
-        undogroup:=ssl.UndoList.PopItem;
-        if undogroup<>nil then
-          TAAScriptTabData(tablist.TabData[oldselection]).undogroups.Add(undogroup);
-
-
-      until undogroup=nil;
-
-
-      //save flags
-      setlength(TAAScriptTabData(tablist.TabData[oldselection]).flags, ssl.count);
-      for i:=0 to ssl.Count-1 do
-        TAAScriptTabData(tablist.TabData[oldselection]).flags[i]:=ssl.Flags[i];
-    end;
-
-  end;
-
-
-
-
-
-  assemblescreen.BeginUpdate(false);
-  assemblescreen.text:=TAAScriptTabData(tablist.CurrentTabData).script;
-  opendialog1.FileName:=TAAScriptTabData(tablist.CurrentTabData).filename;
-  assemblescreen.TopLine:=TAAScriptTabData(tablist.CurrentTabData).topline;
-  p:=TAAScriptTabData(tablist.CurrentTabData).carretpos;
-  assemblescreen.CaretXY:=p;
-  assemblescreen.EndUpdate;
-
-  //restore undo
-  assemblescreen.ClearUndo; //get rid of the old one (just in case the previous tabswitch failed...)
-  l:=tlist.create;
-
-  if (ssl is TSynEditStringList) and (TAAScriptTabData(tablist.CurrentTabData).undogroups<>nil) then
-  begin
-    for i:=TAAScriptTabData(tablist.CurrentTabData).undogroups.Count-1 downto 0 do
-    begin
-      l.clear;
-      undogroup:=TAAScriptTabData(tablist.CurrentTabData).undogroups[i];
-
-      repeat
-        undoitem:=undogroup.Pop;
-        if undoitem<>nil then
-          l.add(undoitem)
-        else
-          undogroup.free;
-      until undoitem=nil;
-
-      ssl.UndoList.BeginBlock;
-      for j:=l.count-1 downto 0 do
-      begin
-        undoitem:=l[j];
-        ssl.UndoList.AddChange(undoitem);
-      end;
-      ssl.UndoList.EndBlock;
-    end;
-
-    TAAScriptTabData(tablist.CurrentTabData).undogroups.Clear;
-
-    //flags
-    for i:=0 to length(TAAScriptTabData(tablist.CurrentTabData).flags)-1 do
-       ssl.Flags[i]:=TAAScriptTabData(tablist.CurrentTabData).flags[i];
-  end;
-
-
-  l.free;
+  assemblescreen.ClearUndo;
 
 {$endif}
 end;
-
-procedure tfrmautoinject.tlistOnTabCreate(sender: TObject; index: integer);
-begin
-  ttablist(sender).TabData[index]:=TAAScriptTabData.Create;
-end;
-
-procedure tfrmautoinject.tlistOnTabDestroy(sender: TObject; index: integer);
-var d: TAAScriptTabData;
-begin
-  if ttablist(sender).TabData[index]<>nil then
-  begin
-    d:=TAAScriptTabData(ttablist(sender).TabData[index]);
-    if d.undogroups<>nil then
-    begin
-      while d.undogroups.Count>0 do
-      begin
-        TSynEditUndoGroup(d.undogroups[0]).Free;
-        d.undogroups.Delete(0);
-      end;
-
-      d.undogroups.free;
-    end;
-    d.free;
-    ttablist(sender).TabData[index]:=nil;
-  end;
-end;
-
-
-function checkScript(script: string; out errorreason: string): boolean;
-var
-  r: integer;
-begin
-  r:=luaL_loadstring(luavm,pchar(script));
-
-  result:=(r=0) and lua_isfunction(luavm,-1);
-  if not result then
-    errorReason:=lua_tostring(luavm,-1);
-
-  lua_pop(luavm,1);
-end;
-
-procedure TfrmAutoInject.miLuaSyntaxCheckClick(Sender: TObject);
-var
-  i,r: integer;
-  s: string;
-  hasError: boolean;
-begin
-  hasError:=false;
-
-  if tablist=nil then
-  begin
-    if checkscript(assemblescreen.text,s)=false then
-    begin
-      hasError:=true;
-      lua_getglobal(luavm,'print');
-      lua_pushstring(LuaVM, format(rsErrorInScriptNoTab, [s]));
-      lua_pcall(luavm,1,0,0);
-    end;
-  end
-  else
-  begin
-    TAAScriptTabData(tablist.CurrentTabData).script:=assemblescreen.text;
-
-    for i:=0 to tablist.count-1 do
-    begin
-      if checkscript(TAAScriptTabData(tablist.TabData[i]).script, s)=false then
-      begin
-        hasError:=true;
-        s:=format(rsErrorInScript, [tablist.TabText[i], s]);
-
-        lua_getglobal(luavm,'print');
-        lua_pushstring(LuaVM, s);
-        lua_pcall(luavm,1,0,0);
-
-      end;
-    end;
-  end;
-
-  if not hasError then
-    showMessage(rsEverythingOk); //todo: Get a thumbs up dialog
-end;
-
-procedure TfrmAutoInject.miMoveLeftClick(Sender: TObject);
-begin
-  //has no effect on AA scripts, but for the lua tablescripts it does
-  tablist.MoveTabLeft(selectedtab);
-end;
-
-procedure TfrmAutoInject.miMoveRightClick(Sender: TObject);
-begin
-  tablist.MoveTabRight(selectedtab);
-end;
-
-procedure TfrmAutoInject.miRenameTabClick(Sender: TObject);
-var v: string;
-begin
-  v:=tablist.TabText[selectedtab];
-  if InputQuery(rsRenameTab, rsNewNameQuestion, v) then
-    tablist.TabText[selectedtab]:=v;
-end;
-
 
 procedure tfrmAutoInject.gutterclick(Sender: TObject; X, Y, Line: integer; mark: TSynEditMark);
 begin
@@ -2292,21 +1792,41 @@ begin
 
   {$ifndef standalonetrainerwithassembler}
 
+  setlength(scripts,1);
+  scripts[0].currentundo:=0;
+  oldtabindex:=0;
+{  assemblescreen.SelStart:=0;
+  assemblescreen.SelLength:=0; }
+
+
   AAHighlighter:=TSynAASyn.Create(self);
   CPPHighlighter:=TSynCppSyn.create(self);
   LuaHighlighter:=TSynLuaSyn.Create(self);
+
   reloadHighlighterSettings;
 
   assembleSearch:=TSyneditSearch.Create;
 
+  tlist:=TTablist.Create(self);
+  tlist.height:=20;
+  tlist.Align:=alTop;
+  tlist.Visible:=false;
+  tlist.OnTabChange:=tlistOnTabChange;
 
-  assemblescreen:=TSynEditPlus.Create(self);
-  assemblescreen.BorderStyle:=bsNone;
+  tlist.Parent:=panel2;
+
+
+  assemblescreen:=TSynEdit.Create(self);
   assemblescreen.Highlighter:=AAHighlighter;
   assemblescreen.Options:=SYNEDIT_DEFAULT_OPTIONS - [eoScrollPastEol]+[eoTabIndent]+[eoKeepCaretX];
   fq:=assemblescreen.Font.Quality;
   if not (fq in [fqCleartypeNatural, fqDefault]) then
     assemblescreen.Font.quality:=fqDefault;
+
+ { if overridefont<>nil then
+    assemblescreen.Font.assign(overridefont)
+  else
+    assemblescreen.Font.Size:=10;    }
 
   //assemblescreen.Font.Quality:=fqDefault;
   assemblescreen.WantTabs:=true;
@@ -2334,20 +1854,13 @@ begin
 
   assemblescreen.OnChange:=assemblescreenchange;
 
-  assemblescreen.Color:=colorset.TextBackground;
-  assemblescreen.Font.color:=colorset.FontColor;
-  assemblescreen.Gutter.Color:=clBtnFace;
-  assemblescreen.Gutter.LineNumberPart.MarkupInfo.Background:=clBtnFace;
-  assemblescreen.Gutter.SeparatorPart.MarkupInfo.Background:=clBtnFace;
-
-
 
   setlength(x,0);
   LoadedFormPosition:=loadformposition(self,x);
 
   reg:=tregistry.create;
   try
-    if reg.OpenKey('\Software\'+strCheatEngine+'\Auto Assembler\',false) then
+    if reg.OpenKey('\Software\Cheat Engine\Auto Assembler\',false) then
     begin
       if reg.valueexists('Show Line Numbers') then
         assemblescreen.Gutter.linenumberpart.visible:=reg.ReadBool('Show Line Numbers');
@@ -2385,31 +1898,8 @@ begin
   miRedo.ShortCut:=TextToShortCut('Shift+Meta+X');
   miFind.ShortCut:=TextToShortCut('Meta+F');
   mifindNext.ShortCutKey2:=TextToShortcut('Meta+G');
-
-  miNewWindow.Shortcut:=TextToShortCut('Meta+N');
-  load1.Shortcut:=TextToShortCut('Meta+O');
-  save1.Shortcut:=TextToShortCut('Meta+S');
-
-  if assemblescreen<>nil then
-  begin
-    i:=assemblescreen.Keystrokes.FindCommand(ecSelectAll);
-    if i<>-1 then assemblescreen.Keystrokes[i].ShortCut:=TextToShortCut('Meta+A');
-  end;
-
-  if processhandler.SystemArchitecture=archArm then emplate1.visible:=false;
-
 {$endif}
 
-end;
-
-procedure TfrmAutoInject.TabMenuPopup(Sender: TObject);
-var p: tpoint;
-begin
-  p:=tablist.ScreenToClient(mouse.CursorPos);
-  selectedtab:=tablist.GetTabIndexAt(p.x,p.y);
-
-  miMoveLeft.enabled:=selectedtab>0;
-  miMoveRight.enabled:=selectedtab<tablist.Count-1;
 end;
 
 procedure TfrmAutoInject.TabControl1Change(Sender: TObject);
@@ -2435,37 +1925,45 @@ begin
 {$endif}
 end;
 
-
-procedure TfrmAutoInject.deleteTab(index: integer);
-var
-  oldtabindex: integer;
+procedure TfrmAutoInject.TabControl1ContextPopup(Sender: TObject;
+  MousePos: TPoint; var Handled: Boolean);
 begin
-  if (tablist<>nil) and (index>=0) and (tablist.count>1) and (index<tablist.count) then
-  begin
-    oldtabindex:=tablist.SelectedTab;
-    TAAScriptTabData(tablist.CurrentTabData).script:=assemblescreen.text;
-    TAAScriptTabData(tablist.CurrentTabData).filename:=OpenDialog1.FileName;
-    tablist.RemoveTab(index);
-
-    if tablist.SelectedTab=-1 then
-    begin
-      if tablist.Count>oldtabindex then
-        tablist.SelectedTab:=oldtabindex
-      else
-        tablist.SelectedTab:=tablist.count-1;
-    end;
-
-    if tablist.count=1 then
-      tablist.Visible:=false;
-  end;
+  //selectedtab:=TabControl1.IndexOfTabAt(mousepos.x,mousepos.y);
+  //closemenu.Popup(mouse.CursorPos.X,mouse.cursorpos.Y);
 end;
 
 procedure TfrmAutoInject.Close1Click(Sender: TObject);
+var i: integer;
 begin
 {$ifndef standalonetrainerwithassembler}
 
-  if messagedlg(Format(rsAreYouSureYouWantToClose, [tablist.TabText[selectedtab]]), mtConfirmation, [mbyes, mbno], 0)=mryes then
-    deleteTab(selectedTab);
+
+  if messagedlg(Format(rsAreYouSureYouWantToClose, [tlist.TabText[selectedtab]]), mtConfirmation, [mbyes, mbno], 0)=mryes then
+  begin
+    scripts[oldtabindex].script:=assemblescreen.text; //save current script
+    tlist.RemoveTab(selectedtab);
+
+    for i:=selectedtab to length(scripts)-2 do
+      scripts[i]:=scripts[i+1];
+
+    setlength(scripts,length(scripts)-1);
+
+    if oldtabindex=selectedtab then //it was the current one
+    begin
+      oldtabindex:=length(scripts)-1;
+      tlist.SelectedTab:=oldtabindex;
+      assemblescreen.text:=scripts[oldtabindex].script;
+      assemblescreen.OnChange(assemblescreen);
+    end;
+
+    if (length(scripts)=1) then
+    begin
+      tlist.RemoveTab(0);
+      tlist.Visible:=false;
+    end;
+//    tabcontrol1.tabs[selectedtab]
+
+  end;
 {$endif}
 end;
 
@@ -2650,10 +2148,8 @@ procedure TfrmAutoInject.miFindClick(Sender: TObject);
 begin
   finddialog1.Options:=finddialog1.Options-[frFindNext];
   if finddialog1.Execute then
-  begin
     mifindNext.visible:=true;
-    mifindPrevious.visible:=true;
-  end;
+
 end;
 
 procedure TfrmAutoInject.FindDialog1Find(Sender: TObject);
@@ -2664,11 +2160,6 @@ begin
   ReplaceDialog1.OnFind(ReplaceDialog1);
 
   finddialog1.options:=finddialog1.options+[frFindNext];
-end;
-
-function TfrmAutoInject.getIsEditing: boolean;
-begin
-  result:=editscript or editscript2;
 end;
 
 //follow is just a emergency fix since undo is messed up. At least it's better than nothing
@@ -2683,7 +2174,7 @@ begin
         //save these settings
         reg:=tregistry.create;
         try
-          if reg.OpenKey('\Software\'+strCheatEngine+'\Auto Assembler\',true) then
+          if reg.OpenKey('\Software\Cheat Engine\Auto Assembler\',true) then
           begin
             reg.WriteString('Font.name', assemblescreen.Font.Name);
             reg.WriteInteger('Font.size', assemblescreen.Font.size);
@@ -2725,141 +2216,8 @@ begin
   assemblescreen.Undo;
 end;
 
-procedure AddSnapshotAsComment(script: TStrings; address: ptruint; radius: integer=10);
-var
-  i,j: integer;
-  a: ptruint;
-  s,tmps: string;
-  addressString: string;
-  bytesString: string;
-  opcodeString: string;
-  specialString: string;
-
-
-  addresslist: Tstringlist;
-  byteslist: TStringlist;
-  codelist: TStringList;
-  maxBytesSize: integer;
-  addressLinenr: integer;
-
-  d: TDisassembler;
-
-begin
-  script.Add('');
-  script.Add('{');
-  script.Add('// ORIGINAL CODE - INJECTION POINT: ' + symhandler.getNameFromAddress(address) );
-  script.Add('');
-
-  maxBytesSize := 0;
-
-
-  d:=TDisassembler.Create;
-  d.showmodules:=symhandler.showmodules;
-  d.showsymbols:=symhandler.showsymbols;
-  d.showsections:=symhandler.showsections;
-
-  addresslist:=tstringlist.create;
-  byteslist:=tstringlist.create;
-  codelist:=tstringlist.create;
-
-  try
-    a:=address;
-
-    for i:=1 to radius do
-      a:=previousopcode(a);
-
-    addressLinenr:=radius; //usually good enough
-
-    for i:=1 to radius*2+1 do
-    begin
-      addressString:=symhandler.getNameFromAddress(a);
-      s:=d.disassemble(a, tmps);
-      splitDisassembledString(s,false,tmps, bytesString, opcodeString,specialString);
-
-      bytesstring:='';
-      if (a>address) and (d.LastDisassembleData.address<address) then
-      begin
-        //cut it into bytes
-        opcodeString:='db ';
-
-        setlength(d.LastDisassembleData.Bytes,length(d.LastDisassembleData.Bytes)-(a-address));
-        for j:=0 to length(d.LastDisassembleData.Bytes)-1 do
-        begin
-          opcodeString:=opcodeString+inttohex(d.LastDisassembleData.Bytes[j],2)+' ';
-          bytesstring:=bytesString+inttohex(d.LastDisassembleData.Bytes[j],2)+' ';
-        end;
-
-        a:=address;
-      end
-      else
-      begin
-        for j:=0 to length(d.LastDisassembleData.Bytes)-1 do
-          bytesstring:=bytesString+inttohex(d.LastDisassembleData.Bytes[j],2)+' ';
-      end;
-
-
-
-      addressList.add(addressString);
-      bytesList.add(bytesstring);
-      codeList.add(opcodeString);
-
-      maxBytesSize:=max(length(bytesstring), maxBytesSize);
-    end;
-
-    for i:=0 to addresslist.Count-1 do
-    begin
-      if i = addressLinenr then script.Add('// ---------- INJECTING HERE ----------');
-      script.Add(addressList[i] + ': ' + PadRight(bytesList[i],maxBytesSize) + ' - ' + codeList[i]);
-      if i = addressLinenr then script.Add('// ---------- DONE INJECTING  ----------');
-    end;
-
-    script.Add('}');
-
-  finally
-    addresslist.free;
-    byteslist.free;
-    codelist.free;
-
-    d.free;
-
-  end;
-end;
-
-function GetNextAllocNumber(Script: TStrings): integer;
-var
-  i,j: integer;
-  injectnr: integer;
-  x: string;
-begin
-  result:=0;
-  for i:=0 to script.Count-1 do
-  begin
-    x:=lowercase(trim(script[i]));
-
-    if copy(x,1,12)='alloc(newmem' then
-    begin
-      x:=copy(x,13,pos(',',x)-13);
-      try
-        if x='' then
-        begin
-          if result=0 then
-            result:=2
-        end
-        else
-        begin
-          j:=strtoint(x);
-          if result<=j then
-            result:=j+1;
-        end;
-      except
-        inc(result);
-      end;
-    end;
-  end;
-end;
-
 // \/   http://forum.cheatengine.org/viewtopic.php?t=566415 (jgoemat and some mods by db)
-procedure GenerateFullInjectionScript(Script: tstrings; address: string; commentRadius: integer=10; farjmp: boolean=false);
+procedure GenerateFullInjectionScript(Script: tstrings; address: string);
 var
   originalcode: array of string;
   originalbytes: array of byte;
@@ -2894,12 +2252,7 @@ var
   ddBytes: string;
 
   mi: TModuleInfo;
-  jmpsize: integer;
 begin
-  if not processhandler.is64Bit then
-    farjmp:=false;
-
-  jmpsize:=ifthen(farjmp, 14, 5);
 
   try
     a:=StrToQWordEx('$'+address);
@@ -2912,7 +2265,23 @@ begin
 
 
   c:=a;
-  injectnr:=GetNextAllocNumber(script);
+  injectnr:=0;
+  for i:=0 to script.Count-1 do
+  begin
+    j:=pos('alloc(newmem',lowercase(script[i]));
+    if j<>0 then
+    begin
+      x:=copy(script[i],j+12,length(script[i]));
+      x:=copy(x,1,pos(',',x)-1);
+      try
+        k:=strtoint(x);
+        if injectnr<=k then
+          injectnr:=k+1;
+      except
+        inc(injectnr);
+      end;
+    end;
+  end;
   if injectnr = 0 then nr := '' else nr := sysutils.IntToStr(injectnr);
 
 
@@ -2921,7 +2290,7 @@ begin
   setlength(originalcode,0);
   codesize:=0;
 
-  while codesize<jmpsize do
+  while codesize<5 do
   begin
     setlength(originalcode,length(originalcode)+1);
     originalcode[length(originalcode)-1]:=disassemble(c,x);
@@ -2979,7 +2348,7 @@ begin
     with enablecode do
     begin
       add('assert(address'+nr+',bytes'+nr+')');
-      if processhandler.is64bit and (not farjmp) then
+      if processhandler.is64bit then
         add('alloc(newmem' + nr + ',$1000,' + address + ')')
       else
         add('alloc(newmem' + nr + ',$1000)');
@@ -2997,14 +2366,11 @@ begin
 
       add('');
       add('address'+nr+':');
-      if farjmp then
-        add('  jmp far newmem'+nr+'')
-      else
-        add('  jmp newmem'+nr+'');
-      if codesize>jmpsize then
+      add('  jmp newmem'+nr+'');
+      if codesize>5 then
       begin
-        if codesize-jmpsize>1 then
-          add('  nop '+inttohex(codesize-jmpsize,1))
+        if codesize-5>1 then
+          add('  nop '+inttohex(codesize-5,1))
         else
           add('  nop');
       end;
@@ -3057,8 +2423,37 @@ begin
     // now we disassemble quite a bit more code for comments at the
     // bottom so someone can easily find the code again if the game
     // is updated
-    addSnapshotAsComment(script, a, commentradius);
+    script.Add('');
+    script.Add('{');
+    script.Add('// ORIGINAL CODE - INJECTION POINT: ' + address);
+    script.Add('');
 
+    injectFirstLine := 0;
+    injectLastLine := 0;
+    maxBytesSize := 0;
+    dline.Init(a - 128, mi);
+
+
+    while dline.Address < (a + 128) do
+    begin
+      if (dline.Address < a) and ((dline.Address + dline.Size) > a) then dline.Shorten((dline.Address + dline.Size) - a);
+      addressList.Add(dline.AddressString);
+      ddBytes := dline.GetHexBytes;
+      maxBytesSize := Max(maxBytesSize, Length(ddBytes));
+      bytesList.Add(ddBytes);
+      codeList.Add(dline.Code);
+      if (dline.Address >= a) and (injectFirstLine <= 0) then injectFirstLine := addressList.Count - 1;
+      if (dline.Address < a + codesize) then injectLastLine := addressList.Count - 1;
+      dline.Init(dline.Address + dline.Size, mi);
+    end;
+
+    for i := injectFirstLine - 10 to injectLastLine + 10 do
+    begin
+      if i = injectFirstLine then script.Add('// ---------- INJECTING HERE ----------');
+      script.Add(addressList[i] + ': ' + PadRight(bytesList[i],maxBytesSize) + ' - ' + codeList[i]);
+      if i = injectLastLine then script.Add('// ---------- DONE INJECTING  ----------');
+    end;
+    script.Add('}');
   finally
     initialcode.free;
     enablecode.free;
@@ -3086,7 +2481,7 @@ begin
     address:=inttohex(a,8);
 
   if inputquery(rsCodeInjectTemplate, rsOnWhatAddressDoYouWantTheJump, address) then
-    generateFullInjectionScript(assemblescreen.Lines, address, 10, (ssCtrl in GetKeyShiftState) or mi14ByteJMP.checked);
+    generateFullInjectionScript(assemblescreen.Lines, address);
 end;
 
 procedure TfrmAutoInject.miReplaceClick(Sender: TObject);
@@ -3096,9 +2491,8 @@ end;
 
 procedure TfrmAutoInject.reloadHighlighterSettings;
 begin
-  LuaHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\Lua Highlighter'+darkmodestring);
-  AAHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\AA Highlighter'+darkmodestring);
-  CPPHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\CPP Highlighter'+darkmodestring);
+  LuaHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\Cheat Engine\Lua Highlighter');
+  AAHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\Cheat Engine\AA Highlighter');
 end;
 
 procedure TfrmAutoInject.MenuItem2Click(Sender: TObject);
@@ -3106,11 +2500,11 @@ var
   frmHighlighterEditor: TfrmHighlighterEditor;
 begin
   frmHighlighterEditor:=TfrmHighlighterEditor.create(self);
-  LuaHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\Lua Highlighter'+darkmodestring);
+  LuaHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\Cheat Engine\Lua Highlighter');
   frmHighlighterEditor.highlighter:=LuaHighlighter;
   if frmHighlighterEditor.showmodal=mrok then
   begin
-    LuaHighlighter.SaveToRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\Lua Highlighter'+darkmodestring);
+    LuaHighlighter.SaveToRegistry(HKEY_CURRENT_USER, '\Software\Cheat Engine\Lua Highlighter');
     reloadHighlighterSettings;
     ReloadAllLuaEngineHighlighters;
   end;
@@ -3124,37 +2518,20 @@ var
   frmHighlighterEditor: TfrmHighlighterEditor;
 begin
   frmHighlighterEditor:=TfrmHighlighterEditor.create(self);
-  AAHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\AA Highlighter'+darkmodestring);
+  AAHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\Cheat Engine\AA Highlighter');
   frmHighlighterEditor.highlighter:=AAHighlighter;
   if frmHighlighterEditor.showmodal=mrok then
   begin
-    AAHighlighter.SaveToRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\AA Highlighter'+darkmodestring);
+    AAHighlighter.SaveToRegistry(HKEY_CURRENT_USER, '\Software\Cheat Engine\AA Highlighter');
     ReloadAllAutoInjectHighlighters;
   end;
 
   frmHighlighterEditor.free;
 end;
 
-procedure TfrmAutoInject.MenuItem1Click(Sender: TObject);
+procedure GenerateAOBInjectionScript(script: TStrings; address: string; symbolname: string);
 var
-  frmHighlighterEditor: TfrmHighlighterEditor;
-begin
-  frmHighlighterEditor:=TfrmHighlighterEditor.create(self);
-  CPPHighlighter.loadFromRegistryDefault(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\CPP Highlighter'+darkmodestring);
-
-  frmHighlighterEditor.highlighter:=CPPHighlighter;
-  if frmHighlighterEditor.showmodal=mrok then
-  begin
-    CPPHighlighter.SaveToRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\CPP Highlighter'+darkmodestring);
-    ReloadAllAutoInjectHighlighters;
-  end;
-
-  frmHighlighterEditor.free;
-end;
-
-procedure GenerateAOBInjectionScript(script: TStrings; address: string; symbolname: string; commentradius: integer=10; farjmp: boolean=false);
-var
-  a,a2: ptrUint;                  // pointer to injection point
+  a: ptrUint;                     // pointer to injection point
   originalcode: array of string;  // disassembled code we're replacing
   originalbytes: array of byte;   // bytes we're replacing
   codesize: integer;              // # of bytes we're replacing
@@ -3172,7 +2549,6 @@ var
   x: string;
   i,j,k: integer;
   p: integer;
-  count: integer;
 
   // lines of code to inject in certain places
   initialcode: tstringlist;
@@ -3193,12 +2569,8 @@ var
   resultAOB: String;
   resultOffset: Integer;
   symbolNameWithOffset: String;
-  jmpsize: integer;
 begin
-  if not processhandler.is64Bit then
-    farjmp:=false;
-
-  jmpsize:=ifthen(farjmp, 14, 5);
+  // now heavily modified code from "Code injection" menu
 
   try
     a:=StrToQWordEx('$'+address);
@@ -3210,7 +2582,23 @@ begin
   symhandler.getmodulebyaddress(a,mi);
 
   c:=a;
-  injectnr:=GetNextAllocNumber(script);
+  injectnr:=0;
+  for i:=0 to script.Count-1 do
+  begin
+    j:=pos('alloc(newmem',lowercase(script[i]));
+    if j<>0 then
+    begin
+      x:=copy(script[i],j+12,length(script[i]));
+      x:=copy(x,1,pos(',',x)-1);
+      try
+        k:=strtoint(x);
+        if injectnr<=k then
+          injectnr:=k+1;
+      except
+        inc(injectnr);
+      end;
+    end;
+  end;
   if injectnr = 0 then nr := '' else nr := sysutils.IntToStr(injectnr);
 
 
@@ -3219,7 +2607,7 @@ begin
   setlength(originalcode,0);
   codesize:=0;
 
-  while codesize<jmpsize do
+  while codesize<5 do
   begin
     setlength(originalcode,length(originalcode)+1);
     originalcode[length(originalcode)-1]:=disassemble(c,x);
@@ -3282,8 +2670,8 @@ begin
       else
         add('aobscan(' + symbolName + ',' + resultAOB + ') // should be unique');
 
-      if processhandler.is64bit and (not farjmp) then
-        add('alloc(newmem' + nr + ',$1000,' + symbolname + ')')
+      if processhandler.is64bit then
+        add('alloc(newmem' + nr + ',$1000,' + address + ')')
       else
         add('alloc(newmem' + nr + ',$1000)');
       add('');
@@ -3300,14 +2688,11 @@ begin
 
       add('');
       add(symbolNameWithOffset + ':');
-      if farjmp then
-        add('  jmp far newmem' + nr + '')
-      else
-        add('  jmp newmem' + nr + '');
-      if codesize>jmpsize then
+      add('  jmp newmem' + nr + '');
+      if codesize>5 then
       begin
-        if codesize-jmpsize>1 then
-          add('  nop '+inttohex(codesize-jmpsize,1))
+        if codesize-5>1 then
+          add('  nop '+inttohex(codesize-5,1))
         else
           add('  nop');
       end;
@@ -3348,21 +2733,48 @@ begin
       script.Add(disablecode[i]);
 
     // add template comment at the beginning
-    script.Insert(0, '{ '+rsAAAOBTemplate_Game+'   : ' + copy(mainform.ProcessLabel.Caption, pos('-', mainform.ProcessLabel.Caption) + 1, length(mainform.ProcessLabel.Caption)));
-    script.Insert(1, '  '+rsAAAOBTemplate_Version+': ');
-    script.Insert(2, '  '+rsAAAOBTemplate_Date+'   : ' + FormatDateTime('YYYY-MM-DD', Now));
-    script.Insert(3, '  '+rsAAAOBTemplate_Author+' : ' + UserName);
+    script.Insert(0,'{ Game   : ' + copy(mainform.ProcessLabel.Caption, pos('-', mainform.ProcessLabel.Caption) + 1, length(mainform.ProcessLabel.Caption)));
+    script.Insert(1,'  Version: ');
+    script.Insert(2,'  Date   : ' + FormatDateTime('YYYY-MM-DD', Now));
+    script.Insert(3,'  Author : ' + UserName);
     script.Insert(4,'');
-    script.Insert(5, '  '+rsAAAOBTemplate_blabla);
+    script.Insert(5,'  This script does blah blah blah');
     script.Insert(6,'}');
     script.Insert(7,'');
 
     // now we disassemble quite a bit more code for comments at the
     // bottom so someone can easily find the code again if the game
     // is updated
-    addSnapshotAsComment(script, a, commentradius);
+    script.Add('');
+    script.Add('{');
+    script.Add('// ORIGINAL CODE - INJECTION POINT: ' + address);
+    script.Add('');
 
+    injectFirstLine := 0;
+    injectLastLine := 0;
+    maxBytesSize := 0;
+    dline.Init(a - 128, mi);
 
+    while dline.Address < (a + 128) do
+    begin
+      // see if we overshot our injection point
+      if (dline.Address < a) and ((dline.Address + dline.Size) > a) then dline.Shorten((dline.Address + dline.Size) - a);
+      addressList.Add(dline.AddressString);
+      ddBytes := dline.GetHexBytes;
+      maxBytesSize := Max(maxBytesSize, Length(ddBytes));
+      bytesList.Add(ddBytes);
+      codeList.Add(dline.Code);
+      if (dline.Address >= a) and (injectFirstLine <= 0) then injectFirstLine := addressList.Count - 1;
+      if (dline.Address < a + codesize) then injectLastLine := addressList.Count - 1;
+      dline.Init(dline.Address + dline.Size, mi);
+    end;
+    for i := injectFirstLine - 10 to injectLastLine + 10 do
+    begin
+      if i = injectFirstLine then script.Add('// ---------- INJECTING HERE ----------');
+      script.Add(addressList[i] + ': ' + PadRight(bytesList[i],maxBytesSize) + ' - ' + codeList[i]);
+      if i = injectLastLine then script.Add('// ---------- DONE INJECTING  ----------');
+    end;
+    script.Add('}');
   finally
     initialcode.free;
     enablecode.free;
@@ -3396,13 +2808,29 @@ begin
 
   if inputquery(rsCodeInjectTemplate, rsOnWhatAddressDoYouWantTheJump, address) then
   begin
-    injectnr:=GetNextAllocNumber(assemblescreen.lines);
+    injectnr:=0;
+    for i:=0 to assemblescreen.Lines.Count-1 do
+    begin
+      j:=pos('alloc(newmem',lowercase(assemblescreen.lines[i]));
+      if j<>0 then
+      begin
+        x:=copy(assemblescreen.Lines[i],j+12,length(assemblescreen.Lines[i]));
+        x:=copy(x,1,pos(',',x)-1);
+        try
+          k:=strtoint(x);
+          if injectnr<=k then
+            injectnr:=k+1;
+        except
+          inc(injectnr);
+        end;
+      end;
+    end;
     if injectnr = 0 then nr := '' else nr := sysutils.IntToStr(injectnr);
 
     symbolname:='INJECT'+nr;
 
     if inputquery(rsCodeInjectTemplate, rsWhatIdentifierDoYouWantToUse, symbolName) then
-      GenerateAOBInjectionScript(assemblescreen.Lines, address, symbolname, 10, (ssCtrl in GetKeyShiftState) or mi14ByteJMP.checked);
+      GenerateAOBInjectionScript(assemblescreen.Lines, address, symbolname);
   end;
 end;
 
@@ -3723,7 +3151,6 @@ begin
   disassembler:=TDisassembler.Create;
   Disassembler.showsymbols:=false; //seeing that mi is given explicitly to init() I assume that modules are prefered over exports
   Disassembler.showmodules:=true;
-  Disassembler.showsections:=false;
   Disassembler.dataOnly:=false;
 end;
 
@@ -3776,76 +3203,8 @@ end;
 
 // /\   http://forum.cheatengine.org/viewtopic.php?t=566415 (jgoemat and some mods by db)
 
-function lua_getTabScript(L: PLua_State): integer; cdecl;
-var
-  frm: TfrmAutoInject;
-  index: integer;
-begin
-  result:=0;
-  frm:=luaclass_getClassObject(L);
-  if lua_gettop(L)=1 then
-  begin
-    index:=lua_tointeger(L,1);
-    lua_pushstring(L, frm.TabScript[index]);
-    result:=1;
-  end;
-end;
-
-function lua_setTabScript(L: PLua_State): integer; cdecl;
-var
-  frm: TfrmAutoInject;
-  index: integer;
-begin
-  result:=0;
-  frm:=luaclass_getClassObject(L);
-  if lua_gettop(L)=2 then
-  begin
-    index:=lua_tointeger(L,1);
-    frm.TabScript[index]:=lua_tostring(L,2);
-  end;
-end;
-
-function lua_addTab(L: PLua_State): integer; cdecl;
-var
-  frm: TfrmAutoInject;
-begin
-  frm:=luaclass_getClassObject(L);
-  frm.miNewTab.Click;
-  if frm.tablist<>nil then
-    lua_pushinteger(L,frm.tablist.Count-1)
-  else
-    lua_pushinteger(L,0);
-
-  result:=1;
-end;
-
-function lua_deleteTab(L: PLua_State): integer; cdecl;
-var
-  frm: TfrmAutoInject;
-  index: integer;
-  oldtabindex: integer;
-begin
-  frm:=luaclass_getClassObject(L);
-  if lua_gettop(L)>=1 then
-  begin
-    index:=lua_tointeger(L,1);
-    frm.deleteTab(index);
-  end;
-  result:=0;
-end;
-
-procedure frmAutoInject_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
-begin
-  customForm_addMetaData(L, metatable, userdata);
-
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'addTab', lua_addTab);
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'deleteTab', lua_deleteTab);
-  luaclass_addArrayPropertyToTable(L, metatable, userdata, 'TabScript', lua_getTabScript, lua_setTabScript);
-end;
 
 initialization
-  luaclass_register(TfrmAutoInject, frmAutoInject_addMetaData);
-
   {$i frmautoinjectunit.lrs}
 
 end.

@@ -11,7 +11,7 @@
 #include "threads.h"
 #include "vmxhelper.h"
 #include "debugger.h"
-#include "vmxoffload.h"
+
 
 #include "IOPLDispatcher.h"
 #include "interruptHook.h"
@@ -594,15 +594,11 @@ NTSTATUS DispatchClose(IN PDEVICE_OBJECT DeviceObject,
 
 void UnloadDriver(PDRIVER_OBJECT DriverObject)
 {
-	cleanupDBVM();
-	
 	if (!debugger_stopDebugging())
 	{
 		DbgPrint("Can not unload the driver because of debugger\n");
 		return; //
 	}
-
-	debugger_shutdown();
 
 	ultimap_disable();
 	DisableUltimap2();

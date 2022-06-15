@@ -55,7 +55,6 @@ typedef struct _vmregisters /* DO NOT CHANGE THIS ORDER */
   UINT64         rcx;
   UINT64         rbx;
   UINT64         rax; //not valid in AMD
-  //UINT64         amd_savedfsbase;
 } VMRegisters;
 
 #ifdef DEBUG
@@ -138,11 +137,6 @@ typedef struct _vmxhoststate //structure for easy management of hoststates
 
   QWORD RSP; //0x6c14
   QWORD RIP; //0x6c16
-
-  QWORD IA32_S_CET; //0x6c18
-  QWORD SSP; //0x6c1a
-  QWORD IA32_INTERRUPT_SSP_TABLE_ADDR; //0x6c1c
-  QWORD IA32_PKRS; //0x2c06
 } vmxhoststate, *pvmxhoststate;
 
 
@@ -234,15 +228,12 @@ typedef volatile struct _vmcb
 	BYTE  reserved2[3];
 	BYTE  V_TPR;  //60=correct
 	unsigned V_IRQ : 1;
-	unsigned V_GIF : 1;
-	unsigned reserved4: 6;
+	unsigned reserved4: 7;
 	unsigned V_INTR_PRIO: 4;
 	unsigned V_IGN_TPR: 1;
 	unsigned reserved5: 3;
 	unsigned V_INTR_MASKING : 1;
-	unsigned V_GIF_ENABLED : 1;
-	unsigned reserved6: 5;
-	unsigned AVIC_ENABLED: 1;
+	unsigned reserved6: 7;
 	BYTE  V_INTR_VECTOR; //64=correct
 	unsigned reserved6_1: 24;
 
@@ -255,8 +246,8 @@ typedef volatile struct _vmcb
 	};
 
 	QWORD EXITCODE; //70 correct
-	QWORD EXITINFO1;  //78
-	QWORD EXITINFO2;  //80
+	QWORD EXITINFO1;
+	QWORD EXITINFO2;
 	QWORD EXITINTINFO;
 
 	union{
@@ -286,7 +277,6 @@ typedef volatile struct _vmcb
 	  QWORD Enable_LBR_Virtualization;
 	  struct {
 	    unsigned LBR_VIRTUALIZATION_ENABLE: 1;
-	    unsigned VirtualizedVMSAVEandVMLOAD: 1;
 	  };
 	};
 	DWORD VMCB_CLEAN_BITS;
@@ -403,8 +393,6 @@ typedef struct _singlestepreason
   void* Data; //pointer to the object for this reason (watchlist, cloaklist, changeregonbplist)
 } SingleStepReason, *PSingleStepReason;
 
-typedef void(*NMICallBack)(void* self);
-
 typedef volatile struct tcpuinfo
 {
   volatile struct tcpuinfo *self; //pointer to itself (must be offset 0)
@@ -451,14 +439,10 @@ typedef volatile struct tcpuinfo
 
 
   void *vmcb_host;
-  UINT64 vmcb_host_pa; //separate storage for host info (not vmcb_host)
-
   pvmcb vmcb; //AMD's virtual machine control_block. Give the physical address of this to VMRUN
   UINT64 vmcb_PA;
 
   UINT64 guest_VM_HSAVE_PA; //the current VM_HSAVE_PA according to the guest
-  int vmcb_GIF;
-  unsigned char vmcb_pending[16];
 
 
 
@@ -595,21 +579,10 @@ typedef volatile struct tcpuinfo
     int insideVMXRootMode;
     QWORD guest_vmxonaddress;
     QWORD guest_activeVMCS; //the VMCS the guest thinks it is. (usually the same with some modification)
-
-
-    struct
-    {
-      QWORD VMCS_PhysicalAddress;
-      DWORD *VMCS_VirtualAddress;
-      //actual address in case I make a real shadow copy
-    } mappedVMCSBlocks[10];
-    int mappedVMCSBlocks_nextIndex; //index % 10.  If not found and no free one is left, use this entry to pick one to free and then increment with 1
-
-
-
+    //saved hoststate (used by handleByGuest)
 
     int currenterrorcode; //if not 0, return this errorcode on vmread
-    vmxhoststate originalhoststate;  //saved hoststate (used by emulateVMExit)
+    vmxhoststate originalhoststate;
     vmxhoststate dbvmhoststate;
     int runningvmx; //1 if the previous call was a vmlaunch/vmresume and no vmexit happened yet
 
@@ -629,25 +602,15 @@ typedef volatile struct tcpuinfo
   int eptUpdated;
 
 
-  struct
-  {
-    CloakedPageData *ActiveRegion; //if not null this contains the current page that is executable
-    QWORD LastCloakedVirtualBase;
-  } NP_Cloak; //AMD cloaking
 
 
   struct //single stepping data
   {
     int Method;
-    int PreviousTFState;
-    QWORD PreviousEFER; //AMD single step
-    QWORD PreviousFMASK;
-    int LastInstructionWasSyscall;//AMD single step
 
     SingleStepReason *Reasons;
     int ReasonsPos;
     int ReasonsLength;
-
   } singleStepping;
 
   int BPAfterStep;
@@ -663,17 +626,6 @@ typedef volatile struct tcpuinfo
   } SwitchKernel;
 
   int LastVMCall;
-  int LastVMCallDebugPos;
-  int insideHandler;
-
-  DWORD lastExitReason;
-  int lastExitWasWithRunningVMX;
-
-  int showall;
-#ifdef USENMIFORWAIT
-  int WaitTillDone;
-  int WaitingTillDone;
-#endif
 
 } tcpuinfo, *pcpuinfo; //allocated when the number of cpu's is known
 
@@ -763,21 +715,6 @@ typedef struct _regCR4
 #define CR0_PG          (1<<31)
 
 
-#define EFER_LME        (1<<8)
-#define EFER_LMA        (1<<10)
-
-
-
-//AMD VMCB_CLEAN fields
-#define CLEAN_CR2       (1<<9)
-#define CLEAN_DRx       (1<<6)
-#define CLEAN_NP        (1<<4)
-#define CLEAN_TPR       (1<<3)
-#define CLEAN_ASID      (1<<2)
-#define CLEAN_I         (1<<1)
-
-
-
 typedef struct _regDR6
 {
   union{
@@ -791,7 +728,6 @@ typedef struct _regDR6
       unsigned BD        :1;
       unsigned BS        :1;
       unsigned BT        :1;
-      unsigned RTM       :1;
     };
   };
 } __attribute__((__packed__)) regDR6,*PregDR6;
@@ -856,8 +792,6 @@ TIA32_VMX_MISC IA32_VMX_MISC;
 
 extern void SaveExtraHostState(UINT64 VMCB_PA);
 
-char * getVMExitReassonString(void);
-
 void CheckGuest(void);
 void displayVMmemory(pcpuinfo currentcpuinfo);
 void displayPhysicalMemory();
@@ -868,14 +802,11 @@ int vmexit(tcpuinfo *cpu, UINT64 *registers, void *fxsave);
 int vmexit_amd(pcpuinfo currentcpuinfo, UINT64 *registers, void *fxsave);
 
 void sendvmstate(pcpuinfo currentcpuinfo, VMRegisters *registers);
-void sendvmstateFull(pcpuinfo currentcpuinfo UNUSED, VMRegisters *registers UNUSED);
 char *getVMInstructionErrorString(void);
 
 void ShowCurrentInstruction(pcpuinfo currentcpuinfo);
 void ShowCurrentInstructions(pcpuinfo currentcpuinfo);
 void displayPreviousStates(void);
-
-void ShowPendingInterrupts();
 
 int isDebugFault(QWORD dr6, QWORD dr7);
 
@@ -890,7 +821,6 @@ extern volatile DWORD initcs;
 
 int APStartsInSIPI;
 extern pcpuinfo getcpuinfo();
-
 
 
 typedef BOOL DBVM_PLUGIN_EXIT_PRE(PDBVMExports exports, pcpuinfo currentcpuinfo, void *registers, void *fxsave);

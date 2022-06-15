@@ -6,7 +6,7 @@ unit scrollTreeView;
 interface
 
 uses
-  Classes, SysUtils, controls, StdCtrls, ExtCtrls, comctrls, lmessages,betterControls;
+  Classes, SysUtils, controls, StdCtrls, ExtCtrls, comctrls, lmessages;
 
 type
 
@@ -16,8 +16,7 @@ type
 
   THScrollEvent=procedure (sender: TObject; scrolledleft, maxscrolledleft: integer) of object;
 
-
-  TTreeView = class({$ifdef windows}betterControls.{$else}comctrls.{$endif}TTreeView)
+  TTreeView = class(TCustomTreeView)
   private
     fOnHScroll: THScrollEvent;
     fOnVScroll: TNotifyEvent;

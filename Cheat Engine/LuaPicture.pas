@@ -27,21 +27,7 @@ begin
   picture:=luaclass_getClassObject(L);
 
   if lua_gettop(L)>=1 then
-  begin
-    try
-      picture.LoadFromFile(Lua_ToString(L, -1));
-      lua_pushboolean(L,true);
-      result:=1;
-    except
-      on e: exception do
-      begin
-        lua_pushboolean(L, false);
-        lua_pushstring(L, e.Message);
-        result:=2;
-      end;
-
-    end;
-  end;
+    picture.LoadFromFile(Lua_ToString(L, -1));
 end;
 
 function picture_saveToFile(L: PLua_State): integer; cdecl;
@@ -72,26 +58,15 @@ begin
     if paramstart=2 then //6.2 compat, there i set the position to 0. In 6.3+ I will have the user set it to the position they want first
       stream.Position:=0;
 
-    try
-      if paramcount=2 then
-      begin
-        ext:=Lua_ToString(L, paramstart+1);
-        picture.LoadFromStreamWithFileExt(stream,ext);
-      end
-      else
-      if paramcount=1 then
-        picture.LoadFromStream(stream);
-
-      lua_pushboolean(L,true);
-      result:=1;
-    except
-      on e:exception do
-      begin
-        lua_pushboolean(L, false);
-        lua_pushstring(L,e.message);
-        result:=2;
-      end;
+    if paramcount=2 then
+    begin
+      ext:=Lua_ToString(L, paramstart+1);
+      picture.LoadFromStreamWithFileExt(stream,ext);
     end;
+
+    if paramcount=1 then
+      picture.LoadFromStream(stream);
+
   end;
 end;
 

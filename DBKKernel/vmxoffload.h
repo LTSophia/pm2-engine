@@ -1,7 +1,6 @@
 #ifndef VMXOFFLOAD_H
 #define VMXOFFLOAD_H
 
-void cleanupDBVM();
 void initializeDBVM(PCWSTR dbvmimgpath);
 void vmxoffload(void);
 

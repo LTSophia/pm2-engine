@@ -5,7 +5,7 @@ unit LuaCheckbox;
 interface
 
 uses
-  Classes, SysUtils,lua, lualib, lauxlib, controls, StdCtrls, betterControls;
+  Classes, SysUtils,lua, lualib, lauxlib, controls, StdCtrls;
 
 procedure initializeLuaCheckbox;
 
@@ -71,12 +71,11 @@ function checkbox_setState(L: PLua_State): integer; cdecl;
 var
   parameters: integer;
   checkbox: Tcustomcheckbox;
-  paramstart, paramcount: integer;
 begin
   result:=0;
-  checkbox:=luaclass_getClassObject(L, @paramstart, @paramcount);
-  if paramcount>=1 then
-    checkbox.state:=tcheckboxstate(lua_tointeger(L,paramstart));
+  checkbox:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
+    checkbox.state:=tcheckboxstate(lua_tointeger(L,-1));
 end;
 
 function checkbox_getonChange(L: PLua_State): integer; cdecl;

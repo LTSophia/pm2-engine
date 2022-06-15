@@ -12,7 +12,7 @@ uses
   mactypes, macport,
   {$endif}
   {$ifdef windows}
-  {jwawindows,} windows, dialogs,
+  {jwawindows,} windows,
   {$endif}
   Classes, SysUtils, networkinterface, newkernelhandler, CEFuncProc;
   {$endif}
@@ -50,7 +50,6 @@ uses networkConfig;
 
 resourcestring
   rsNoConnection = 'No connection';
-  rsInvalidCeserverVersion = 'Invalid ceserver version. ( %s )';
 
 threadvar connection: TCEConnection;
 
@@ -176,7 +175,6 @@ function NetworkReadProcessMemory(hProcess: THandle; lpBaseAddress, lpBuffer: Po
 var a,b: dword;
     c,d: ptruint;
 begin
-
   //log('NetworkReadProcessMemory');
   //log(format('Read %d bytes from %p into %p',[nsize, lpBaseAddress, lpBuffer]));
 
@@ -305,22 +303,12 @@ end;
 
 procedure InitializeNetworkInterface;
 var tm: TThreadManager;
-    versionname: string;
 begin
   //hook the threadmanager if it hasn't been hooked yet
 
   {$ifdef windows}
 
   OutputDebugString('InitializeNetworkInterface');
-
-  if NetworkVersion(versionname)<2 then
-  begin
-    if MainThreadID=GetCurrentThreadId then
-      messageDlg(format(rsInvalidCeserverVersion, [versionname]), mterror, [mbok], 0);
-
-    exit;
-  end;
-
 
   if not threadManagerIsHooked then
   begin
@@ -335,10 +323,10 @@ begin
   end;
 
   newkernelhandler.OpenProcess:=@NetworkOpenProcess;
-  newkernelhandler.ReadProcessMemoryActual:=@NetworkReadProcessMemory;
+  newkernelhandler.ReadProcessMemory:=@NetworkReadProcessMemory;
   newkernelhandler.WriteProcessMemoryActual:=@NetworkWriteProcessMemory;
   newkernelhandler.VirtualProtectEx:=@NetworkVirtualProtectEx;
-  newkernelhandler.VirtualQueryExActual:=@NetworkVirtualQueryEx;
+  newkernelhandler.VirtualQueryEx:=@NetworkVirtualQueryEx;
   newkernelhandler.CreateToolhelp32Snapshot:=@NetworkCreateToolhelp32Snapshot;
   newkernelhandler.Process32First:=@NetworkProcess32First;
   newkernelhandler.Process32Next:=@NetworkProcess32Next;

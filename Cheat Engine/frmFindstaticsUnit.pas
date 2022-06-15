@@ -13,7 +13,7 @@ uses
   {$endif}
   LCLIntf, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls, ComCtrls,disassembler,CEFuncProc,NewKernelHandler,
-  {tlhelp32,}symbolhandler, LResources, commonTypeDefs, betterControls;
+  {tlhelp32,}symbolhandler, LResources, commonTypeDefs;
 
 type TStaticlist=record
   s: ptrUint;
@@ -171,7 +171,6 @@ begin
     d:=TDisassembler.Create;
     d.showmodules:=false;
     d.showsymbols:=false;
-    d.showsections:=false;
 
 
     while (not terminated) and (currentpos<=stopaddress) do

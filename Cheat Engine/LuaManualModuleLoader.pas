@@ -24,9 +24,6 @@ var
   executeEntryPoint: boolean;
   paramlist: integer;
   i: integer;
-
-  usetimeout: boolean=false;
-  timeout: integer;
 begin
   result:=0;
   if lua_gettop(L)>=1 then
@@ -49,19 +46,6 @@ begin
     else
       executeEntryPoint:=true;
 
-    if lua_gettop(L)>=3 then
-    begin
-      if lua_isnil(L,3) then
-        useTimeout:=false
-      else
-      begin
-        useTimeout:=true;
-        timeout:=lua_tointeger(L,3);
-      end;
-    end
-    else
-      useTimeout:=false;
-
 
     if executeEntryPoint then
     begin
@@ -76,10 +60,7 @@ begin
 
 
       lua_pushinteger(L,0); //stdcall
-      if usetimeout then
-        lua_pushinteger(L,timeout) //timeout
-      else
-        lua_pushnil(L); //timeout:infinite
+      lua_pushnil(L); //timeout:infinite
       lua_pushinteger(L,ml.EntryPoint); //address
 
       lua_newtable(L); //hinstance

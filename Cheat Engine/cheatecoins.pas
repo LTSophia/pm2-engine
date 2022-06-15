@@ -17,7 +17,7 @@ interface
 
 {$IFDEF windows}
 uses
-  jwawindows, windows, newkernelhandler, Classes, SysUtils, dialogs, betterControls;
+  jwawindows, windows, newkernelhandler, Classes, SysUtils, dialogs;
 
 procedure EnableCheatEcoinSystem;
 
@@ -30,7 +30,7 @@ function checkCoinStatus: integer;
 implementation
 
 {$IFDEF windows}
-uses forms, frmMicrotransactionsUnit, ceregistry, luahandler, mainunit2;
+uses forms, frmMicrotransactionsUnit, ceregistry, luahandler;
 
 var
   _DecreaseCount: integer;
@@ -326,7 +326,7 @@ procedure decreaseCheatECoinCount; stdcall;
 begin
   asm
     {$ifdef cpu64}
-    lea r8,[rip+_DecreaseCount]
+    lea r8,[_DecreaseCount]
     xor dword [r8],$deadbeef
     {$else}
     add [_DecreaseCount],2
@@ -339,7 +339,7 @@ end;
 function getCheatECoinCount: integer; assembler; nostackframe;
 asm
   {$ifdef cpu64}
-  lea r8,[rip+_GetCount]
+  lea r8,[_GetCount]
   mov eax,[r8]
   {$else}
   lea eax,[_GetCount]
@@ -410,8 +410,7 @@ var
 begin
   //MEssageBoxA(0,'0','0',0);
 
-
-  ShowMessage('New!!! Cheat-e-coins! Now you can buy Cheat-e-coins to be able to use '+strCheatEngine+'. It''s just like a game!!! Yay!');
+  ShowMessage('New!!! Cheat-e-coins! Now you can buy Cheat-e-coins to be able to use Cheat Engine. It''s just like a game!!! Yay!');
 
   k:=GetModuleHandle('kernel32.dll');
   AddVectoredExceptionHandler:=GetProcAddress(k,'AddVectoredExceptionHandler');

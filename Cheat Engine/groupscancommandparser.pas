@@ -9,8 +9,6 @@ This unit contains the class that reads a groupscan command and parses it. The r
 interface
 
 
-
-
 {$ifdef jni}
 uses Classes, SysUtils, strutils, CustomTypeHandler, commonTypeDefs;
 {$else}
@@ -31,7 +29,7 @@ type
     FloatSettings: TFormatSettings;
 
     elements: array of record
-      wildcard: boolean; //for vtPointer means it has to be a valid pointer, so not nil
+      wildcard: boolean;
       offset: integer;
       vartype: TVariabletype;
       uservalue: string;
@@ -41,7 +39,6 @@ type
       bytesize: integer;
       command: string;
       picked: boolean;
-      pointertypes: TPointerTypes; // for vtPointer this restricts whether the pointer is static, dynamic, executable
     end;
 
     blocksize: integer;
@@ -56,36 +53,33 @@ type
 
 implementation
 
-uses Parsers, ProcessHandlerUnit;
+uses Parsers;
 
 procedure TGroupscanCommandParser.parseToken(s: string);
 var i,j,k: integer;
   command,value: string;
   ctn: string;
   bracketcount: integer;
+
+
   nextchar: integer;
 begin
 
   //deal with custom types with a ':' and don't mess up strings
   bracketcount:=0;
-  j:=0;
-  for i:=1 to length(s) do
+  for i:=1 to length(s)-1 do
   begin
     case s[i] of
-      ':': if bracketcount=0 then
-      begin
-        j:=i;
-        break; //found it
-      end;
+      ':': if bracketcount=0 then break; //found it
       '(': inc(bracketcount);
       ')': dec(bracketcount);
     end;
   end;
 
-  if j=0 then exit;
+  if i=length(s) then exit;
 
-  command:=uppercase(copy(s,1,j-1));
-  value:=copy(s,j+1, length(s));
+  command:=uppercase(copy(s,1,i-1));
+  value:=copy(s,i+1, length(s));
 
 
 
@@ -101,20 +95,11 @@ begin
     typeAligned:=value='A';
   end;
 
-  if (length(command)>=1) and (command[1] in ['1','2','4','8','F','D','C','S','W','P']) then
+  if (length(command)>=1) and (command[1] in ['1','2','4','8','F','D','C','S','W']) then
   begin
     j:=length(elements);
     setlength(elements, j+1);
 
-    //init the element to 0
-    elements[j].wildcard:=false;
-    elements[j].vartype:=vtByte;
-    elements[j].uservalue:='';
-    elements[j].valueint:=0;
-    elements[j].valuefloat:=0;
-    elements[j].customtype:=nil;
-    elements[j].bytesize:=1;
-    elements[j].pointertypes:=[ptStatic, ptDynamic];
     elements[j].offset:=calculatedBlocksize;
     elements[j].command:=command;
 
@@ -145,12 +130,6 @@ begin
       begin
         elements[j].vartype:=vtQword;
         elements[j].bytesize:=8;
-      end;
-
-      'P':   //pointer
-      begin
-        elements[j].vartype:=vtPointer;
-        elements[j].bytesize:=processhandler.pointersize;
       end;
 
       'F':
@@ -239,34 +218,6 @@ begin
       case elements[j].vartype of
         vtByte..vtQword, vtCustom: elements[j].valueint:=StrToQWordEx(value);
 
-        vtPointer:
-        begin
-          if value = 'S' then
-          begin
-            elements[j].pointertypes:=[ptStatic];
-            elements[j].wildcard:=true;
-          end
-          else if value = 'D' then
-          begin
-            elements[j].pointertypes:=[ptDynamic];
-            elements[j].wildcard:=true;
-          end
-          else if value = 'E' then
-          begin
-            elements[j].pointertypes:=[ptExecutable];
-            elements[j].wildcard:=true;
-          end
-          else
-          begin
-            //convert it to a normal type
-            if processhandler.is64Bit then
-              elements[j].vartype:=vtQword
-            else
-              elements[j].vartype:=vtDword;
-
-            elements[j].valueint:=StrToQWordEx(value);
-          end;
-        end;
 
         vtSingle, vtDouble:
         begin

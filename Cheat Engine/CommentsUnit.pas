@@ -9,7 +9,7 @@ uses
   windows,
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources, ComCtrls, CEFuncProc, betterControls;
+  Dialogs, StdCtrls, ExtCtrls, LResources, ComCtrls, LuaHandler, CEFuncProc;
 
 type
 
@@ -43,7 +43,7 @@ var
 
 implementation
 
-uses LuaHandler, MainUnit;
+uses MainUnit;
 
 {$ifdef windows}
 procedure TComments.WMGetMinMaxInfo(var Message: TMessage);
@@ -75,7 +75,6 @@ end;
 procedure TComments.FormShow(Sender: TObject);
 begin
   memo1.font.height:=GetFontData(font.reference.Handle).Height;
-  memo1.font.color:=font.color;
 end;
 
 procedure TComments.mLuaScriptChange(Sender: TObject);

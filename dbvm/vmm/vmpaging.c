@@ -211,7 +211,6 @@ UINT64 getPhysicalAddressVM(pcpuinfo currentcpuinfo, UINT64 address, int *notpag
 #ifdef DEBUG
   if (pagebase==0xffffffffffffffffULL)
   {
-    nosendchar[getAPICID()]=0;
     sendstringf("getPhysicalAddressVM for with cr3 of 0xffffffffffffffff\n");
     jtagbp();
     while (1) outportb(0x80,0xdd);
@@ -476,7 +475,7 @@ int setupRealModePaging(pcpuinfo currentcpuinfo)
   return setupNonPagedPaging(currentcpuinfo);
 }
 
-criticalSection setupNonPagedPagingCS={.name="setupNonPagedPagingCS", .debuglevel=2};
+criticalSection setupNonPagedPagingCS;
 int setupNonPagedPaging(pcpuinfo currentcpuinfo)
 {
 //sets up a identify mapped memory (faking the vmm memory as ffpages)

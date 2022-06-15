@@ -6,7 +6,7 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources, SynEdit, synedittypes, betterControls;
+  Dialogs, StdCtrls, ExtCtrls, LResources, SynEdit;
 
 type
 
@@ -42,7 +42,7 @@ type
     procedure Panel1Click(Sender: TObject);
   private
     { Private declarations }
-    fSynEdit: TCustomSynEdit;
+    fSynEdit: TSynEdit;
     oldsettings: record
       font: tfont;
       showlinenumbers: boolean;
@@ -53,7 +53,7 @@ type
 
   public
     { Public declarations }
-    function execute(synedit: TCustomSynEdit): boolean;
+    function execute(synedit: TSynEdit): boolean;
   end;
 
 var
@@ -62,7 +62,7 @@ var
 implementation
 
 
-function TfrmAAEditPrefs.execute(synedit: TCustomSynEdit): boolean;
+function TfrmAAEditPrefs.execute(synedit: TSynEdit): boolean;
 begin
   fSynEdit:=synedit;
   FontDialog1.Font.Assign(fSynEdit.Font);

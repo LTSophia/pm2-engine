@@ -6,7 +6,7 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources, betterControls;
+  Dialogs, StdCtrls, ExtCtrls, LResources;
 
 type
 
@@ -22,8 +22,6 @@ type
     Label1: TLabel;
     procedure Edit1Change(Sender: TObject);
     procedure Edit1KeyPress(Sender: TObject; var Key: char);
-    procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ListBox1DblClick(Sender: TObject);
     procedure ListBox1SelectionChange(Sender: TObject; User: boolean);
@@ -51,21 +49,18 @@ type
     property SelectionToText: TSelectionToTextEvent read fSelectionToText write fSelectionToText;
   end;
 
-function ShowSelectionList(owner: TComponent; title, caption: string; list: TStrings; var output: string; AllowCustomInput: boolean=false; SelectionToText: TSelectionToTextEvent=nil; formname: string=''): integer;
+function ShowSelectionList(owner: TComponent; title, caption: string; list: TStrings; var output: string; AllowCustomInput: boolean=false; SelectionToText: TSelectionToTextEvent=nil): integer;
 
 implementation
 
-uses math, CEFuncProc;
+uses math;
 
-function ShowSelectionList(owner: TComponent; title, caption: string; list: TStrings; var output: string; AllowCustomInput: boolean=false; SelectionToText: TSelectionToTextEvent=nil; formname: string=''): integer;
+function ShowSelectionList(owner: TComponent; title, caption: string; list: TStrings; var output: string; AllowCustomInput: boolean=false; SelectionToText: TSelectionToTextEvent=nil): integer;
 var sl: TfrmSelectionList;
 begin
   sl:=TfrmSelectionList.create(owner, list);
   sl.caption:=title;
   sl.label1.Caption:=caption;
-
-  if formname<>'' then
-    sl.name:=formname;
 
   sl.searchbox:=true;
   sl.customInput:=AllowCustomInput;
@@ -157,16 +152,6 @@ begin
   listbox1.OnSelectionChange:=ListBox1SelectionChange;
 end;
 
-procedure TfrmSelectionList.FormCreate(Sender: TObject);
-begin
-
-end;
-
-procedure TfrmSelectionList.FormDestroy(Sender: TObject);
-begin
-  SaveFormPosition(self);
-end;
-
 procedure TfrmSelectionList.FormShow(Sender: TObject);
 begin
   if fsearchbox then
@@ -174,8 +159,6 @@ begin
 
   if listbox1.height<listbox1.ItemHeight*4 then
     height:=height+(listbox1.ItemHeight*4)-listbox1.height;
-
-  LoadFormPosition(self);
 end;
 
 procedure TfrmSelectionList.Edit1Change(Sender: TObject);

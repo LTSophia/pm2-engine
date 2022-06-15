@@ -6,7 +6,7 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, ComCtrls,math, Buttons, LResources, betterControls;
+  Dialogs, StdCtrls, ExtCtrls, ComCtrls,math, Buttons, LResources;
 
 type
   TForm5 = class(TForm)
@@ -43,7 +43,7 @@ var
 
 implementation
 
-uses Unit4, Unit6, frmHelpUnit, cetranslator;
+uses Unit4, Unit6, frmHelpUnit;
 
 resourcestring
   rsStep4FloatingPointsPW = 'Step 4: Floating points (PW=';
@@ -97,8 +97,7 @@ procedure TForm5.FormCreate(Sender: TObject);
 begin
   health:=100.0;
   ammo:=100.0;
-  caption:=altnamer(caption);
-  memo1.lines.text:=altnamer(rsTutorialStep4);
+  memo1.lines.text:=rsTutorialStep4;
   memo1.Lines.Insert(0, rsStep4FloatingPointsPW+inttostr(890124)+')');
   memo1.SelStart:=0;
   font.size:=12;

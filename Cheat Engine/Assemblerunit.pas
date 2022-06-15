@@ -18,14 +18,12 @@ uses
   dialogs,LCLIntf,sysutils{$ifdef windows},imagehlp{$endif}, ProcessHandlerUnit,vextypedef;
 {$endif}
 
-const opcodecount=1917+14;  //I wish there was a easier way than to handcount
+const opcodecount=1911;  //I wish there was a easier way than to handcount
   //1112
 
 
 type
   EAssemblerException=class(Exception);
-  EAssemblerExceptionOffsetTooBig=class(EAssemblerException);
-
 
 
 
@@ -102,10 +100,6 @@ type tparam=(par_noparam,
              par_xmm_m64,
              par_xmm_m128,
              par_ymm_m256,
-             par_vm32x, //VSIB
-             par_vm32y, //VSIB
-             par_vm64x, //VSIB
-             par_vm64y, //VSIB
 
             //values
              par_imm8,
@@ -139,7 +133,6 @@ type topcode=record
   vexOpcodeExtension: TVEXOpcodeExtention; //e.g oe_F3;
   vexLeadingOpcode: TVEXLeadingopcode; //lo_0f),
   vexExtraParam: integer;
-  vexSIB: boolean;
  // RexPrefixOffset: byte; //if specified specifies which byte should be used for the rexw (e.g f3 before rex )
 
   //paramencoding: TParamEncoding;
@@ -192,7 +185,6 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'ADDSS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m32;bytes:3;bt1:$f3;bt2:$0f;bt3:$58),
 
   (mnemonic:'ADDSUBPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:3;bt1:$66;bt2:$0f;bt3:$d0),
-  (mnemonic:'ADDSUBPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:3;bt1:$f2;bt2:$0f;bt3:$d0),
   (mnemonic:'ADOX';opcode1:eo_reg;paramtype1:par_r32;paramtype2:par_rm32;bytes:4;bt1:$f3;bt2:$0f;bt3:$38;bt4:$f6),
   (mnemonic:'AESDEC';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$de),
   (mnemonic:'AESDECLAST';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$df),
@@ -837,7 +829,7 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'LZCNT';opcode1:eo_reg;paramtype1:par_r16;paramtype2:par_rm16;bytes:4;bt1:$66;bt2:$F3;bt3:$0f;bt4:$bd),
   (mnemonic:'LZCNT';opcode1:eo_reg;paramtype1:par_r32;paramtype2:par_rm32;bytes:3;bt1:$F3;bt2:$0f;bt3:$bd),
 
-  (mnemonic:'MASKMOVDQU';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;bytes:3;bt1:$66;bt2:$0f;bt3:$f7),
+  (mnemonic:'MASKMOVDQU';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_mm;bytes:3;bt1:$66;bt2:$0f;bt3:$f7),
   (mnemonic:'MASKMOVQ';opcode1:eo_reg;paramtype1:par_mm;paramtype2:par_mm;bytes:2;bt1:$0f;bt2:$f7),
   (mnemonic:'MAXPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:3;bt1:$66;bt2:$0f;bt3:$5f),
   (mnemonic:'MAXPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:2;bt1:$0f;bt2:$5f),
@@ -892,9 +884,6 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'MOVBE';opcode1:eo_reg;paramtype1:par_r16;paramtype2:par_rm16;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$f0),
   (mnemonic:'MOVBE';opcode1:eo_reg;paramtype1:par_r32;paramtype2:par_rm32;bytes:3;bt1:$0f;bt2:$38;bt3:$f0),
 
-  (mnemonic:'MOVBE';opcode1:eo_reg;paramtype1:par_rm16;paramtype2:par_r16;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$f1),
-  (mnemonic:'MOVBE';opcode1:eo_reg;paramtype1:par_rm32;paramtype2:par_r32;bytes:3;bt1:$0f;bt2:$38;bt3:$f1),
-
   (mnemonic:'MOVD';opcode1:eo_reg;paramtype1:par_mm;paramtype2:par_rm32;bytes:2;bt1:$0f;bt2:$6e),
   (mnemonic:'MOVD';opcode1:eo_reg;paramtype1:par_rm32;paramtype2:par_mm;bytes:2;bt1:$0f;bt2:$7e),
 
@@ -907,8 +896,6 @@ const opcodes: array [1..opcodecount] of topcode =(
 
   (mnemonic:'MOVDQU';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:3;bt1:$f3;bt2:$0f;bt3:$6f),
   (mnemonic:'MOVDQU';opcode1:eo_reg;paramtype1:par_xmm_m128;paramtype2:par_xmm;bytes:3;bt1:$f3;bt2:$0f;bt3:$7f),
-
-  (mnemonic:'MOVDDUP';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m64;bytes:3;bt1:$f2;bt2:$0f;bt3:$12),
 
   (mnemonic:'MOVHLPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;bytes:2;bt1:$0f;bt2:$12),
 
@@ -962,7 +949,7 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'MOVSLDUP';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:3;bt1:$f3;bt2:$0f;bt3:$12),
 
 
-  (mnemonic:'MOVSQ';bytes:1;bt1:$a5;W1:true; invalidin32bit: true),
+  (mnemonic:'MOVSQ';bytes:1;bt2:$a5;W1:true),
 
   (mnemonic:'MOVSS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m32;bytes:3;bt1:$f3;bt2:$0f;bt3:$10),
   (mnemonic:'MOVSS';opcode1:eo_reg;paramtype1:par_xmm_m32;paramtype2:par_xmm;bytes:3;bt1:$f3;bt2:$0f;bt3:$11),
@@ -1208,8 +1195,8 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'PMINUW';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m128;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$3a),
 
 
-  (mnemonic:'PMOVMSKB';opcode1:eo_reg;paramtype1:par_r32;paramtype2:par_mm;bytes:2;bt1:$0f;bt2:$d7),
-  (mnemonic:'PMOVMSKB';opcode1:eo_reg;paramtype1:par_r32;paramtype2:par_xmm;bytes:3;bt1:$66;bt2:$0f;bt3:$d7),
+  (mnemonic:'PMOVMSKB';opcode1:eo_reg;opcode2:eo_ib;paramtype1:par_r32;paramtype2:par_mm;paramtype3:par_imm8;bytes:2;bt1:$0f;bt2:$d7),
+  (mnemonic:'PMOVMSKB';opcode1:eo_reg;opcode2:eo_ib;paramtype1:par_r32;paramtype2:par_xmm;paramtype3:par_imm8;bytes:3;bt1:$66;bt2:$0f;bt3:$d7),
 
   (mnemonic:'PMOVSXBD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m32;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$21),
   (mnemonic:'PMOVSXBQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm_m16;bytes:4;bt1:$66;bt2:$0f;bt3:$38;bt4:$22),
@@ -1770,10 +1757,10 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'VBLENDPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256;paramtype4:par_imm8; bytes:1;bt1:$0d;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
   (mnemonic:'VBLENDPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128;paramtype4:par_imm8; bytes:1;bt1:$0c;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
   (mnemonic:'VBLENDPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256;paramtype4:par_imm8; bytes:1;bt1:$0c;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
-  (mnemonic:'VBLENDVPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128;paramtype4:par_xmm; bytes:1;bt1:$4b;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
-  (mnemonic:'VBLENDVPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256;paramtype4:par_ymm; bytes:1;bt1:$4b;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
-  (mnemonic:'VBLENDVPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128;paramtype4:par_xmm; bytes:1;bt1:$4a;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
-  (mnemonic:'VBLENDVPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256;paramtype4:par_ymm; bytes:1;bt1:$4a;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_3A; vexExtraParam:2),
+  (mnemonic:'VBLENDVPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128;paramtype4:par_xmm; bytes:1;bt1:$15;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_38; vexExtraParam:2),
+  (mnemonic:'VBLENDVPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256;paramtype4:par_ymm; bytes:1;bt1:$15;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_38; vexExtraParam:2),
+  (mnemonic:'VBLENDVPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128;paramtype4:par_xmm; bytes:1;bt1:$14;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_38; vexExtraParam:2),
+  (mnemonic:'VBLENDVPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256;paramtype4:par_ymm; bytes:1;bt1:$14;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F_38; vexExtraParam:2),
 
   (mnemonic:'VBROADCASTF128';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_m128;bytes:1;bt1:$1a;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38),
   (mnemonic:'VBROADCASTSD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_xmm_m64;bytes:1;bt1:$19;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38),
@@ -1991,22 +1978,22 @@ const opcodes: array [1..opcodecount] of topcode =(
 
 
   //todo: add modrm support for vm*
-  (mnemonic:'VGATHERDPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$92;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERQPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$93;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERDPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$92;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERQPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm64y;paramtype3:par_ymm; bytes:1;bt1:$93;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERDPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$92;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERQPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$93;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERDPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$92;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VGATHERQPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64y;paramtype3:par_xmm; bytes:1;bt1:$93;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERDD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$90;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERQD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$91;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERDD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$90;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERQD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm64y;paramtype3:par_ymm; bytes:1;bt1:$91;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERDQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$90;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERQQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$91;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERDQ';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$90;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
-  (mnemonic:'VPGATHERQQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64y;paramtype3:par_xmm; bytes:1;bt1:$91;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3; vexSIB:true),
+  //(mnemonic:'VGATHERDPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$92;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERQPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$93;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERDPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$92;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERQPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm64y;paramtype3:par_ymm; bytes:1;bt1:$93;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERDPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$92;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERQPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$93;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERDPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$92;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VGATHERQPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64y;paramtype3:par_xmm; bytes:1;bt1:$93;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERDD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$90;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERQD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$91;W1:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERDD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$90;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERQD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm64y;paramtype3:par_ymm; bytes:1;bt1:$91;W1:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERDQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm32x;paramtype3:par_xmm; bytes:1;bt1:$90;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERQQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64x;paramtype3:par_xmm; bytes:1;bt1:$91;W0:true;hasvex:true; vexL:0; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERDQ';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_vm32x;paramtype3:par_ymm; bytes:1;bt1:$90;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
+  //(mnemonic:'VPGATHERQQ';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_vm64y;paramtype3:par_xmm; bytes:1;bt1:$91;W0:true;hasvex:true; vexL:1; vexOpcodeExtension: oe_66;vexLeadingOpcode: lo_0F_38; vexExtraParam:3),
 
 
   (mnemonic:'VHADDPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128; bytes:1;bt1:$7c;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F; vexExtraParam:2),
@@ -2049,12 +2036,12 @@ const opcodes: array [1..opcodecount] of topcode =(
   (mnemonic:'VMCALL';bytes:3;bt1:$0f;bt2:$01;bt3:$c1),  
   (mnemonic:'VMCLEAR';opcode1:eo_reg6;paramtype1:par_m64;bytes:3;bt1:$66;bt2:$0f;bt3:$c7),
 
-  (mnemonic:'VMINPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F; vexExtraParam:2),
-  (mnemonic:'VMINPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256; bytes:1;bt1:$5d;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F; vexExtraParam:2),
-  (mnemonic:'VMINPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_none; vexLeadingOpcode: lo_0F; vexExtraParam:2),
-  (mnemonic:'VMINPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256; bytes:1;bt1:$5d;hasvex:true; vexL:1; vexOpcodeExtension: oe_none; vexLeadingOpcode: lo_0F; vexExtraParam:2),
-  (mnemonic:'VMINSD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m64; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_f2; vexLeadingOpcode: lo_0F; vexExtraParam:2),
-  (mnemonic:'VMINSS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m32; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_f3; vexLeadingOpcode: lo_0F; vexExtraParam:2),
+  (mnemonic:'VMIXPD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F; vexExtraParam:2),
+  (mnemonic:'VMIXPD';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256; bytes:1;bt1:$5d;hasvex:true; vexL:1; vexOpcodeExtension: oe_66; vexLeadingOpcode: lo_0F; vexExtraParam:2),
+  (mnemonic:'VMIXPS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m128; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_none; vexLeadingOpcode: lo_0F; vexExtraParam:2),
+  (mnemonic:'VMIXPS';opcode1:eo_reg;paramtype1:par_ymm;paramtype2:par_ymm;paramtype3:par_ymm_m256; bytes:1;bt1:$5d;hasvex:true; vexL:1; vexOpcodeExtension: oe_none; vexLeadingOpcode: lo_0F; vexExtraParam:2),
+  (mnemonic:'VMIXSD';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m64; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_f2; vexLeadingOpcode: lo_0F; vexExtraParam:2),
+  (mnemonic:'VMIXSS';opcode1:eo_reg;paramtype1:par_xmm;paramtype2:par_xmm;paramtype3:par_xmm_m32; bytes:1;bt1:$5d;hasvex:true; vexL:0; vexOpcodeExtension: oe_f3; vexLeadingOpcode: lo_0F; vexExtraParam:2),
 
 
   (mnemonic:'VMLAUNCH';bytes:3;bt1:$0f;bt2:$01;bt3:$c2),
@@ -2704,7 +2691,7 @@ type TAssemblerBytes=array of byte;
 
 type TAssemblerEvent=procedure(address:qword; instruction: string; var bytes: TAssemblerBytes) of object;
 
-type TassemblerPreference=(apNone=0, apShort=1, apLong=2, apFar=3);
+type TassemblerPreference=(apNone, apShort, apLong, apFar);
 
 function Assemble(opcode:string; address: ptrUint;var bytes: TAssemblerBytes; assemblerPreference: TassemblerPreference=apNone; skiprangecheck: boolean=false): boolean;
 function GetOpcodesIndex(opcode: string): integer;
@@ -2726,7 +2713,6 @@ type TSingleLineAssembler=class
     relativeAddressLocation: integer; //index into the bytes array containing the start of th relative 4 byte address
     actualdisplacement: qword;
     needsAddressSwitchPrefix: boolean;
-    usesVexSIB: boolean;
     faddress: qword;
 
     function getRex_W: boolean;
@@ -3063,14 +3049,14 @@ begin
   if (reg='BPL') or (reg='RBP') or (reg='EBP') or (reg='BP') or (reg='CH') or (reg='MM5') or (reg='XMM5') or (reg='ST(5)') or (reg='GS') or (reg='CR5') or (reg='DR5') then result:=5;
   if (reg='SIL') or (reg='RSI') or (reg='ESI') or (reg='SI') or (reg='DH') or (reg='MM6') or (reg='XMM6') or (reg='ST(6)') or (reg='HS') or (reg='CR6') or (reg='DR6') then result:=6;
   if (reg='DIL') or (reg='RDI') or (reg='EDI') or (reg='DI') or (reg='BH') or (reg='MM7') or (reg='XMM7') or (reg='ST(7)') or (reg='IS') or (reg='CR7') or (reg='DR7') then result:=7;
-  if (reg='R8') or (reg='XMM8') or (reg='YMM8') then result:=8;
-  if (reg='R9') or (reg='XMM9') or (reg='YMM9') then result:=9;
-  if (reg='R10') or (reg='XMM10') or (reg='YMM10') then result:=10;
-  if (reg='R11') or (reg='XMM11') or (reg='YMM11') then result:=11;
-  if (reg='R12') or (reg='XMM12') or (reg='YMM12') then result:=12;
-  if (reg='R13') or (reg='XMM13') or (reg='YMM13') then result:=13;
-  if (reg='R14') or (reg='XMM14') or (reg='YMM14') then result:=14;
-  if (reg='R15') or (reg='XMM15') or (reg='YMM15') then result:=15;
+  if (reg='R8') then result:=8;
+  if (reg='R9') then result:=9;
+  if (reg='R10') then result:=10;
+  if (reg='R11') then result:=11;
+  if (reg='R12') then result:=12;
+  if (reg='R13') then result:=13;
+  if (reg='R14') then result:=14;
+  if (reg='R15') then result:=15;
 
   if (result=-1) and exceptonerror then raise EAssemblerException.create(rsInvalidRegister);
 end;
@@ -3872,7 +3858,6 @@ procedure TSingleLineAssembler.createsibscaleindex(var sib:byte;reg:string);
 var
   i: integer;
   hasmultiply: boolean;
-  s: string;
 begin
   hasmultiply:=false;
 
@@ -3918,55 +3903,38 @@ begin
   end
   else
   begin
-    if usesVexSIB then
-    begin              //vgatherqps xmm7,[ymm1*2+00000000],xmm5
-      if ((reg='') or (pos('RSP',reg)>0)) then setsibindex(sib,4) else
-      begin
-        if reg.StartsWith('XMM') or reg.StartsWith('YMM') then
-        begin
-          s:=reg.Split('*')[0];
-
-          setsibindex(sib, s.Substring(3).ToInteger);
-          exit;
-        end
-      end;
-
-      raise EAssemblerException.create(rsWTFIsA+reg);
-    end
-    else
+    if pos('RAX',reg)>0 then setsibindex(sib,0) else
+    if pos('RCX',reg)>0 then setsibindex(sib,1) else
+    if pos('RDX',reg)>0 then setsibindex(sib,2) else
+    if pos('RBX',reg)>0 then setsibindex(sib,3) else
+    if ((reg='') or (pos('RSP',reg)>0)) then setsibindex(sib,4) else //if esp it is invalid, but if the user types it it'll compile
+    if pos('RBP',reg)>0 then setsibindex(sib,5) else
+    if pos('RSI',reg)>0 then setsibindex(sib,6) else
+    if pos('RDI',reg)>0 then setsibindex(sib,7) else
+    if pos('R8',reg)>0 then setsibindex(sib,8) else
+    if pos('R9',reg)>0 then setsibindex(sib,9) else
+    if pos('R10',reg)>0 then setsibindex(sib,10) else
+    if pos('R11',reg)>0 then setsibindex(sib,11) else
+    if pos('R12',reg)>0 then setsibindex(sib,12) else
+    if pos('R13',reg)>0 then setsibindex(sib,13) else
+    if pos('R14',reg)>0 then setsibindex(sib,14) else
+    if pos('R15',reg)>0 then setsibindex(sib,15) else
     begin
-      if pos('RAX',reg)>0 then setsibindex(sib,0) else
-      if pos('RCX',reg)>0 then setsibindex(sib,1) else
-      if pos('RDX',reg)>0 then setsibindex(sib,2) else
-      if pos('RBX',reg)>0 then setsibindex(sib,3) else
-      if ((reg='') or (pos('RSP',reg)>0)) then setsibindex(sib,4) else //if esp it is invalid, but if the user types it it'll compile
-      if pos('RBP',reg)>0 then setsibindex(sib,5) else
-      if pos('RSI',reg)>0 then setsibindex(sib,6) else
-      if pos('RDI',reg)>0 then setsibindex(sib,7) else
-      if pos('R8',reg)>0 then setsibindex(sib,8) else
-      if pos('R9',reg)>0 then setsibindex(sib,9) else
-      if pos('R10',reg)>0 then setsibindex(sib,10) else
-      if pos('R11',reg)>0 then setsibindex(sib,11) else
-      if pos('R12',reg)>0 then setsibindex(sib,12) else
-      if pos('R13',reg)>0 then setsibindex(sib,13) else
-      if pos('R14',reg)>0 then setsibindex(sib,14) else
-      if pos('R15',reg)>0 then setsibindex(sib,15) else
-      begin
-        //in case addressswitch is needed
-        if pos('EAX',reg)>0 then setsibindex(sib,0) else
-        if pos('ECX',reg)>0 then setsibindex(sib,1) else
-        if pos('EDX',reg)>0 then setsibindex(sib,2) else
-        if pos('EBX',reg)>0 then setsibindex(sib,3) else
-        if pos('ESP',reg)>0 then setsibindex(sib,4) else
-        if pos('EBP',reg)>0 then setsibindex(sib,5) else
-        if pos('ESI',reg)>0 then setsibindex(sib,6) else
-        if pos('EDI',reg)>0 then setsibindex(sib,7) else
-          raise EAssemblerException.create(rsWTFIsA+reg);
+      //in case addressswitch is needed
+      if pos('EAX',reg)>0 then setsibindex(sib,0) else
+      if pos('ECX',reg)>0 then setsibindex(sib,1) else
+      if pos('EDX',reg)>0 then setsibindex(sib,2) else
+      if pos('EBX',reg)>0 then setsibindex(sib,3) else
+      if pos('ESP',reg)>0 then setsibindex(sib,4) else
+      if pos('EBP',reg)>0 then setsibindex(sib,5) else
+      if pos('ESI',reg)>0 then setsibindex(sib,6) else
+      if pos('EDI',reg)>0 then setsibindex(sib,7) else
+        raise EAssemblerException.create(rsWTFIsA+reg);
 
-        //still here, so I guess so
-        needsAddressSwitchPrefix:=true;
-      end;
+      //still here, so I guess so
+      needsAddressSwitchPrefix:=true;
     end;
+
   end;
 end;
 
@@ -4132,6 +4100,7 @@ begin
   end;
 
   try
+
     if (reg[k]='ESP') or (reg[-k]='ESP') or (reg[k]='RSP') or (reg[-k]='RSP') then //esp takes precedence
     begin
       if reg[-k]='ESP' then k:=-k;
@@ -4144,7 +4113,6 @@ begin
       found:=true;
       exit;
     end;
-
 
     if (reg[k]='EAX') or (reg[-k]='EAX') or (reg[k]='RAX') or (reg[-k]='RAX') then
     begin
@@ -4597,15 +4565,12 @@ var tokens: ttokens;
     br: PTRUINT;
     canDoAddressSwitch: boolean;
 
-
     bigvex: boolean;
     VEXvvvv: integer;
 
     cannotencodewithrexw: boolean;
 
     //cpuinfo: TCPUIDResult;
-
-    bts: TAssemblerBytes;
 begin
   faddress:=address;
   VEXvvvv:=$f;
@@ -4809,7 +4774,9 @@ begin
     //handle it by the arm assembler
    // for i:=0 to nroftokens do
    //   tempstring:=tempstring+tokens[i]+' ';   //seperators like "," are gone, but the armassembler doesn't really care about that  (only tokens matter)
-    exit(ArmAssemble(address, opcode, bytes));
+
+    result:=ArmAssemble(address, opcode, bytes);
+    exit;
   end;
 
 
@@ -5089,8 +5056,7 @@ begin
   if (not overrideShort) and (not overrideLong) and (processhandler.is64Bit) then   //if 64-bit and no override is given
   begin
     //check if this is a jmp or call with relative value
-
-    if (tokens[mnemonic]='JMP') or (tokens[mnemonic]='CALL') or (tokens[mnemonic][1]='J') then
+    if (tokens[mnemonic]='JMP') or (tokens[mnemonic]='CALL') then
     begin
       if paramtype1=ttValue then
       begin
@@ -5099,6 +5065,7 @@ begin
           v2:=address-v
         else
           v2:=v-address;
+
 
         if (v2>$7fffffff) or (overrideFar) then //the user WANTS it to be called as a 'far' jump even if it's not needed
         begin
@@ -5113,32 +5080,10 @@ begin
             AddDword(bytes, 0);
           end
           else
-          if (tokens[mnemonic]='CALL') then
           begin
             add(bytes,[$15]); //call
             AddDword(bytes, 2);
             Add(bytes, [$eb, $08]);
-          end
-          else
-          if (tokens[mnemonic][1]='J') then
-          begin
-            //J* +2
-            //jmp short +14
-            //jmp far address
-            bytes:=[];
-            assemble(tokens[mnemonic]+' +2', address, bytes);
-
-            bts:=[];
-
-            assemble('jmp short +e', address+length(bytes), bts);
-            insert(bts, bytes,length(bytes));
-
-            bts:=[];
-            assemble('jmp far '+inttohex(v,8), address+length(bytes),bts);
-            insert(bts, bytes, length(bytes));
-
-            result:=true;
-            exit;
           end;
 
           AddQword(bytes,v);
@@ -5188,7 +5133,6 @@ begin
 
 
     canDoAddressSwitch:=opcodes[j].canDoAddressSwitch;
-    usesVexSIB:=opcodes[j].vexSIB;
 
 
     case opcodes[j].paramtype1 of
@@ -7103,70 +7047,6 @@ begin
           end;
         end;
 
-
-        if (opcodes[j].paramtype2=par_vm32x) and ((paramtype2=ttMemorylocation32) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('YMM')=false) then
-        begin
-          //ymm,vm32x,
-          if (opcodes[j].paramtype3=par_ymm) and (paramtype3=ttRegisterYMM) then
-          begin
-            //ymm,vm32x,ymm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm32y) and ((paramtype2=ttMemorylocation32) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('XMM')=false) then
-        begin
-          //ymm,vm32y,
-          if (opcodes[j].paramtype3=par_ymm) and (paramtype3=ttRegisterYMM) then
-          begin
-            //ymm,vm32y,ymm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm64x) and ((paramtype2=ttMemorylocation64) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('YMM')=false) then
-        begin
-          //ymm,vm64x,
-          if (opcodes[j].paramtype3=par_ymm) and (paramtype3=ttRegisterYMM) then
-          begin
-            //ymm,vm64x,ymm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm64y) and ((paramtype2=ttMemorylocation64) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('XMM')=false) then
-        begin
-          //ymm,vm64y,
-          if (opcodes[j].paramtype3=par_ymm) and (paramtype3=ttRegisterYMM) then
-          begin
-            //ymm,vm64y,ymm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
       end;
 
 
@@ -7408,70 +7288,6 @@ begin
                 add(bytes,[strtoint(parameter4)]);
                 exit;
               end;
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm32x) and ((paramtype2=ttMemorylocation32) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('YMM')=false) then
-        begin
-          //xmm,vm32x,
-          if (opcodes[j].paramtype3=par_xmm) and (paramtype3=ttRegisterXMM) then
-          begin
-            //xmm,vm64x,xmm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm32y) and ((paramtype2=ttMemorylocation32) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('XMM')=false) then
-        begin
-          //xmm,vm32x,
-          if (opcodes[j].paramtype3=par_xmm) and (paramtype3=ttRegisterXMM) then
-          begin
-            //xmm,vm64x,xmm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm64x) and ((paramtype2=ttMemorylocation64) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('YMM')=false) then
-        begin
-          //xmm,vm64x,
-          if (opcodes[j].paramtype3=par_xmm) and (paramtype3=ttRegisterXMM) then
-          begin
-            //xmm,vm64x,xmm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
-            end;
-          end;
-        end;
-
-        if (opcodes[j].paramtype2=par_vm64y) and ((paramtype2=ttMemorylocation64) or ismemorylocationdefault(parameter2)) and (parameter2.Contains('XMM')=false) then
-        begin
-          //xmm,vm64y,
-          if (opcodes[j].paramtype3=par_xmm) and (paramtype3=ttRegisterXMM) then
-          begin
-            //xmm,vm64y,xmm,
-
-            if (opcodes[j].vexExtraParam=3) then
-            begin
-              addopcode(bytes,j);
-              VEXvvvv:=(not getreg(parameter3)) and $f;
-              exit(createmodrm(bytes,getreg(parameter1),parameter2));
             end;
           end;
         end;
@@ -8070,7 +7886,7 @@ begin
             //result:=HandleTooBigAddress(opcode,address, bytes, actualdisplacement);
 
             if skiprangecheck=false then  //for syntax checking
-              raise EAssemblerExceptionOffsetTooBig.create(rsOffsetTooBig);
+              raise EAssemblerException.create(rsOffsetTooBig);
           end
           else
             pdword(@bytes[relativeAddressLocation])^:=actualdisplacement-(address+length(bytes));

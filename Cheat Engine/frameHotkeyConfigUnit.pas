@@ -12,7 +12,7 @@ uses
   windows,
   {$endif}LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls, LResources, Menus, Buttons, CEFuncProc,
-  commonTypeDefs, LCLType, betterControls;
+  commonTypeDefs, LCLType;
 
 const cehotkeycount=32;
 
@@ -51,8 +51,6 @@ type
     procedure Edit1KeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure Button3Click(Sender: TObject);
-    procedure ListBox1DrawItem(Control: TWinControl; Index: Integer;
-      ARect: TRect; State: TOwnerDrawState);
     procedure ListBox1SelectionChange(Sender: TObject; User: boolean);
     procedure MenuItem1Click(Sender: TObject);
   private
@@ -275,48 +273,6 @@ begin
     edit1.Text:=ConvertKeyComboToString(newhotkeys[listbox1.ItemIndex]);
     edit1.SetFocus;
   end;
-end;
-
-procedure TframeHotkeyConfig.ListBox1DrawItem(Control: TWinControl;
-  Index: Integer; ARect: TRect; State: TOwnerDrawState);
-const
-  TO_START_ALIGNMENT: array[Boolean] of TAlignment = (taLeftJustify, taRightJustify);
-var
-  OldTextStyle, NewTextStyle: TTextStyle;
-  Canvas: TCanvas;
-  Hotkey: string;
-begin
-  Canvas := TListBox(Control).Canvas;
-  if not(odBackgroundPainted in State) then
-    Canvas.FillRect(ARect);
-
-  ARect.Left += 2;
-  ARect.Right -= 2;
-
-  Canvas.font.color:=clWindowtext;
-
-  OldTextStyle := Canvas.TextStyle;
-  NewTextStyle.Layout:= tlCenter;
-
-  Hotkey := ConvertKeyComboToString(newhotkeys[Index]);
-  if(Hotkey <> '') then
-  begin
-    Hotkey := '(' + Hotkey + ')';
-
-    NewTextStyle.Alignment := TO_START_ALIGNMENT[not Control.UseRightToLeftAlignment];
-    Canvas.TextStyle := NewTextStyle;
-    Canvas.TextRect(ARect, ARect.Left, ARect.Top, Hotkey);
-    if Control.UseRightToLeftAlignment then
-      ARect.Left += Canvas.TextWidth(Hotkey) + 2
-    else
-      ARect.Right -= Canvas.TextWidth(Hotkey) + 2;
-  end;
-
-  NewTextStyle.Alignment:= TO_START_ALIGNMENT[Control.UseRightToLeftAlignment];
-  Canvas.TextStyle := NewTextStyle;
-  Canvas.TextRect(ARect, ARect.Left, ARect.Top, TListBox(Control).Items[Index]);
-
-  Canvas.TextStyle := OldTextStyle;
 end;
 
 procedure TframeHotkeyConfig.ListBox1SelectionChange(Sender: TObject;

@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, LuaSyntax, betterControls;
+  StdCtrls, ExtCtrls, LuaSyntax;
 
 type
 

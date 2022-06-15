@@ -247,7 +247,7 @@ begin
       addresspos:=7+sizeof(sizeof(TBitAddress))*i
     else
     if vartype =vtGrouped then
-      addresspos:=7+sizeof(dword)+groupElementSize*i
+      addresspos:=7+sizeof(dword)+groupElementSize
     else
       addresspos:=7+sizeof(sizeof(ptruint))*i;
 
@@ -698,10 +698,10 @@ begin
           begin
             valuelist[j]:=valuelist[j]+gcp.elements[k].command+'['+inttohex(groupdata^.offsets[k],1)+']:';
 
-            //if not gcp.elements[k].wildcard then
-              valuelist[j]:=valuelist[j]+readAndParseAddress(currentaddress+groupdata^.offsets[k], gcp.elements[k].vartype, gcp.elements[k].customtype, false, false, gcp.elements[k].bytesize);
-            //else
-            //  valuelist[j]:=valuelist[j]+'*';
+            if not gcp.elements[k].wildcard then
+              valuelist[j]:=valuelist[j]+readAndParseAddress(currentaddress+groupdata^.offsets[k], gcp.elements[k].vartype, gcp.elements[k].customtype, false, false, gcp.elements[k].bytesize)
+            else
+              valuelist[j]:=valuelist[j]+'*';
 
 
             if k<>length(gcp.elements)-1 then

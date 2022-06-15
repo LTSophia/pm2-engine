@@ -196,31 +196,11 @@ var
 begin
   treenode:=luaclass_getClassObject(L);
   if lua_gettop(L)>=1 then
-    treenode.Expanded:=lua_toboolean(L, 1);
+    treenode.Expanded:=lua_tovariant(L, -1);
 
   result:=0;
 end;
 
-function treenode_getVisible(L: PLua_State): integer; cdecl;
-var
-  treenode: Ttreenode;
-begin
-
-  treenode:=luaclass_getClassObject(L);
-  lua_pushvariant(L, treenode.Visible);
-  result:=1;
-end;
-
-function treenode_setVisible(L: PLua_State): integer; cdecl;
-var
-  treenode: Ttreenode;
-begin
-  treenode:=luaclass_getClassObject(L);
-  if lua_gettop(L)>=1 then
-    treenode.visible:=lua_toboolean(L, 1);
-
-  result:=0;
-end;
 
 function treenode_getParent(L: PLua_State): integer; cdecl;
 var
@@ -246,24 +226,9 @@ var
 begin
   treenode:=luaclass_getClassObject(L);
   if lua_gettop(L)>=1 then
-    treenode.Text:=Lua_ToString(L, 1);
+    treenode.Text:=lua_tovariant(L, -1);
 
   result:=0;
-end;
-
-function treenode_getDisplayRect(L: PLua_State): integer; cdecl;
-var
-  treenode: Ttreenode;
-  textonly: boolean=false;
-  r: trect;
-begin
-  treenode:=luaclass_getClassObject(L);
-  if lua_gettop(L)>=1 then
-    textonly:=lua_toboolean(L,1);
-
-  r:=treenode.DisplayRect(TextOnly);
-  lua_pushrect(L,r);
-  result:=1;
 end;
 
 function treenode_makeVisible(L: PLua_State): integer; cdecl;
@@ -340,7 +305,6 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'deleteChildren', treenode_deleteChildren);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getNextSibling', treenode_getNextSibling);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getItems', treenode_getItems);
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getDisplayRect', treenode_getDisplayRect);
 
   luaclass_addPropertyToTable(L, metatable, userdata, 'Data', treenode_getData, treenode_setData);
   luaclass_addPropertyToTable(L, metatable, userdata, 'Text', treenode_getText, treenode_setText);
@@ -353,7 +317,6 @@ begin
   Luaclass_addPropertyToTable(L, metatable, userdata, 'Parent', treenode_getParent, nil);
   Luaclass_addPropertyToTable(L, metatable, userdata, 'HasChildren', treenode_getHasChildren, treenode_setHasChildren);
   Luaclass_addPropertyToTable(L, metatable, userdata, 'Expanded', treenode_getExpanded, treenode_setExpanded);
-  Luaclass_addPropertyToTable(L, metatable, userdata, 'Visible', treenode_getVisible, treenode_setVisible);
   luaclass_addArrayPropertyToTable(L, metatable, userdata, 'Items', treenode_getItems);
   luaclass_setDefaultArrayProperty(L, metatable, userdata, treenode_getItems, nil);
 

@@ -1,3 +1,0 @@
-LIBRARY		MonoDataCollector
-EXPORTS   
-    MDC_ServerPipe	@1

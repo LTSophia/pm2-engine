@@ -1,6 +1,3 @@
-// Copyright Cheat Engine. All Rights Reserved.
-
-
 unit CEFuncProc;
 
 {$MODE Delphi}
@@ -12,7 +9,7 @@ interface
 
 uses
   {$ifdef darwin}
-   mactypes, LCLType,macport,
+  macport, macportdefines, mactypes, LCLType,
   {$endif}
   {$ifdef windows}
    jwawindows, windows,
@@ -38,7 +35,7 @@ hypermode,
 {$endif}
 {$endif}
  math,syncobjs, {$ifdef windows}shellapi,{$endif} ProcessHandlerUnit, controls, {$ifdef windows}shlobj, ActiveX,{$endif} strutils,
-commontypedefs, {$ifdef windows}Win32Int,{$endif} maps, lua, lualib, lauxlib{$ifdef darwin},macportdefines{$endif}, betterControls;
+commontypedefs, {$ifdef windows}Win32Int,{$endif} maps, lua, lualib, lauxlib;
 
 
 const
@@ -87,7 +84,7 @@ procedure cleanModuleList(ModuleList: TStrings);
 
 function AvailMem:SIZE_T;
 function isreadable(address:ptrUint):boolean;
-function iswritable(address:ptrUint):boolean;
+
 
 procedure RemoveAddress(address: Dword;bit: Byte; vartype: Integer);
 
@@ -357,7 +354,7 @@ uses disassembler,CEDebugger,debughelper, symbolhandler, symbolhandlerstructs,
      frmProcessWatcherUnit, KernelDebugger, formsettingsunit, MemoryBrowserFormUnit,
      savedscanhandler, networkInterface, networkInterfaceApi, vartypestrings,
      processlist, Parsers, Globals, xinput, luahandler, LuaClass, LuaObject,
-     UnexpectedExceptionsHelper, LazFileUtils, autoassembler, Clipbrd, mainunit2;
+     UnexpectedExceptionsHelper, LazFileUtils, autoassembler, Clipbrd;
 
 
 resourcestring
@@ -414,8 +411,6 @@ resourcestring
   rsCEFPDllInjectionFailedSymbolLookupError = 'Dll injection failed: symbol lookup error';
   rsCEFPICantGetTheProcessListYouArePropablyUseinWindowsNtEtc = 'I can''t get the process list. You are propably using windows NT. Use the window list instead!';
   rsPosition = ' Position';
-  rsThisCanTakeSomeTime = 'This can take some time if you are missing the '
-    +'PDB''s and CE will look frozen. Are you sure?';
 
 function ProcessID: dword;
 begin
@@ -446,19 +441,6 @@ var mbi: _MEMORY_BASIC_INFORMATION;
 begin
   i:=VirtualQueryEx(processhandle,pointer(address),mbi,sizeof(mbi));
   result:=(i=sizeof(mbi)) and (mbi.State=mem_commit);
-end;
-
-function iswritable(address:ptrUint):boolean;
-var mbi: _MEMORY_BASIC_INFORMATION;
-  i: integer;
-begin
-  i:=VirtualQueryEx(processhandle,pointer(address),mbi,sizeof(mbi));
-  result:=(i=sizeof(mbi)) and (mbi.State=mem_commit);
-  if result then result:={$ifdef windows}
-                         ((mbi.Protect and PAGE_EXECUTE_READWRITE)=PAGE_EXECUTE_READWRITE) or
-                         ((mbi.Protect and PAGE_EXECUTE_WRITECOPY)=PAGE_EXECUTE_WRITECOPY) or
-  {$endif}
-                         ((mbi.Protect and PAGE_READWRITE)=PAGE_READWRITE);
 end;
 
 function RawToString(const buf: array of byte; vartype: integer;showashex: boolean; bufsize: integer):string;
@@ -766,10 +748,7 @@ begin
   try
     lua_getglobal(Luavm, 'loadModule');
     lua_pushstring(Luavm,dllname);
-    lua_pushboolean(LuaVM,true);
-    lua_pushinteger(LuaVM,10000); //timeout of 10 secs
-
-    if (lua_pcall(Luavm,3,2,0)<>0) then
+    if (lua_pcall(Luavm,1,2,0)<>0) then
       raise exception.create('didn''t even run');
 
     if lua_isnil(Luavm,-2) then
@@ -804,8 +783,7 @@ end;
 {$ifdef darwin}
 Procedure InjectDll(dllname: string; functiontocall: string='');
 var s: tstringlist;
-    di: TDisableInfo;
-    //allocs: TCEAllocArray;
+    allocs: TCEAllocArray;
     injector: qword;
     returnvalue: qword;
     i: integer;
@@ -818,9 +796,8 @@ var s: tstringlist;
 
     errorstring: string;
     tid: dword;
-    //el: TCEExceptionListArray;
+    el: TCEExceptionListArray;
 begin
-  outputdebugstring('cefuncproc.InjectDLL('''+dllname+''','''+functiontocall+''')');
   s:=tstringlist.create;
   s.add('[enable]');
   s.add('registersymbol(v1)');
@@ -946,26 +923,25 @@ begin
   s.add('dealloc(injector)');
   s.add('dealloc(returnvalue)');
 
-  //clipboard.AsText:=s.Text;
+ // clipboard.AsText:=s.Text;
 
  // raise exception.create('copy to clipboard now');
 
 
-  di:=TDisableInfo.create;
-  //setlength(allocs,0);
-  if autoassemble(s,false, true, false, false, di) then
+  setlength(allocs,0);
+  if autoassemble(s,false, true, false, false, allocs,el) then
   begin
     injector:=0;
     returnvalue:=0;
-    for i:=0 to length(di.allocs)-1 do
-      if di.allocs[i].varname='injector' then
-        injector:=di.allocs[i].address
+    for i:=0 to length(allocs)-1 do
+      if allocs[i].varname='injector' then
+        injector:=allocs[i].address
       else
-      if di.allocs[i].varname='returnvalue' then
-        returnvalue:=di.allocs[i].address
+      if allocs[i].varname='returnvalue' then
+        returnvalue:=allocs[i].address
       else
-      if di.allocs[i].varname='errorstr' then
-        erroraddress:=di.allocs[i].address;
+      if allocs[i].varname='errorstr' then
+        erroraddress:=allocs[i].address;
 
     //showmessage('injector='+inttohex(injector,8));
 
@@ -994,11 +970,11 @@ begin
 
     end;
 
-    outputdebugstring('library injection code executed successful');
+    outputdebugstring('dll injection successful');
 
 
     //finally free the injector
-    autoassemble(s, false, false, false, false, di);   //disable
+    autoassemble(s, false, false, false, false, allocs, el);   //disable
 
     if r=2 then
     begin
@@ -1021,19 +997,11 @@ begin
   end else raise exception.create('injecting the dllloader script failed');
 
   s.free;
-
-  outputdebugstring('cefuncproc.InjectDll made it to the end');
 end;
 
 {$endif}
 
 {$ifdef windows}
-
-
-type
-  EInjectDLLFunctionFailure=class(Exception);
-  EInjectError=class(Exception);
-
 Procedure InjectDll(dllname: string; functiontocall: string='');
 var LoadLibraryPtr: pointer;
     GetProcAddressPtr: Pointer;
@@ -1344,9 +1312,9 @@ begin
             begin
               case res of
                 1: ;//success
-                2: raise EInjectError.Create(utf8toansi(rsFailedInjectingTheDLL));
-                3: raise EInjectDLLFunctionFailure.Create(utf8toansi(rsFailedExecutingTheFunctionOfTheDll));
-                else raise EInjectError.Create(utf8toansi(rsUnknownErrorDuringInjection));
+                2: raise exception.Create(utf8toansi(rsFailedInjectingTheDLL));
+                3: raise exception.Create(utf8toansi(rsFailedExecutingTheFunctionOfTheDll));
+                else raise exception.Create(utf8toansi(rsUnknownErrorDuringInjection));
               end;
             end
             else
@@ -1371,7 +1339,7 @@ begin
 
     end;
   except
-    on e:EInjectError do
+    on e:exception do
     begin
       forceLoadModule(dllname, functiontocall, 'dllInject failed: '+e.message);
     end;
@@ -2722,7 +2690,7 @@ begin
   Path := StrAlloc(MAX_PATH);
   SHGetSpecialFolderLocation(0, CSIDL_PERSONAL, PIDL);
   if SHGetPathFromIDList(PIDL, Path) then
-    tablesdir := WinCPToUTF8(Path)+'\'+strMyCheatTables;
+    tablesdir := WinCPToUTF8(Path)+'\My Cheat Tables';
   SHGetMalloc(AMalloc);
   AMalloc.Free(PIDL);
   StrDispose(Path);
@@ -2773,25 +2741,11 @@ var original,a: dword;
     v: boolean;
 begin
   //make writable, write, restore, flush
-  if SystemSupportsWritableExecutableMemory or SkipVirtualProtectEx then
-  begin
-    v:=(SkipVirtualProtectEx=false) and VirtualProtectEx(processhandle,  pointer(address),size,PAGE_EXECUTE_READWRITE,original);
-    result:=writeprocessmemory(processhandle,pointer(address),buffer,size,s);
-    size:=s;
-    if v then
-      VirtualProtectEx(processhandle,pointer(address),size,original,a);
-  end
-  else
-  begin
-    ntsuspendProcess(processhandle);
-    v:=VirtualProtectEx(processhandle, pointer(address),size,PAGE_READWRITE,original);
-    if v then
-    begin
-      result:=writeprocessmemory(processhandle,pointer(address),buffer,size,s);
-      result:=result or VirtualProtectEx(processhandle, pointer(address),size,original,a);
-    end;
-    ntresumeProcess(processhandle);
-  end;
+  v:=(SkipVirtualProtectEx=false) and VirtualProtectEx(processhandle,  pointer(address),size,PAGE_EXECUTE_READWRITE,original);
+  result:=writeprocessmemory(processhandle,pointer(address),buffer,size,s);
+  size:=s;
+  if v then
+    VirtualProtectEx(processhandle,pointer(address),size,original,a);
 end;
 
 function rewritecode(processhandle: thandle; address:ptrUint; buffer: pointer; var size:dword; force: boolean=false): boolean;
@@ -2862,9 +2816,6 @@ var a,b,c,d: dword;
 begin
   result:=false;
   succeed:=false;
-  {$ifdef darwinarm64}
-  exit(false);
-  {$else}
 
   {$IFDEF windows}
  needed:=0;
@@ -2963,47 +2914,36 @@ begin
     end;
 
   end;
-  {$endif}
+
 
 end;
 
 
-var
-  _CPUCOUNT: integer{$ifdef NOTMULTITHREADED}=1{$endif};
 
 function GetCPUCount: integer;
 {
 this function will return how many active cpu cores there are at your disposal
 }
 var
-  PA,SA: DWORD_PTR;
+    PA,SA: DWORD_PTR;
 begin
-  if _CPUCOUNT=0 then
-  begin
 
-    {$IFDEF windows}
-    //get the cpu and system affinity mask, only processmask is used
-    GetProcessAffinityMask(getcurrentprocess,PA,SA);
+{$ifdef NOTMULTITHREADED}
+  result:=1;
+  exit;
+{$endif}
 
-    _CPUCOUNT:=getbitcount(pa);
-    //in the future make use of getlogicalprocessorinformation
+  {$IFDEF windows}
+  //get the cpu and system affinity mask, only processmask is used
+  GetProcessAffinityMask(getcurrentprocess,PA,SA);
 
-    if _CPUCOUNT=0 then _CPUCOUNT:=1;
-    {$else}
-    _CPUCOUNT:=cpucount;
+  result:=getbitcount(pa);
+  //in the future make use of getlogicalprocessorinformation
 
-    if result=1 then
-    begin
-      //doubt!
-    {$ifdef darwin}
-      _CPUCOUNT:=macport.getCPUCount;
-    {$endif}
-
-    end;
-    {$ENDIF}
-  end;
-
-  exit(_CPUCOUNT);
+  if result=0 then result:=1;
+  {$else}
+  result:=cpucount;
+  {$ENDIF}
 end;
 
 
@@ -3022,13 +2962,13 @@ begin
     reg:=tregistry.create;
     try
       Reg.RootKey := HKEY_CURRENT_USER;
-      if Reg.OpenKey('\Software\'+strCheatEngine,false) then
+      if Reg.OpenKey('\Software\Cheat Engine',false) then
       begin
         if reg.valueexists('Save window positions') then
           if reg.readbool('Save window positions') = false then exit;
       end;
 
-      if Reg.OpenKey('\Software\'+strCheatEngine+'\Window Positions '+inttostr(screen.PixelsPerInch),false) or Reg.OpenKey('\Software\'+strCheatEngine+'\Window Positions',false) then
+      if Reg.OpenKey('\Software\Cheat Engine\Window Positions '+inttostr(screen.PixelsPerInch),false) or Reg.OpenKey('\Software\Cheat Engine\Window Positions',false) then
       begin
         s:=form.Name;
         s:=s+rsPosition;
@@ -3113,7 +3053,7 @@ begin
       Reg.RootKey := HKEY_CURRENT_USER;
 
       //make sure the option to save is enabled
-      if Reg.OpenKey('\Software\'+strCheatEngine,false) then
+      if Reg.OpenKey('\Software\Cheat Engine',false) then
       begin
         if reg.valueexists('Save window positions') then
           if reg.readbool('Save window positions') = false then
@@ -3135,7 +3075,7 @@ begin
       end;
 
 
-      if Reg.OpenKey('\Software\'+strCheatEngine+'\Window Positions '+inttostr(screen.PixelsPerInch),true) then
+      if Reg.OpenKey('\Software\Cheat Engine\Window Positions '+inttostr(screen.PixelsPerInch),true) then
       begin
         //registry is open, gather data
         buf:=tmemorystream.Create;
@@ -3220,8 +3160,6 @@ begin
   dis:=TDisassembler.Create;
   dis.showmodules:=false;
   dis.showsymbols:=false;
-  dis.showsections:=false;
-
   dis.dataOnly:=true;
   try
     dis.disassemble(address,st);
@@ -3499,24 +3437,16 @@ function getProcessPathFromProcessID(pid: dword): string;
 var ths: thandle;
     me32:MODULEENTRY32;
 begin
-  outputdebugstring('getProcessPathFromProcessID('+inttostr(pid)+')');
   result:='';
   me32.dwSize:=sizeof(MODULEENTRY32);
   ths:=CreateToolhelp32Snapshot(TH32CS_SNAPMODULE or TH32CS_SNAPMODULE32,pid);
   if ths<>0 then
   begin
     if Module32First(ths,me32) then
-    begin
-      outputdebugstring('me32.szExePath='+me32.szExePath);
       result:=me32.szExePath;
-    end
-    else
-      OutputDebugString('Module32First failed');
 
     closehandle(ths);
-  end
-  else
-    OutputDebugString('CreateToolhelp32Snapshot failed');
+  end;
 end;
 
 function getProcessnameFromProcessID(pid: dword): string;
@@ -3597,14 +3527,6 @@ begin
   result:=s1;
 end;
 
-
-var
-  StackStartCachePID: dword;
-  StackStartCache: tmap;
-  StackStartCacheCS: TCriticalSection;
-  StackStartCacheKernel32Address: ptruint;
-
-
 function GetStackStart(threadnr: integer=0): ptruint;
 {$IFDEF windows}
 var
@@ -3629,20 +3551,6 @@ var
 {$ENDIF}
 //gets the stack base of the main thread, then checks where the "exitThread" entry is located and uses that -pointersize as the stackbase
 begin
-
-  StackStartCacheCS.enter;
-  try
-    if StackStartCachePID<>processid then
-      StackStartCache.Clear //different pid, clear the old cache
-    else
-      if StackStartCache.GetData(threadnr,result) then exit;
-  finally
-    StackStartCacheCS.leave;
-  end;
-
-  //still here, so not cached
-
-
   result:=0;
 
   {$IFDEF windows}
@@ -3748,19 +3656,6 @@ begin
   end;
   {$ENDIF}
 
-  if result<>0 then
-  begin
-    StackStartCacheCS.enter;
-    try
-      if StackStartCache.HasId(threadnr)=false then
-        StackStartCache.Add(threadnr, result);
-
-      StackStartCachePID:=processid;
-    finally
-      StackStartCacheCS.leave;
-    end;
-  end;
-
 end;
 
 function getDiskFreeFromPath(path: string): int64;
@@ -3810,23 +3705,16 @@ begin
   if (length(trim(tempdiralternative))>2) and dontusetempdir then
     path:=trim(tempdiralternative)
   else
-  begin
-    path:=trim(GetEnvironmentVariable('_NT_SYMBOL_PATH'));
-    if path='' then
-      path:=trim(GetEnvironmentVariable('_NT_ALTERNATE_SYMBOL_PATH'));
+    path:=GetTempDir;
 
-    if path='' then
-      path:=GetTempDir;
-  end;
-
-  path:=path+strCheatEngine+' Symbols';
+  path:=path+'Cheat Engine Symbols';
 
   ForceDirectory(path);
-  if warn and (messagedlg(rsThisCanTakeSomeTime, mtWarning, [mbyes, mbno], 0, mbno)<>mryes) then exit;
+  if warn and (messagedlg('This can take some time if you are missing the PDB''s and CE will look frozen. Are you sure?', mtWarning, [mbyes,mbno],0,mbno)<>mryes) then exit;
 
   getmem(shortpath,256);
   GetShortPathName(pchar(path),shortpath,255);
-  symhandler.setsearchpath('srv*'+path+'*https://msdl.microsoft.com/download/symbols');
+  symhandler.setsearchpath('srv*'+shortpath+'*https://msdl.microsoft.com/download/symbols');
   freemem(shortpath);
 
   symhandler.reinitialize(true);
@@ -3842,10 +3730,6 @@ begin
 end;
 
 initialization
-  StackStartCache:=tmap.Create(itu4,sizeof(ptruint));
-  StackStartCachePID:=0;
-  StackStartCacheCS:=TCriticalSection.Create;
-
 
   if not assigned(OpenProcess) then
   begin

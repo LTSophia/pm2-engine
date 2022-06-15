@@ -11,9 +11,8 @@ Global Functions:
 getCEVersion(): Returns a floating point value specifying the version of cheat engine
 getCheatEngineFileVersion(): Returns the full version data of the cheat engine version. A raw integer, and a table containing major, minor, release and build
 
-getOperatingSystem(): Returns 0 for Windows, 1 for Mac
 
-darkMode(): Returns true if CE is running in windows Dark Mode. Has no effect on mac
+getOperatingSystem(): Returns 0 for Windows, 1 for Mac
 
 activateProtection(): Prevents basic memory scanners from opening the cheat engine process (Not that useful)
 enableDRM(altitude OPTIONAL, secondaryprocessid OPTIONAL ) : Prevents normal memory scanners from reading the Cheat Engine process (kernelmode)  The secondaryprocessid lets you protect another process. E.g the game itself, so they can't easily see what you change 
@@ -22,10 +21,7 @@ fullAccess(address,size): Changes the protection of a block of memory to writabl
 
 loadTable(filename, merge OPTIONAL): Loads a .ct or .cetrainer. If merge is provided and set to true it will not clear the old table
 loadTable(stream ,merge OPTIONAL, ignoreluascriptdialog BOOLEAN): Loads a table from a stream object
-saveTable(filename, protect OPTIONAL, dontDeactivateDesignerForms OPTIONAL): Saves the current table. If protect is provided and set to true and the filename has the .CETRAINER extension, it will protect it from reading normally
-saveTable(stream, dontDeactivateDesignerForms OPTIONAL): Saves the current table to a stream object
-
-signTable(filename) : If the current CE install has a valid cheta engine signature, this will sign the specific table with that signature (will pop up the password request)
+saveTable(filename, protect OPTIONAL): Saves the current table. If protect is provided and set to true and the filename has the .CETRAINER extension, it will protect it from reading normally
 
 note: addresses can be strings, they will get interpreted by ce's symbolhandler
 
@@ -55,7 +51,7 @@ readBytes(address,bytecount, ReturnAsTable ) : returns the bytes at the given ad
 writeBytes(address, x,x,x,x,...) : Write the given bytes to the given address from a table
 writeBytes(address, table) : Write the given bytes to the given address from a table
 
-readShortInteger(address) / readByte(address) : Reads a 8-bit integer from the specified address
+
 readSmallInteger(address) : Reads a 16-bit integer from the specified address
 readInteger(address) : Reads a 32-bit integer from the specified address
 readQword(address): Reads a 64-bit integer from the specified address
@@ -63,7 +59,6 @@ readPointer(address): In a 64-bit target this equals readQword, in a 32-bit targ
 readFloat(address) : Reads a single precision floating point value from the specified address
 readDouble(address) : Reads a double precision floating point value from the specified address
 readString(address, maxlength, widechar OPTIONAL) : Reads a string till it encounters a 0-terminator. Maxlength is just so you won't freeze for too long, set to 6000 if you don't care too much. Set WideChar to true if it is encoded using a widechar formatting
-writeShortInteger(address,value) / writeByte(address,value) : Writes a 16-bit integer to the specified address. Returns true on success
 writeSmallInteger(address,value) : Writes a 16-bit integer to the specified address. Returns true on success
 writeInteger(address,value) : Writes a 32-bit integer to the specified address. Returns true on success
 writeQword(address, value): Write a 64-bit integer to the specified address. Returns true on success
@@ -93,8 +88,6 @@ writeBytesLocal(address, table, , count) : See writeBytes but then it's for Chea
 readSmallInteger, readInteger, readSmallIntegerLocal, readIntegerLocal
 can also have second boolean parameter. If true, value will be signed.
 
-signExtend(value,mostSignificantBit): integer - Extends the bits so that if it's MSB bit is set, it will be negative
-
 wordToByteTable(number): {}          - Converts a word to a bytetable
 dwordToByteTable(number): {}         - Converts a dword to a bytetable
 qwordToByteTable(number): {}         - Converts a qword to a bytetable
@@ -104,8 +97,8 @@ extendedToByteTable(number): {}      - Converts an extended to a bytetable
 stringToByteTable(string): {}        - Converts a string to a bytetable
 wideStringToByteTable(string): {}    - Converts a string to a widestring and converts that to a bytetable
 
-byteTableToWord(table, OPTIONAL signed:boolean): number       - Converts a bytetable to a word
-byteTableToDword(table, OPTIONAL signed:boolean): number      - Converts a bytetable to a dword
+byteTableToWord(table): number       - Converts a bytetable to a word
+byteTableToDword(table): number      - Converts a bytetable to a dword
 byteTableToQword(table): number      - Converts a bytetable to a qword
 byteTableToFloat(table): number      - Converts a bytetable to a float
 byteTableToDouble(table): number     - Converts a bytetable to a double
@@ -155,21 +148,12 @@ enumModules(processid OPTIONAL):
     Is64Bit: Boolean set to true if it's a 64-bit module
     PathToFile: String to the location this module is loaded
 
-
 md5memory(address, size): Returns a md5 sum calculated from the provided memory. 
 md5file(pathtofile): Returns a md5 sum calculated from the file. 
 getFileVersion(pathtofile): returns the 64-bit file version, and a table that has split up the file version into major, minor, release and build
 
 getFileList(Path:string, searchMask:string OPTIONAL, SearchSubDirs: boolean OPTIONAL, DirAttrib: integer OPTIONAL): Returns an indexed table with filenames
 getDirectoryList(Path:string, SearchSubDirs: boolean OPTIONAL): Returns an indexed table with directory names
-extractFileName(filepath): returns the filename of the path
-extractFileExt(filepath): returns the file extension of the path
-extractFileNameWithoutExt(filepath): Returns the filename of the path, without the extension
-extractFilePath(filepath): removes the filename from the path
-
-getTempFolder() : Returns the path to the temp folder
-fileExists(pathtofile): Returns true if a file exists at that path
-deleteFile(pathtofile): Returns true if a file existed at that path, and now not anymore
 
 enableWindowsSymbols(): Will download the PDB files of Windows and load them (Takes a long time the first time)
 getAddress(string, local OPTIONAL): returns the address of a symbol. Can be a modulename or an export. set Local to true if you wish to querry the symboltable of the ce process
@@ -182,7 +166,6 @@ getRTTIClassName(address): Returns the classname of a given structure based on R
 reinitializeSymbolhandler(waittilldone: BOOLEAN OPTIONAL, default=TRUE): reinitializes the symbolhandler. E.g when new modules have been loaded
 reinitializeDotNetSymbolhandler(modulename OPTIONAL): Reinitializes only the DotNet part of the symbol list. (E.g After an ILCode has been JITed) (6.4+)
 reinitializeSelfSymbolhandler(waittilldone: BOOLEAN OPTIONAL, default=TRUE): reinitializes the selfsymbolhandler. E.g when new modules have been loaded to CE process
-waitForSections(): Waits till the sections have been enumerated
 waitForExports(): Waits till all DLL Exports are loaded 
 waitForDotNet(): Waits till all .NET symbols are loaded (this includes DLL Exports)
 waitForPDB(): Waits till all PDB symbols are loaded (this includes DLL Exports, and .NET)
@@ -195,27 +178,10 @@ errorOnLookupFailure(state): If set to true (default) address lookups in stringf
 waitforsymbols(state): If set to true looking up a symbol will wait for the symbol to be loaded(default true)
 
 generateAPIHookScript(address:string, addresstojumpto:string, addresstogetnewcalladdress:string OPT, ext:string OPT, targetself:boolean OPT) : Generates an auto assembler script which will hook the given address when executed
-assemble(line, address OPTIONAL, assemblePreference OPTIONAL, skipRangeCheck OPTIONAL): assembles a single line of code and returns a byte array of the generated code.  
-  address is the address to assemble this code at
-  assemblePreference: apNone=0, apShort=1, apLong=2, apFar=3
-  skipRangeCheck is a boolean.  Which will skip range checks if true and just assembles it, no matter of how wrong the result will be   
 autoAssemble(text, targetself OPTIONAL, disableInfo OPTIONAL) : runs the auto assembler with the given text. Returns true on success, with as secondary a table you can use when disabling (if targetself is set it will assemble into Cheat Engine itself). If disableInfo is provided the [Disable] section will be handled
 autoAssemble(text, disableInfo OPTIONAL)
 
 autoAssembleCheck(text, enable, targetself) : Checks the script for syntax errors. Returns true on succes, false with an error message on failure
-
-compile(text, address OPTIONAL, targetself OPTIONAL) : Compiles C code and returns a table with the addresses of the symbols on success, or nil with a secondary result containing the errormessage
-compile({indexedtable containing scripts}, address OPTIONAL, targetself OPTIONAL) ) : ^ but allows multiple scripts to be compiled into one
-compileFiles({filelist}, address OPTIONAL, targetself OPTIONAL) ): ^ but takes an indexed list of files
-compileTCCLib() - Compiles the TCC library functions some C code may need to function internally
-
-addCIncludePath(path) : Adds an extra default include path for the compile() function
-removeCIncludePath(path) : Removes a specific path previously added with addCIncludePath
-
-compileCS(text, {references}, coreAssembly OPTIONAL) - Compiles c# code and returns the autogenerated filename. references is a list of c# assemblies this code may reference. This file will be deleted when CE closes (or next time another CE closes and it's not in use anymore).  Note: This requires .NET 4 to be installed, even if the target is mono.  Tip: Handy with injectDotNetDLL
-dotNetExecuteClassMethod(pathtodll, namespace, classname, methodname, parameters: string): integer - Inside CE, call a method in a .NET class declared as : public static int methodname(string parameters)  For the target process version, look into injectDotNetDLL
-
-
 
 registerEXETrainerFeature(FeatureName:String, function():table): adds a new feature to the exe trainer generator window, and calls your function when the user builds an .exe trainer.  The function should return a table with table entries: PathToFile and RelativePath.
   example output:
@@ -244,10 +210,6 @@ registerAutoAssemblerCommand(command, function(parameters, syntaxcheckonly)): Re
 unregisterAutoAssemblerCommand(command)
 
 
-registerLuaFunctionHighlight(functionname): Makes the lua highlighter show the functionname as a functionkeyword
-unregisterLuaFunctionHighlight(functionname): Removes the given name from showing up as a functionkeyword
-
-
 registerSymbolLookupCallback(function(string):integer, location): ID  6.4+
   Registers a function to be called when a a symbol is parsed
   Location determines at what part of the symbol lookup the function is called
@@ -271,9 +233,6 @@ registerAddressLookupCallback(function(integer):string): ID
   Registers a function to be called when the name of an address is requested
 
 unregisterAddressLookupCallback(ID): Removes the callback
-
-registerGlobalStructureListUpdateNotification(function(sender)): ID -  Calls the given function each time the list is updated
-unregisterGlobalStructureListUpdateNotification(id) - removes the callback with the given ID
 
 
 registerStructureAndElementListCallback(function StructureListCallback(), function elementlistcallback(id1,id2) ) : Registers a function to be called when a structure needs to be dissected 
@@ -327,24 +286,17 @@ registerAutoAssemblerTemplate(name, function(script: TStrings; sender: TFrmAutoI
 unregisterAutoAssemblerTemplate(ID)
 
 
-generateCodeInjectionScript(script: Tstrings, address: string, farjmp: boolean) - Adds a default codeinjection script to the given script
-generateAOBInjectionScript(script: Tstrings, symbolname: string, address: string, commentradius(default 10), farjmp: boolean) - Adds an AOB injection script to the given script
-generateFullInjectionScript(script: Tstrings, address: string, commentradius(default 10), farjmp: boolean) - Adds a Full Injection script to the given script
-
-getNextAllocNumber(script: TStrings): integer - scans the given script for alloc(newmem## and returns the next unused newmem number)
-addSnapshotAsComment(script: TStrings, address: integer, radius(Default 10)) - creates a comment section for AA scripts that contains a snapshot of the original code
-getUniqueAOB(address): AOBString,Offset - Scans for a unique AOB for the given address and returns the AOB as a string, and an offset applied in case the aob returned doesn't start at the given address
+generateCodeInjectionScript(script: Tstrings, address: string): Adds a default codeinjection script to the given script
+generateAOBInjectionScript(script: Tstrings, symbolname: string, address: string): Adds an AOB injection script to the given script
+generateFullInjectionScript(script: Tstrings, address: string): Adds a Full Injection script to the given script
 
 
 
 showMessage(text) : shows a messagebox with the given text
 inputQuery(caption, prompt, initialstring): Shows a dialog where the user can input a string. This function returns the given string, or nil on cancel
-showSelectionList(title, caption, stringlist, allowCustomInput OPTIONAL, formname OPTIONAL): integer,string - Shows a menu with the given list. It returns the linenumber (starting at 0) and the selected string.  Linenumber is -1 if the user was allowed to enter custom input
+showSelectionList(title, caption, stringlist, allowCustomInput OPTIONAL): integer,string - Shows a menu with the given list. It returns the linenumber (starting at 0) and the selected string.  Linenumber is -1 if the user was allowed to enter custom input
 
 messageDialog(text, type, buttons...) : pops up a messagebox with a specific icon/sound with the specified buttons (mbok, mbyes, ....)
-messageDialog(title, text, type, buttons...): ^ but adds a custom title
-messageDialog(text) : shows an information dialog with the text
-
 sleep(milliseconds): pauses for the number of specified milliseconds (1000= 1 sec...)
 
 getProcesslist(Strings): Fills a Strings inherited object with the processlist of the system. Format: %x-pidname
@@ -372,6 +324,7 @@ function onOpenProcess(processid):
 MainForm.OnProcessOpened: function(processid, processhandle, caption) - Define this if you want to be notified when a new process has been opened. Called only once from the main thread. It is recommended to use this instead of onOpenProcess
 
 function onTableLoad(before): If defined this function will be called twice when a table gets loaded. Once before the loading, and once after.
+
 
 
 getOpenedProcessID() : Returns the currently opened process. If none is open, returns 0
@@ -427,8 +380,6 @@ convertKeyComboToString({key1,...}): ^
 outputDebugString(text): Outputs a message using the windows OutputDebugString message. You can use tools like dbgview to read this. Useful for testing situations where the GUI freezes
 
 shellExecute(command, parameters OPTIONAL, folder OPTIONAL, showcommand OPTIONAL): Executes a given command
-runCommand(exepath, parameters or {parameter1, parameter2}, pathtoexecutein OPTIONAL): Executes the given command and returns the output of the command as a string and the exitcode as an integer (Should not open a console window) If pathtoexecutein is not provided the path will be the current working directory of CE
-
 
 getTickCount() :  Returns the current tickcount since windows was started. Each tick is one millisecond
 processMessages() :  Lets the main eventhandler process the new messages (allows for new button clicks)
@@ -448,11 +399,7 @@ readFromClipboard():  Reads the text from the clipboard
 speedhack_setSpeed(speed) : Enables the speedhack if needed and sets the specific speed
 speedhack_getSpeed(): Returns the last set speed
 
-injectDLL(filename, skipsymbolreloadwait OPTIONAL): Injects a dll or dylib, and returns true on success
-injectLibrary(filepath, skipsymbolreloadwait OPTIONAL): Same as injectDLL, just sounds better
-
-injectDotNetDLL(dllpath, FullClassName, MethodName,parameterstring, timeout optional)
-
+injectDLL(filename): Injects a dll, and returns true on success
 executeCode(address, parameter OPTIONAL, timeout OPTIONAL) : address - Executes a stdcall function with 1 parameter at the given address in the target process  and wait for it to return. The return value is the result of the function that was called
 executeCodeLocal(addres, parameter OPTIONAL): address -  Executes a stdcall function with 1 parameter at the given address in the target process. The return value is the result of the function that was called
 
@@ -516,7 +463,7 @@ unloadLoadedFont(id)
 
 
 onAutoGuess(function) :
-  Registers a function to be called whenever autoguess is used to predict a variable type
+  Registers an function to be called whenever autoguess is used to predict a variable type
   function override (address, ceguess): Return the variable type you want it to be. If no change, just return ceguess
 
 
@@ -532,9 +479,8 @@ getAutoAttachList(): returns the AutoAttach StringList object. It can be control
 AOBScan(x,x,x,x,...):
 scans the currently opened process and returns a StringList object containing all the results. don't forget to free this list when done
 Bytevalue of higher than 255 or anything not an integer will be seen as a wildcard
-AOBScan(aobstring, OPTIONAL protectionflags, OPTIONAL alignmenttype, OPTIONAL alignmentparam): see above but here you just input one string
-AOBScanUnique(aobstring, OPTIONAL protectionflags, OPTIONAL alignmenttype, OPTIONAL alignmentparam)- Integer: scans for the aobstring and returns the first result it finds and nil if nothing is found. Make sure it is unique as it will return the first result found as it will return any random match
-AOBScanModuleUnique(modulename, aobstring, OPTIONAL protectionflags, OPTIONAL alignmenttype, OPTIONAL alignmentparam)- Integer : scans for the aobstring in the designated module
+AOBScan(aobstring): see above but here you just input one string
+AOBScanUnique(aobstring)- Integer: scans for the aobstring and returns the first result it finds and nil if nothing is found. Make sure it is unique as it will return the first result found as it will return any random match
 
 
 
@@ -548,7 +494,7 @@ deAlloc(address, size OPTIONAL): Frees allocated memory
 
 allocateSharedMemory(name, size):
   Creates a shared memory object in the attached process of the given size if it doesn't exist yet. If size is not given and there is no shared region with this name then the default size of 4096 is used
-  It then maps this shared memory block into the currently targeted process. It returns the address of this mapped region in the target process.  Keep in mind that a process can map the same block multiple times, so keep track of your assignments
+  It then maps this shared memory block into the currently targeted process. It returns the address of mapped region in the target process
 allocateSharedMemoryLocal(name, size): Same as allocateSharedMemory but then for the Cheat Engine process itself
 
 
@@ -582,7 +528,6 @@ getCheatEngineProcessID(): Returns the processid of cheat engine
 
 getAutorunPath() : Returns the autorun path
 
-
 disassemble(address): Disassembles the given address and returns a string in the format of "address - bytes - opcode : extra"
 splitDisassembledString(disassembledstring): Returns 4 strings. The address, bytes, opcode and extra field
 
@@ -598,13 +543,6 @@ playSound(tablefile, waittilldone OPTIONAL) : Takes the memorystream from the ta
 speak(text, waittilldone OPTIONAL): Speaks a given text.  If waitTillDone is true the thread it's in will be frozen till it is done
 speak(text, flags): Speaks a given text using the given flags. https://msdn.microsoft.com/en-us/library/speechplatform_speakflags.aspx
 speakEnglish(text, waittilldone OPTIONAL) - will try the English voice by wrapping the given text into an XML statement specifying the english voice. Will not say anything if no Egnlish language is present. Do not use SPF_IS_NOT_XML flag and SPF_PARSE_SSML won't work in this situation
-
-
-
-printf(...) : Same as print(string.format(...))
-setProgressState(state): Sets the state of the cheatengine task in the taskbar (windows only) values: tbpsNone, tbpsIndeterminate, tbpsNormal, tbpsError, tbpsPaused
-setProgressValue(current, max): Sets the state of the cheatengine task progress status
-
 
 getUserRegistryEnvironmentVariable(name): string - Returns the environment variable stored in the user registry environment
 setUserRegistryEnvironmentVariable(name, string) - Sets the environment variable stored in the user registry environment
@@ -623,7 +561,7 @@ unregisterFormAddNotification(Object)
 getSettingsForm(): Returns the main settings form
 getMemoryViewForm() : Returns the main memoryview form class object which can be accessed using the Form_ class methods and the methods of the classes it inherits from. There can be multiple memory views, but this will only find the original/base
 getMainForm() : Returns the main form class object which can be accessed using the Form class methods and the methods of the classes it inherits from
-
+getLuaEngine() : Returns the lua engine form object (Creates it if needed)
 getApplication() : Returns the application object. (the titlebar)
 getAddressList() : Returns the cheat table addresslist object
 getFreezeTimer() : Returns the freeze timer object
@@ -681,7 +619,7 @@ getMethodProperty(Class, propertyname): Returns a function you can use to call t
 registerSymbol(symbolname, address, OPTIONAL donotsave): Registers a userdefined symbol. If donotsave is true this symbol will not get saved when the table is saved
 unregisterSymbol(symbolname)
 
-getNameFromAddress(address,ModuleNames OPTIONAL=true, Symbols OPTIONAL=true, Sections OPTIONAL=false): Returns the given address as a string. Registered symbolname, modulename+offset, or just a hexadecimal string depending on what address
+getNameFromAddress(address,ModuleNames OPTIONAL=true, Symbols OPTIONAL=true): Returns the given address as a string. Registered symbolname, modulename+offset, or just a hexadecimal string depending on what address
 inModule(address) : returns true if the given address is inside a module
 inSystemModule(address) : returns true if the given address is inside a system module
 getCommonModuleList: Returns the commonModuleList stringlist. (Do not free this one)
@@ -731,13 +669,12 @@ debug_getCurrentDebuggerInterface() : Returns the current debuggerinterface used
 debug_canBreak(): Returns true if there is a possibility the target can stop on a breakpoint. 6.4+
 debug_isBroken(): Returns true if the debugger is currently halted on a thread
 debug_getBreakpointList(): Returns a lua table containing all the breakpoint addresses
-debug_breakThread(threadid): Breaks the thread with the specific threadID (Note: The thread may not break instantly and may have to be awakened first)
 
 debug_addThreadToNoBreakList(threadid): This will cause breakpoints on the provided thread to be ignored
 debug_removeThreadFromNoBreakList(threadid): removed the threadid from the list
 
-debug_setBreakpointForThread(threadid, address, size OPTIONAL, trigger OPTIONAL, breakpointmethod OPTIONAL, functiontocall() OPTIONAL) : sets a breakpoint of a specific size at the given address for the specified thread. if trigger is bptExecute then size is ignored. If trigger is ignored then it will be of type bptExecute, which obviously also ignores the size then as well.  (Other triggers are bptAccess and bptWrite)
-debug_setBreakpoint(address, size OPTIONAL, trigger OPTIONAL, breakpointmethod OPTIONAL, functiontocall() OPTIONAL) 
+
+debug_setBreakpoint(address, size OPTIONAL, trigger OPTIONAL, breakpointmethod OPTIONAL, functiontocall() OPTIONAL) : sets a breakpoint of a specific size at the given address. if trigger is bptExecute then size is ignored. If trigger is ignored then it will be of type bptExecute, which obviously also ignores the size then as well.  (Other triggers are bptAccess and bptWrite)
 debug_setBreakpoint(address, size OPTIONAL, trigger OPTIONAL, functiontocall() OPTIONAL) 
 debug_setBreakpoint(address, functiontocall() OPTIONAL)
 debug_removeBreakpoint(address) : if the given address is a part of a breakpoint it will be removed
@@ -853,7 +790,6 @@ properties:
   Enabled: boolean - Determines if the object is usable or greyed out
   Visible: boolean - Determines if the object is visible or not
   Color: ColorDefinition/RGBInteger - The color of the object. Does not affect the caption
-  RGBColor: RGBInteger - The color of the object in RGB formatting
   Parent: WinControl - The owner of this control
   PopupMenu: PopupMenu - The popup menu that shows when rightclicking the control
   Font: Font - The font class associated with the control
@@ -896,8 +832,8 @@ methods:
   doClick():  Executes the current function under onClick
   bringToFront(): Changes the z-order of the control so it'd at the top
   sendToBack(): Changes the z-order of the control so it'd at the back
-  screenToClient(x,y): Converts screen x,y coordinates to x,y coordinates on the control
-  clientToScreen(x,y): Converts control x,y coordinates to screen coordinates
+  screenToClient(): Converts screen x,y coordinates to x,y coordinates on the control
+  clientToScreen(): Converts control x,y coordinates to screen coordinates
 
 GraphicsObject : (GraphicsObject->Object)
 
@@ -953,12 +889,9 @@ properties
   Menu: Menu - The menu this item resides in
   Parent: MenuItem - The menuitem this item hangs under
   MenuIndex: integer - The position this menu item is in it's parent
-  ImageList: ImageList
-  ImageIndex: integer - Which image of the attached ImageList to show
   Item[] : Array to access each child menuitem
   [] : Item[]
   OnClick: Function to call when the menu item is activated
-  FontColor: Color of the font. (Only works when in dark mode)
 
 methods
   getCaption() : Gets the caption of the menu item
@@ -998,16 +931,14 @@ properties
   Text : String - All the strings in one string
   Count: Integer - The number of strings in this list
   String[]: String - Array to access one specific string in the list
-  Data[]: Integer - Array to access the data of a specific string in the list
   [] = String[]
 
 methods
   clear() : Deletes all strings in the list
-  add(string, data:integer OPTIONAL) : adds a string to the list. Returns the index
-  addText([[strings]]) : adds multiple strings at once
+  add(string) : adds a string to the list
   delete(index) : Deletes a string from the list
   getText() : Returns all the strings as one big string
-  setText(string) : Sets the strings of the given strings object to the given text (can be multiline)
+  setText() : Sets the strings of the given strings object to the given text (can be multiline)
   indexOf(string): Returns the index of the specified string. Returns -1 if not found
   insert(index, string): Inserts a string at a specific spot moving the items after it
 
@@ -1018,9 +949,6 @@ methods
 
   getString(index) : gets the string at the given index
   setString(index, string) : Replaces the string at the given index
-  getData(index) : Returns the integer value stored in the string
-  setData(index, integer): Sets the integer value stored in the string
-
   beginUpdate() : Stops updates from triggering other events (prevents flashing)
   endUpdate(): call after beginUpdate
 
@@ -1070,23 +998,8 @@ methods
   minimize()
 
 
-ControlScrollBar Class (Inheritance: Object)
-  Increment: Word - The amount the position moves when using the scrollbar arrows
-  Page: Word - slider size in pixels
-  Smooth: Boolean
-  Position: Integer - (limited to 0 to range-page)
-  Range: Integer 
-  Tracking: Boolean - Gives feedback when the slider is moved
-  Visible: Boolean
-
-ScrollingWinControl Class (Inheritance: CustomControl->WinControl->Control->Component->Object)
-properties 
-  HorzScrollBar: ControlScrollBar
-  VertScrollBar: ControlScrollBar
-
 Form Class: (Inheritance: ScrollingWinControl->CustomControl->WinControl->Control->Component->Object)
 properties
-  DesignTimePPI: integer - the PPI/DPI at the time the form was designed
   AllowDropFiles: boolean - Allows files to be dragged into the form
   ModalResult: integer - The current ModalResult value of the form. Note: When this value gets set the modal form will close
   Menu: MainMenu - The main menu of the form
@@ -1097,7 +1010,6 @@ properties
 
 
 methods
-  fixDPI() : Resizes controls and fonts based on the current DPI and the DPI used to create the form. Only use this on forms that are not designed with variable DPI in mind
   centerScreen(); : Places the form at the center of the screen
   hide() : Hide the form
   show() : show the form
@@ -1122,35 +1034,20 @@ methods
   registerCloseCallback(function(f)): userdata - Registers a function to be called when the form has been closed
   unregisterCloseCallback(userdata) - removes the specific callback
 
-  dragNow() -  Call this on mousedown on any object if you wish that the mousemove will drag the whole form arround. Useful for borderless windows (Dragging will stop when the mouse button is released)
-  saveFormPosition({IntegerTable OPTIONAL}) - Saves the current form position and dimensions and an optional list of integer. The name of the form must have been set to a unique name
-  loadFormPosition(): boolean, {IntegerTable OPTIONAL, can be nil} - Restores the form position and dimensions. On success returns true and a integer table if that was provided with the save.  The name of the form must have been set to a unique name
+  dragNow():  Call this on mousedown on any object if you wish that the mousemove will drag the whole form arround. Useful for borderless windows (Dragging will stop when the mouse button is released)
 
 
 CEForm Class: (Inheritance: Form->ScrollingWinControl->CustomControl->WinControl->Control->Component->Object)
 createForm(visible OPT): creates a CEForm class object(window) and returns the pointer for it. Visible is default true but can be changed
 createFormFromFile(filename): Returns the generated CEform
-createFormFromStream(stream): Returns the generated CEform
 
 properties
   DoNotSaveInTable: boolean - Set this if you do not wish to save the forms in the table
 methods
   saveToFile(filename): Saves a userdefined form
-  saveToStream(s): Saves the userdefined form to the given stream
   getDoNotSaveInTable(): Returns the DoNotSaveInTable property
   setDoNotSaveInTable(boolean): Sets the DoNotSaveInTable property
   saveCurrentStateAsDesign() : Sets the current state of the form as the state that will be saved when the table is saved
-
-
-TfrmLuaEngine class: (Inheritance: Form->ScrollingWinControl->CustomControl->WinControl->Control->Component->Object)
-getLuaEngine() : Returns the main lua engine form object (Creates it if needed)
-createLuaEngine() : Creates a new lua engine form object. If there is no main luaengine window, this will become it. 
-
-properties
-  mOutput: Memo - Output of the luaengine window
-  mScript: SynEdit - Editor for the script
-
-methods
 
 
 TfrmAutoInject class: (Inheritance: Form->ScrollingWinControl->CustomControl->WinControl->Control->Component->Object)
@@ -1158,12 +1055,8 @@ createAutoAssemblerForm(script: string OPTIONAL): TFrmAutoInject - Spawns an aut
 
 properties
   Assemblescreen: SynEdit - Editor for the script
-  TabCount: integer
-  TabScript[index]: string
 
 methods
-  addTab(): integer
-  deleteTab(index)
 
 GraphicControl Class: (Inheritance: Control->Component->Object)
 properties
@@ -1544,8 +1437,6 @@ properties
   SubItems: Strings - The Strings object that hold the subitems
   Selected: boolean - Returns true if selected
   Index: integer - The index in the Items object of the owner of this listitem (readonly)
-  ImageIndex: integer - The index in the attached imagelist (LargeImages/SmallImages)
-  StateIndex: integer - The index in the attached imagelist (StateImages)
   Owner: ListItems - The ListItems object that owns this ListItem (readonly)
   Data: integer - Read/Write value up to the user to implement
 
@@ -1582,16 +1473,11 @@ properties
   Items: ListItems - The ListItems objects of the listview
   ItemIndex: integer - The currently selected index in the Items object  (-1 if nothing is selected)
   Selected: ListItem - The currently selected listitem (nil if nothing is selected)
-  TopItem: ListItem - The first visible item in the listview
-  VisibleRowCount: integer - The number of lines currently visible
   Canvas: Canvas - The canvas object used to render the listview  (Readonly)
   AutoWidthLastColumn: Boolean - When set to true the last column will resize when the control resizes
   HideSelection: Boolean - When set to true the selection will not hide when the focus leaves the control
   RowSelect: Boolean - When set to true the whole row will be selected instead of just the first column
   OwnerData: Boolean - When set to true the listview will call the onData function for every line being displayed. Use Items.Count to set the number of virtual lines
-  LargeImages: ImageList
-  SmallImages: ImageList
-  StateImages: ImageList
 
   OnData: function(sender, ListItem) - Called when a listview with OwnerData true renders a line
 
@@ -1655,7 +1541,6 @@ methods
   expand(recursive:boolean=TRUE OPTIONAL) : Expands the given node
   collapse(recursive:boolean=TRUE OPTIONAL)  : collapses the given node
   getNextSibling(): Returns the treenode object that's behind this treenode on the same level
-  getDisplayRect(TextOnly: Boolean=FALSE OPTIONAL): Returns a rect {Left,Top,Right,Bottom} describing the node
   add(text:string): Returns a Treenode object that is a child of the treenode used to create it
 
 
@@ -1747,7 +1632,6 @@ methods
 
   line(sourcex, sourcey, destinationx, destinationy)
   lineTo(destinationx, destinationy)
-  moveTo(destinationx, destinationy)
   rect(x1,y1,x2,y2) - Draws a rectangle
   fillRect(x1,y1,x2,y2) - Draws a filled rectangle
   roundRect(x1,y1,x2,y2,rx,ry) - Draws a rectangle with rounded corners
@@ -1769,7 +1653,7 @@ methods
   copyRect(dest_x1,dest_y1,dest_x2,dest_y2, sourceCanvas, source_x1,source_y1,source_x2,source_y2) : Draws an image from one source to another. Useful in cases of doublebuffering
   strectDraw(rect
   draw(x,y, graphic) : Draw the image of a specific Graphic class
-  stretchDraw(rect, graphic): Draw the image of a specific Graphic class and stretch it so it fits in the given rectangle
+  strectDraw(rect, graphic): Draw the image of a specific Graphic class and stretch it so it fits in the given rectangle
   getClipRect() : Returns a table containing the fields Left, Top, Right and Bottom, which define the invalidated region of the graphical object. Use this to only render what needs to be rendered in the onPaint event of objects
 
 Pen Class : (Inheritance: CustomPen->CanvasHelper->Object)
@@ -1914,13 +1798,7 @@ createColorBox(owner) - Creates a new colorbox
 
 
 FindDialog Class: (Inheritance: CommonDialog->Component->Object)
-createFindDialog(owner)
-
 properties
-  Top
-  Left
-  Width
-  Height
   FindText: String - The text the user wishes to find
   Options: Enum - Find Options
                    { frDown, frFindNext, frHideMatchCase, frHideWholeWord,
@@ -1933,7 +1811,7 @@ methods
 
 
 FileDialog Class: (Inheritance: CommonDialog->Component->Object)
-
+createFindDialog(owner)
 properties
 
   DefaultExt: string - When not using filters this will be the default extention used if no extension is given
@@ -2160,7 +2038,6 @@ properties
   CustomTypeName: String - If the type is vtCustom this will contain the name of the CustomType
   Script: String - If the type is vtAutoAssembler this will contain the auto assembler script
   Value: string - The value in stringform.
-  NumericalValue: number - The value in numerical form.  nil if it can not be parsed to a number
   Selected: boolean - Set to true if selected (ReadOnly)
   Active: boolean - Set to true to activate/freeze, false to deactivate/unfreeze
   Color: integer
@@ -2199,7 +2076,6 @@ properties
   AsyncProcessing: Boolean - True when async is true and it's being processed
   AsyncProcessingTime: qword - The time that it has been processing in milliseconds
 
-  HasMouseOver: boolean - True if the mouse is currently over it
 
   OnActivate: function(memoryrecord,before,currentstate):boolean - The function to call when the memoryrecord will change (or changed) Active to true. If before is true, not returning true will cause the activation to stop.
   OnDeactivate: function(memoryrecord,before,currentstate):boolean - The function to call when the memoryrecord will change (or changed) Active to false. If before is true, not returning true will cause the deactivation to stop.
@@ -2230,8 +2106,7 @@ methods
   createHotkey({keys}, action, value OPTIONAL, description OPTIONAL): Returns a hotkey object 
 
   disableWithoutExecute(): Sets the entry to disabled without executing the disable section
-  beginEdit() : Call when you wish to take a long time to edit a record. (e.g external editor) It prevents the record from getting deleted
-  endEdit() : to mark the end of your long edit sequence
+
 
 global events
   function onMemRecPreExecute(memoryrecord, newstate BOOLEAN):
@@ -2251,7 +2126,6 @@ global events
 
 Addresslist Class: (Inheritance: Panel->WinControl->Control->Component->Object)
 properties
-  LoadedTableVersion: integer - Returns the tableVersion of the last loaded table
   Count: Integer - The number of records in the table
   SelCount: integer- The number of records that are selected
   SelectedRecord: MemoryRecord - The main selected record
@@ -2268,14 +2142,10 @@ properties
   IncreaseArrowColor: color
   DecreaseArrowColor: color
 
-  MouseHighlightedRecord() : Returns the memoryrecord that the mouse points at. nil if nothing
-
-
   OnDescriptionChange: function(addresslist,memrec):boolean - called when the user initiates a description column change on a record. Return true if you handle it, false for normal behaviour
   OnAddressChange: function(addresslist,memrec):boolean - called when the user initiates an address column change on a record. Return true if you handle it, false for normal behaviour
   OnTypeChange: function(addresslist,memrec):boolean - called when the user initiates a type column change on a record. Return true if you handle it, false for normal behaviour
   OnValueChange: function(addresslist,memrec):boolean - called when the user initiates a value column change on a record. Return true if you handle it, false for normal behaviour
-  OnAutoAssemblerEdit: function(addresslist,memrec) - Called when the user initiates a memoryrecord AA script edit.  This function will be responsible for changing the memory record
 
 
 methods
@@ -2306,7 +2176,7 @@ createMemScan(progressbar OPTIONAL) : Returns a new MemScan class object
 properties
   LastScanWasRegionScan: boolean - returns true is the previous scan was an unknown initial value
   LastScanValue: string
-  LastScanType: ScanType/string - 'stNewScan', 'st v   ', 'stNextScan'
+  LastScanType: ScanType/string - 'stNewScan', 'stFirstScan', 'stNextScan'
   ScanresultFolder: string - Path where the results are stored  
   OnScanDone: function(memscan) - Set a function to be called when the scan has finished
   OnGuiUpdate: function(memscan, TotalAddressesToScan, CurrentlyScanned, ResultsFound) - Called during the scan so you can update the interface if needed
@@ -2430,8 +2300,6 @@ methods
 
   waitTillDone() : Waits for the memscan thread(s) to finish scanning. Always use this
   saveCurrentResults(name) : Save the current scanresults to a unique name for this memscan. This save can be used to compare against in a subsequent next scan
-  getSavedResultList(): Returns an indexed table of all the saved results (strings)
-  getSavedResultHandler(name): Gets the 'SavedResultHandler' object with this name (nil on failure)
   getAttachedFoundlist() : Returns a FoundList object if one is attached to this scanresults. Returns nil otherwise
 
 
@@ -2457,12 +2325,6 @@ methods
   getCount()
   getAddress(index) : Returns the address as a string
   getValue(index) : Returns the value as a string
-
-
-SavedResultHandler:
-  properties
-  methods
-    getStringFromAddress(address, hexadecimal:boolean OPTIONAL, signed: boolean OPTIONAL) : Returns the value in string format at the given address
 
 
 Memoryview class: (Inheritance: Form->ScrollingWinControl->CustomControl->WinControl->Control->Component->Object)
@@ -2537,14 +2399,11 @@ createThread(function(Thread,...), ...) :
 createThreadSuspended(function(Thread,...), ...) :
   Same as createNativeThread but it won't run until resume is called on it
 
-createThreadNewState(scripttext): Creates a new thread in a new lua state. This is more efficient as no locking inside lua takes place, but has no access to userdefined lua functions and only limited base CE functions. called inside a function(t) where t is the thread.  Watch for t.Terminated to quit.  Notice: Unlike createThread, the created thread does not freeOnTerminate so you can read out the "Result" property which will be set on thread finish
-
 
 properties
   Name: string - This name will be shown when the thread terminated abnormally
   Finished: boolean - Returns true if the thread has reached the end.  Do not rely on this if the thread is freeOnTerminate(true) (which is the default)
   Terminated: boolean - Returns true if the Terminate method has been called
-  Result: string - The result of the thread function as a string
 
 methods
   freeOnTerminate(state) :
@@ -2639,8 +2498,6 @@ methods:
 structChange() : Forces a refresh
 addColumn(): Adds a new column in the currently focuses group and returns it's structColumn object
 addGroup(): Adds a new group and returns the structGroup object
-getSelectedStructElement(): Returns the currently selected StructureElement , and as second result a table containing an indexed list continaing 'struct', and 'element' describing the path to the base
-
 
 structColumn class:
 properties:
@@ -2773,8 +2630,6 @@ dbk_executeKernelMemory(address, parameter) :
 
 
 dbvm_initialize(offloados:Boolean OPTIONAL, reason:String OPTIONAL) : Initializes the dbvm functions (dbk_initialize also calls this) offloados is a boolean that when set will offload the system onto dbvm if it's not yet running (and only IF the dbk driver is loaded)
-dbvm_setKeys(key1,key2,key3) - Sets the keys to operate DBVM.  Key1 and Key3 are pointersize, key2 is 32-bit.  Note that if key1 or key3 are 64-bit wide, 32-bit CE can not use DBVM.  Returns true if DBVM is working, and automatically updates the current DBVM keys in CE and the driver if DBVM was already connected (e.g default keys)
-dbvm_getMemory(): Returns the total memory free for DBVM, and the total number of full pages as secondary result
 dbvm_addMemory(pagecount): Adds memory to DBVM (one page is 4096 bytes)
 dbvm_readMSR(msr): See dbk_readMSR but then using dbvm
 dbvm_writeMSR(msr, value): See dbk_writeMSR
@@ -2783,7 +2638,7 @@ dbvm_getCR4(): Returns the real Control Register 4 state
 dbvm_readPhysicalMemory(address, size): bytetable
 dbvm_writePhysicalMemory(address, bytetable)
 
-dbvm_watch_writes(PhysicalAddress, bytesize OPTIONAL, OPTIONS OPTIONAL,  internalentrycount OPTIONAL, Optional1, Optional2) : 
+dbvm_watch_writes(PhysicalAddress, bytesize OPTIONAL, OPTIONS OPTIONAL,  internalentrycount OPTIONAL) : 
   Starts watching writes to the given address range
   OPTIONS is a binary field.
     (1 << 0): Log the same RIP multiple times (if different registers)
@@ -2792,13 +2647,11 @@ dbvm_watch_writes(PhysicalAddress, bytesize OPTIONAL, OPTIONS OPTIONAL,  interna
     (1 << 3): Logs contain a 4KB stack snapshot
     (1 << 4): does nothing
     (1 << 5): If the number of recorded entries gets bigger than internalentrycount, grow the list instead of discarding the entries
-    (1 << 6): <reserved>
-    (1 << 7): DBVMBP.  Not a watch! When triggered changes RIP to Optional1 if in UserMode and Optional2 if in Kernelmode.  These addresses need to contain an 0xcc (int3) . If 0 RIP will not be changed, and also not if the current state is not interuptable. Look at dbvm_bp_* functions for more information
+
   On success returns an ID to use with dbvm_watch_retrievelog and dbvm_watch_disable
 
 
-dbvm_watch_reads(PhysicalAddress, bytesize OPTIONAL, OPTIONS OPTIONAL,  internalentrycount OPTIONAL, Optional1, Optional2) : see dbvm_watch_writes but then for reads and writes
-dbvm_watch_executes(PhysicalAddress, bytesize OPTIONAL, OPTIONS OPTIONAL,  internalentrycount OPTIONAL, Optional1, Optional2) : see dbvm_watch_writes but then for executes
+dbvm_watch_reads(PhysicalAddress, bytesize OPTIONAL, OPTIONS OPTIONAL,  internalentrycount OPTIONAL) : see dbvm_watch_writes but then for reads and writes
 dbvm_watch_retrievelog(ID) : Returns an array of watch event data. (Context of the system at the time of the event, like registers)
 dbvm_watch_disable(ID) : Disables the watch operation
 
@@ -2839,23 +2692,6 @@ dbvm_changeregonbp(physicaladdress, changereginfo, virtualaddress OPTIONAL): boo
 
 dbvm_removechangeregonbp(physicaladdress) : Disables the changeregonbp breakpoint
 
-dbvm_traceonbp(PhysicalAddress, stepcount, VirtualAddress, {secondaryoptions}) : Sets a int3 breakpoint at the given address after cloaking that page and when hit does a trace. 
-secondaryoptions is a table:
-  logFPU: boolean
-  logStack: boolean         
-
-dbvm_traceonbp_getstatus() : status, count, maxcount - Returns the status (0=no trace configured. 1=trace configured but not started yet, 2=trace configured and started, 3=trace done) and the number of steps the trace currently holds
-dbvm_traceonbp_stoptrace() : requests the trace to stop
-dbvm_traceonbp_remove(pa,force: boolean) - Disables the current trace and removes all results
-dbvm_traceonbp_retrievelog() : Returns an array of traceentries. (Context of the system at the time of the event, like registers)
-
-dbvm_bp_getBrokenThreadListSize() : Returns the number of breakpoint slots currently available
-dbvm_bp_getBrokenThreadEventShort(id) : Returns a table with information about the specific breakpoint slow
-dbvm_bp_getBrokenThreadEventFull(id) : Returns a bigger table (fpu and stack) 
-dbvm_bp_setBrokenThreadEventFull(id,state) : Sets the state of the frozen thread
-dbvm_bp_resumeBrokenThread(id, continueMethod) : Resumes the specific thread.  continueMethod can be 0=run, 1=step into
-dbvm_bp_getProcessAndThreadIDFromEvent(ThreadEvent): processid,threadid - Returns the processid and threadid of the provided threadEvent. On failure processid will be nil, and threadid will contain text
-
 dbvm_log_cr3_start() : Tells DBVM to record (up to 512) unique CR3 values it encounters
 dbvm_log_cr3_stop() : Stops the logging and returns the results as a table
 
@@ -2863,7 +2699,7 @@ dbvm_speedhack_setSpeed(speed): Changes the speed the timestamp counter goes up 
 dbvm_setTSCAdjust(enabled, timeout): If enabled (default true with timeout 2000) will return a small(20-30) timestamp between multiple rdtsc/rdtscp instructions.  The timeout is the number of actual TSC to watch else the actual time is given. A high timeout can make your system unstable
 
 dbk_getCR0(): Returns Control Register 0
-dbk_getCR3(): Returns Control Register 3 of the currently opened process.  (Note: This will also work without dbk when only dbvm is loaded)
+dbk_getCR3(): Returns Control Register 3 of the currently opened process
 dbk_getCR4(): Returns Control Register 4
 dbk_getPhysicalAddress(address): Returns the physical address of the given address
 dbk_writesIgnoreWriteProtection(state): Set to true if you do not wish to initiate copy-on-write behaviour
@@ -3045,8 +2881,8 @@ Disassembler Class (Inheritance: Object)
 
 
 createDisassembler() - Creates a disassembler object that can be used to disassemble an instruction and at the same time get more data
-getDefaultDisassembler() - Returns the default disassembler object used by a lot of ce's disassembler routines (Only use this from the main thread)
-getVisibleDisassembler() - Deprectad. Returns a stub disassembler for backward compatability. It's function overrides are set the other visible disasemblers will use that if they themselves don't have an ovverride. Special codes are: {H}=Hex value {R}=Register {S}=Symbol {N}=Nothing special {C######}=RGB color , {B######}=Background RGB color were ###### is 0xBBGGRR 
+getDefaultDisassembler() - Returns the default disassembler object used by a lot of ce's disassembler routines
+getVisibleDisassembler() - Returns the disassembler used by the disassemblerview. Special codes are: {H}=Hex value {R}=Register {S}=Symbol {N}=Nothing special {C######}=RGB color , {B######}=Background RGB color were ###### is 0xBBGGRR 
 
 registerGlobalDisassembleOverride(function(sender: Disassembler, address: integer, LastDisassembleData: Table): opcode, description): Same as Disassembler.OnDisassembleOverride, but does it for all disassemblers, including newly created ones.  Tip: Check the sender to see if you should use syntax highlighting codes or not
   This function returns an ID you can pass on to unregisterGlobalDisassembleOverride()  6.4+
@@ -3080,7 +2916,6 @@ Methods
       isJump: boolean - Set to true if the disassembled instruction can change the EIP/RIP (not ret)
       isCall: boolean - Set to true if it's a Call
       isRet: boolean - Set to true if it's a Ret
-      isRep: boolean - Set to true if it's preceded by a Rep
       isConditionalJump: boolean - Set to true if it's a conditional jump
 
 
@@ -3216,14 +3051,9 @@ global functions
 
 properties
   Path: string - Gets/Sets the current subkey (nil if main)
-  Value[]: A table access into the settings. e.g: Value["Count"]=12  .Setting vcalue to nil will delete it
-  [] : Same as Value[]
+  Value[]: A table access into the settings. e.g: Value["Count"]=12
 
 methods
-  getBinaryValue(name, stream) : Gets binary data from the registry value. Adds it after the current 'position'
-  setBinaryValue(name, stream, size OPTIONAL) : Sets binary data in the registry value. If size is given, write from the current position. If not, or size=0, writes from position 0 to the end
-  getBinaryValue(name): bytetable
-  setBinaryValue(name, bytetable)
 
 
 
@@ -3241,7 +3071,8 @@ SymbolList class
 
 Global functions
   createSymbolList() : Creates an empty symbollist
-  getMainSymbolList(): Returns the symhandler internal symbol list (Note: This does not contain .net, modulelist, or other info)
+
+
 
 
 Properties
@@ -3262,8 +3093,6 @@ Methods
   deleteSymbol(address)
   register() : Registers the current symbol list with the symbol handler
   unregister(): Unregisters the current symbol list from the symbol handler
-  getModuleList(): Returns an indexed table with all the modules
-  getSymbolList(): Returns an unindex table with each symbol being an element containing an address
 
 
 Pagecontrol Class (WinControl->Control->Component->Object)
@@ -3388,7 +3217,7 @@ methods
 
 Database Class (Inheritance: CustomConnection->Component->Object)
 properties
-  Connected: Boolean - Sewt this to true to activate the connection. (turns back to false on failure)
+  Connected: Boolean
   DatabaseName: string
   KeepConnection: Boolean
   Params: Strings 
@@ -3425,7 +3254,6 @@ methods
 ODBCConnection class(Inheritance: SQLConnection->Database->CustomConnection->Component->Object) 
 createODBCConnection(owner) - creates an ODBCConnection object
 properties
-  DatabaseName: string - Name of the odbc connection
   Driver: string
   FileDSN: string
 
@@ -3653,8 +3481,6 @@ properties
 methods
   -
 
-----------------------------------------------------------
-
 HotkeyHandlerThread(Inheritence: Thread)
 getHotkeyHandlerThread() : Returns the hotkey handler thread used internally by CE
 
@@ -3674,7 +3500,7 @@ methods
   waitForThread(timeout OPTIONAL) : Waits for the thread to finish. Timeout is time in milliseconds. If nil, the timeout it infinite. If 0, it returns without wait
 
 ModuleLoader(Inheritance: -)
-loadModule(pathtodll, executeEntryPoint OPTIONAL default=true, timeout OPTIONAL default=nil=infinite)
+loadModule(pathtodll, executeEntryPoint OPTIONAL default=true)
 
 properties:
   loaded: boolean - true if successfuly mapped
@@ -3691,27 +3517,6 @@ properties
 
 methods
   getLog(): table - Returns an indexed table with the write logs. each entry has a table with the fields: address, original and new
-
-
-DotNetDataCollector class
-getDotNetDataCollector() - Returns the current dotnetdatacollector object
-
-properties
-Attached: boolean - Returns true if attached to a process
-
-
-methods
-enumDomains(): table - Returns an index table containing all domains. Each entry is build up as {DomainHandle, Name}
-enumModuleList(DomainHandle) : table - Returns an indexed table containing information about all modules. Each module entry is build up as {ModuleHandle, BaseAddress, Name}
-enumTypeDefs(ModuleHandle) : table - Returns an indexed table containing information about all TypeDefs (classes) . Each entry is build up as {TypeDefToken, Name, Flags, Extends}
-getTypeDefMethods(ModuleHandle, TypedefToken) : table - Returns a table containing all the methods in the specified typedef. Each entry is build up as {MethodToken, Name, Attributes, ImplementationFlags, ILCode, NativeCode, SecondaryNativeCode[]: Integer)
-getTypeDefParent(ModuleHandle, TypedefToken): {ModuleHandle, TypedefToken}
-getTypeDefData(ModuleHandle, TypedefToken) : table - Returns a table containing all the fields in the specified typedef.  {ObjectType, ElementType, CountOffset, ElementSize, FirstElementOffset, ClassName, Fields[]{Offset, FieldType, Name} }
-getMethodParameters(ModuleHandle, MethodDefToken): table - Returns a table containing all the parameters of the for method. {Name, CType}
-getAddressData(address): table - Queries a specific address and returns information about it, assuming it is a valid object. It contains the following data: {StartAddress, ObjectType, ElementType, CountOffset, ElementSize, FirstElementOffset, ClassName, Fields[]{Offset, FieldType, Name} }
-
-enumAllObjects(): table - Queries ALL defined objects. {StartAddress, Size, TypeID{token1,token2}, ClassName}   WARNING: This will take a LOOOOOONG time and if done from the main thread will make it look like CE is frozen
-enumAllObjectsOfType(ModuleHandle, TypedefToken): {} - Returns a list of addresses that have this type
 
 
 
@@ -3829,75 +3634,3 @@ methods
   getPointIndexAt(x,y): integer - Returns the pointindex at the given x, y coordinate
   addPoint(x,y,index OPTIONAL): creates a point. If no index is given if inside the line at that line index, else at the end of the list.  If a index is given at that specific index. 
   removeAllPoints(): Removes all points
-
-
-RemoteExecutor class
-The remoteExecute class creates an executor thread inside the target process waiting for commands to execute specific functions
-An executor can only run one piece of code at a time, but you can have more than one executor
-
-createExecuteMethodStub(callmethod, address, classregisternr, {type=typenr},typenr,{type=5, size=y, isOutputOnly=true/false, isInputOnly=true/false }, ....) - Creates an ExecuteCodeExStub object which the executor can execute
-createExecuteCodeExStub(callmethod, address, {type=typenr},typenr,{type=5, size=y, isOutputOnly=true/false, isInputOnly=true/false }, ....) - Creates an ExecuteCodeExStub object which the executor can execute
-createRemoteExecutor() - creates a new remote executor
-
-properties
-
-methods
-  executeStub(ExecuteCodeExStub,{parameters},timeout,waittilldone) 
-
-CECustomButton class(Inheritance: CustomControl->WinControl->Control->Component->Object)
-A more customizable button instead of the windows theme'd button, and lets you repaint it from scratch as well
-
-createCECustomButton(owner)
-
-properties
-  ShowPrefix: boolean - Process first single '&' per line as an underscore and draw '&&' as '&'  
-  BorderColor: Color  - The color of the button border
-  BorderSize: integer - The thickness of the border
-  ButtonColor: Color - The color of the button face
-  ButtonHighlightedColor: Color  - The color of the buttonface when highlighted(hovered over with the mouse)
-  ButtonDownColor: Color - The color of the buttonface when the mouse is pressed down on it
-  DrawFocusRect: boolean   - If true will draw a focus roundrect showing it has focus
-  DrawBorder: boolean - default=true.  Will draw a border around the button
-  FocusedSize: integer - The with of the focus roundrect
-  FocusElipseColor: Color - The color of the focus roundrect
-  GrowFont: boolean read - When true the font will get resized till the caption fits the button
-  RoundingX: integer 
-  RoundingY: integer 
-  CustomDrawn: boolean - Do your own drawing in the OnPaint property of the button
-  FramesPerSecond: integer - If animation is used this will determine how often per second the OnPaint gets called
-  ButtonAnimationSpeed: integer - If not customdrawn, this determnines how long the animations for enter/leave take
-                                                                                                                      
-
-methods
-  startAnimatorTimer() - Starts the animator timer which will trigger an OnPaint with the speed of the current framesPerSecond property
-  stopAnimatorTimer() - Stops the animator timer
-
-
-------- XML ------- 
-DOMNode class(Inheritance:)
-properties
-methods
-  writeToFile(filename)
-  writeToStream(stream)
-
-
-DOMDocument class(Inheritance: DOMNode_TopLevel->DOMNode_WithChildren->DOMNode)
-properties
-methods
-
-
-XMLDocument class(Inheritance: DOMDocument->DOMNode_TopLevel->DOMNode_WithChildren->DOMNode)
-createXMLDocument() - Creates an empty XML document
-createXMLDocumentFromFile(filename) - reads the given filename and return an XMLDocument with the parsed contents of the file
-createXMLDocumentFromStream(stream) - reads the given stream and returns an XMLDocument with the parsed contents of the stream
-
-properties
-methods
-
-
-ce lua extensions:
-string table:
-split(character) -> table of strings separated by character  
-endsWith('string') : boolean - Returns true if the string ends with the given string
-startsWith('string') : boolean - Returns true if the string starts with the given string
-

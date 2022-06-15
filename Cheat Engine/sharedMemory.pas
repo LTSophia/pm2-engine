@@ -54,7 +54,8 @@ end;
 
 function allocateSharedMemoryIntoTargetProcess(name: string; size: integer=4096): pointer;
 var s: tstringlist;
-  disableinfo: TDisableInfo;
+  CEAllocArray: TCEAllocArray;
+  ExceptionList: TCEExceptionListArray;
   i: integer;
   starttime: qword;
   x: ptruint;
@@ -158,22 +159,21 @@ begin
 
  // Clipboard.AsText:=s.text;
 
-  disableinfo:=TDisableInfo.create;
   try
-
-    if autoassemble(s,false, true, false, false, disableinfo) then
+    setlength(CEAllocArray,0);
+    if autoassemble(s,false, true, false, false, CEAllocArray, exceptionlist) then
     begin
       starttime:=GetTickCount64;
-      for i:=0 to length(disableinfo.allocs)-1 do
+      for i:=0 to length(ceallocarray)-1 do
       begin
 
-        if disableinfo.allocs[i].varname='address' then
+        if ceallocarray[i].varname='address' then
         begin
           while gettickcount64-starttime<10*1000 do
           begin
             //poll if address is still 0
 
-            if ReadProcessMemory(processhandle, pointer(disableinfo.allocs[i].address), @address, processhandler.pointersize, x) then
+            if ReadProcessMemory(processhandle, pointer(ceallocarray[i].address), @address, processhandler.pointersize, x) then
             begin
               if address<>0 then
               begin
@@ -190,12 +190,10 @@ begin
         end;
       end;
 
-      VirtualFreeEx(processhandle, pointer(disableinfo.allocs[0].address), 0, MEM_DECOMMIT);
+      VirtualFreeEx(processhandle, pointer(ceallocarray[0].address), 0, MEM_DECOMMIT);
     end;
   except
   end;
-
-  disableinfo.free;
   {$else}
   result:=nil;
   {$endif}

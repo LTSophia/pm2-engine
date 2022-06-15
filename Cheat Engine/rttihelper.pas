@@ -7,7 +7,6 @@ unit rttihelper;
 interface
 
 uses
-  {$ifdef darwin}macport,{$endif}
   Classes, SysUtils;
 
 function getRTTIClassName(StructureBaseAddress: ptruint; var classname: string): boolean;

@@ -46,11 +46,11 @@ type
     maxlevel: integer;
     modulelist: tstringlist;
 
-    FFileName: widestring;
+    FFileName: string;
     files: array of record
       startindex: qword;
       lastindex: qword;
-      filename: widestring;
+      filename: string;
       filesize: qword;
       f,fm: Thandle;
     end;
@@ -111,12 +111,12 @@ type
 
     procedure ReleaseFiles;
 
-    constructor create(filename: widestring; original: TPointerscanresultReader=nil);
+    constructor create(filename: string; original: TPointerscanresultReader=nil);
 
     destructor destroy; override;
     property count: qword read FCount;
     property offsetCount: integer read maxlevel;
-    property filename: widestring read FFilename;
+    property filename: string read FFilename;
     property entrySize: integer read sizeOfEntry;
     property modulelistCount: integer read getModuleListcount;
     property modulename[index: integer]: string read getModuleName;
@@ -171,7 +171,6 @@ begin
   //search the folder this ptr file is in for .result.* files
   //extract1
 
-  rs.clear;
   filemap:=TMap.Create(its8, sizeof(pointer));
 
   if lookupmode=1 then
@@ -185,11 +184,7 @@ begin
       ext1:=ExtractFileExt(fr.name);
       ext1:=copy(ext1, 2, length(ext1)-1);
 
-      if copy(ext1,1,5)='child' then
-      begin
-        rs.add(path+fr.name); //no need to sort
-      end
-      else if TryStrToInt64('$'+ext1, v1) then
+      if TryStrToInt64('$'+ext1, v1) then
       begin
         f:=path+fr.name;
         getmem(fn, length(f)+1);
@@ -543,7 +538,7 @@ end;
 
 
 
-constructor TPointerscanresultReader.create(filename: widestring; original: TPointerscanresultReader=nil);
+constructor TPointerscanresultReader.create(filename: string; original: TPointerscanresultReader=nil);
 var
   configfile: TFileStream;
   modulelistLength: integer;
@@ -557,8 +552,8 @@ var
   error: boolean;
   a: ptruint;
 
-  fn: widestring;
-  filenames: array of widestring;
+  fn: string;
+  filenames: array of string;
 
   fnames: tstringlist;
 
@@ -697,7 +692,7 @@ begin
       files[j].filename:=fn;
 
 
-      files[j].f:=CreateFileW(pwchar(fn), GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 0);
+      files[j].f:=CreateFile(pchar(fn), GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 0);
 
       if (files[j].f<>0) and (files[j].f<>INVALID_HANDLE_VALUE) then
       begin

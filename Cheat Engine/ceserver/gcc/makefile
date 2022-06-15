@@ -6,9 +6,9 @@ else
   LDFLAGS = -lz -ldl -pthread
 endif
 LIBS      =
-INCLUDE   = -I../
-TARGET    = ./ceserver
-SRCDIR    = ../
+INCLUDE   = -I./include
+TARGET    = ./bin/ceserver
+SRCDIR    = ./source
 ifeq "$(strip $(SRCDIR))" ""
   SRCDIR  = .
 endif

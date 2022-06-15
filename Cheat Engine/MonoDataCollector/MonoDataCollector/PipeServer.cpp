@@ -1,35 +1,13 @@
-#ifdef _WINDOWS
 #include "StdAfx.h"
-#include <setjmp.h>
-#else
-#include <signal.h>
-#include <sys/types.h>
-#endif
 #include "PipeServer.h"
 
-
 BOOL ExpectingAccessViolations = FALSE;
-
-#ifdef _WINDOWS
-#pragma warning( disable : 4101)
-HANDLE MDC_ServerPipe = 0;
 DWORD ExpectingAccessViolationsThread = 0;
-#else
-uint64_t ExpectingAccessViolationsThread = 0;
-#endif
-
-typedef uint64_t QWORD;
-
-jmp_buf onError;
 
 void ErrorThrow(void)
 {
-	longjmp(onError, 1);
+	throw ("Access violation caught");
 }
-
-#ifdef _WINDOWS
-
-
 
 int looper = 0;
 LONG NTAPI ErrorFilter(struct _EXCEPTION_POINTERS *ExceptionInfo)
@@ -48,78 +26,15 @@ LONG NTAPI ErrorFilter(struct _EXCEPTION_POINTERS *ExceptionInfo)
 
 	return EXCEPTION_CONTINUE_SEARCH;
 }
-#else
-
-struct sigaction old_sa[33], new_sa[33];
-
-uint64_t ErrorRIP;
-uint64_t ErrorRBP;
-uint64_t ErrorRSP;
-jmp_buf onError;
-
-void ErrorFilter(int signr, siginfo_t *info, void *uap)
-{
-    char s[200];
-    snprintf(s,200, "Errorfilter %d", signr);
-    OutputDebugString(s);
-    ucontext_t *uap_c=(ucontext_t *)uap;
-    //check if it's the serverthread, and if so, change the instruction pointer to ErrorThrow
-    uint64_t tid;
-    pthread_threadid_np(NULL, &tid);
-    
-    if ((ExpectingAccessViolations) && (tid==ExpectingAccessViolationsThread))
-    {
-        OutputDebugString("It is this thread. Jumping to state saved in onError");
-        
-        longjmp(onError,1);
-        
-    }
-    else
-    {
-         OutputDebugString("calling original handler");
-    
-        if (old_sa[signr].sa_flags & SA_SIGINFO)
-            old_sa[signr].sa_sigaction(signr, info, uap);
-        else
-            old_sa[signr].sa_handler(signr);
-    }
-}
-#endif
 
 
 CPipeServer::CPipeServer(void)
 {
-    //OutputDebugString("CPipeServer::CPipeServer");
 	attached = FALSE;
-	limitedConnection = FALSE;
-	il2cpp = FALSE;
-	UWPMode = FALSE;
-	mono_selfthread = NULL;
-	mono_runtime_is_shutting_down = NULL;
-
-#ifdef _WINDOWS
 	swprintf(datapipename, 256, L"\\\\.\\pipe\\cemonodc_pid%d", GetCurrentProcessId());
 	//swprintf(eventpipename, 256,L"\\\\.\\pipe\\cemonodc_pid%d_events", GetCurrentProcessId());
 
 	AddVectoredExceptionHandler(1, ErrorFilter);
-#else
-    sprintf((char*)datapipename, "cemonodc_pid%d",GetCurrentProcessId());
-    
-    int i;
-    for (i=10; i<12; i++)
-    {
-        new_sa[i].sa_sigaction=ErrorFilter;
-        new_sa[i].sa_flags=SA_SIGINFO;
-        sigemptyset(&new_sa[i].sa_mask);
-         
-        //sigaction(10, &new_sa, &old_sa);
-        sigaction(i, &new_sa[i], &old_sa[i]);
-    }
-
-    //while (1);
-    
-    
-#endif
 }
 
 CPipeServer::~CPipeServer(void)
@@ -135,6 +50,7 @@ char* CPipeServer::ReadString(void)
 {
 	WORD length = ReadWord();
 	char *result = (char *)malloc(length + 1);
+	void *method = NULL;
 	if (length)
 		Read(result, length);
 	result[length] = 0;
@@ -145,7 +61,7 @@ void CPipeServer::WriteString1(const char* value) //for 1 byte length strings
 {
 	if (value)
 	{
-		int n = (int)strlen(value);
+		int n = strlen(value);
 		WriteByte(n);
 		Write((PVOID)value, n);
 
@@ -161,7 +77,7 @@ void CPipeServer::WriteString(const char* value)
 {
 	if (value)
 	{
-		int n = (int)strlen(value);
+		int n = strlen(value);
 		WriteWord(n);
 		Write((PVOID)value, n);
 
@@ -182,78 +98,17 @@ void CPipeServer::FreeString(char* value)
 
 void CPipeServer::CreatePipeandWaitForconnect(void)
 {
-	//OutputDebugStringA((char*)"CreatePipeandWaitForconnect called\n");
-#ifdef _WINDOWS
-
-	//OutputDebugStringA((char*)"Closing pipe if needed\n");
+	OutputDebugStringA("CreatePipeandWaitForconnect called\n");
 	if ((pipehandle) && (pipehandle != INVALID_HANDLE_VALUE))
 	{
 		CloseHandle(pipehandle);
 		pipehandle = 0;
 	}
 
-	if (!UWPMode)
-	{
-		//OutputDebugStringA("datapipename=\n");
-		//OutputDebugStringW(datapipename);
+	pipehandle = CreateNamedPipe(datapipename, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, 256 * 1024, 16, INFINITE, NULL);
+	//eventpipe=CreateNamedPipe(eventpipename, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1,256*1024, 0, INFINITE, NULL);
 
-		pipehandle = CreateNamedPipeW(datapipename, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, 256 * 1024, 16, INFINITE, NULL);
-		//eventpipe=CreateNamedPipe(eventpipename, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1,256*1024, 0, INFINITE, NULL);
-
-		if ((pipehandle) && (pipehandle != INVALID_HANDLE_VALUE))
-		{
-			//OutputDebugStringA("calling ConnectNamedPipe\n");
-
-			ConnectNamedPipe(pipehandle, NULL);
-
-			//OutputDebugStringA("after ConnectNamedPipeW\n");
-		}
-		else
-		{
-			//OutputDebugStringA("CreateNamedPipeW failed.  Likely in a UWP app. Switching to client mode and waiting for g_ClientPipe to be set\n");
-			UWPMode = 1;
-		}
-	}
-
-	if (UWPMode)
-	{
-		//OutputDebugStringA("UWPMode connection. Fetching the new serverpipe\n");
-
-		MDC_ServerPipe = (HANDLE)0xdeadbeef; //tell monoscript that it has to provide a serverpipe itself
-		while (MDC_ServerPipe == (HANDLE)0xdeadbeef)
-			Sleep(50);
-
-		pipehandle = MDC_ServerPipe;
-		MDC_ServerPipe = 0; //indicates that it got read out
-		
-		//OutputDebugStringA("Retrieved a pipe\n");
-		//OutputDebugStringA("calling ConnectNamedPipe\n");
-
-		if (ConnectNamedPipe(pipehandle, NULL))
-			OutputDebugStringA("ConnectNamedPipe returned TRUE");
-		else
-		{
-			char bla[255];
-			int error = GetLastError();
-			if (error == ERROR_PIPE_CONNECTED)
-				OutputDebugStringA("ConnectNamedPipe returned FALSE because the client was already connected");
-			else
-			{
-				snprintf(bla, 255, "ConnectNamedPipe failed! Error: %d\n", GetLastError());
-				OutputDebugStringA(bla);
-			}
-		}
-	}
-	
-#else
-    if ((pipehandle) && (pipehandle != INVALID_HANDLE_VALUE))
-        ClosePipe(pipehandle);
-    
-    pipehandle = ::CreateNamedPipe((char*)datapipename);
-#endif
-
-	//OutputDebugStringA("At the end of CreatePipeandWaitForconnect\n");
-
+	ConnectNamedPipe(pipehandle, NULL);
 }
 
 void __cdecl customfreeimplementation(PVOID address)
@@ -265,32 +120,8 @@ void __cdecl customfreeimplementation(PVOID address)
 
 void CPipeServer::InitMono()
 {
-
-    
-	//OutputDebugStringA("CPipeServer::InitMono");
-    il2cpp = FALSE;
-#ifdef __APPLE__
-	//OutputDebugStringA((char*)"InitMono");
-    void *hMono=NULL; // = FindModule("mono");
-    void *fp=dlsym(RTLD_DEFAULT, "mono_thread_attach");
-    if (fp)
-    {
-        hMono=fp;
-    }
-    else
-    {
-        fp=dlsym(RTLD_DEFAULT, "il2cpp_thread_attach");
-        if (fp)
-        {
-            il2cpp = TRUE;
-            hMono=fp;
-        }
-    }
-#endif
-    
-#ifdef _WINDOWS
 	HMODULE hMono = GetModuleHandle(L"mono.dll");
-	
+	il2cpp = FALSE;
 		
 
 	if (!hMono)
@@ -307,24 +138,26 @@ void CPipeServer::InitMono()
 				do
 				{
 					if (GetProcAddress(me.hModule, "mono_thread_attach"))
-						hMono = me.hModule;							
+					{
+						hMono = me.hModule;
+						break;
+					}
 
 					if (GetProcAddress(me.hModule, "il2cpp_thread_attach"))
 					{
 						il2cpp = true;
 						hMono = me.hModule;
+						break;
 					}
-						
-				} while (!hMono && Module32Next(ths, &me));
+
+				} while (Module32Next(ths, &me));
 
 			}
 			CloseHandle(ths);
 		}
 	}
-    #endif //WINDOWS
 
 	WriteQword((UINT64)hMono);
-    
 	if (hMono)
 	{
 		std::stringstream x;
@@ -332,11 +165,6 @@ void CPipeServer::InitMono()
 		x << "Mono dll found at " << std::hex << hMono << "\n";
 		//OutputDebugStringA(x.str().c_str());
 
-        #ifdef __APPLE__
-        hMono=RTLD_DEFAULT;
-        #endif
-        
-        
 		if (attached == FALSE)
 		{
 
@@ -386,13 +214,10 @@ void CPipeServer::InitMono()
 				mono_class_get_method_from_name = (MONO_CLASS_GET_METHOD_FROM_NAME)GetProcAddress(hMono, "il2cpp_class_get_method_from_name");
 				mono_class_get_fields = (MONO_CLASS_GET_FIELDS)GetProcAddress(hMono, "il2cpp_class_get_fields");
 				mono_class_get_parent = (MONO_CLASS_GET_PARENT)GetProcAddress(hMono, "il2cpp_class_get_parent");
-				mono_class_get_image = (MONO_CLASS_GET_IMAGE)GetProcAddress(hMono, "il2cpp_class_get_image");
-
 				mono_class_is_generic = (MONO_CLASS_IS_GENERIC)GetProcAddress(hMono, "il2cpp_class_is_generic");
 				mono_class_vtable = (MONO_CLASS_VTABLE)GetProcAddress(hMono, "il2cpp_class_vtable");
 				mono_class_from_mono_type = (MONO_CLASS_FROM_MONO_TYPE)GetProcAddress(hMono, "il2cpp_class_from_mono_type");
 				mono_class_get_element_class = (MONO_CLASS_GET_ELEMENT_CLASS)GetProcAddress(hMono, "il2cpp_class_get_element_class");
-				mono_class_instance_size = (MONO_CLASS_INSTANCE_SIZE)GetProcAddress(hMono, "il2cpp_class_instance_size");
 
 				mono_class_num_fields = (MONO_CLASS_NUM_FIELDS)GetProcAddress(hMono, "il2cpp_class_num_fields");
 				mono_class_num_methods = (MONO_CLASS_NUM_METHODS)GetProcAddress(hMono, "il2cpp_class_num_methods");
@@ -458,12 +283,6 @@ void CPipeServer::InitMono()
 				mono_assembly_loaded = (MONO_ASSEMBLY_LOADED)GetProcAddress(hMono, "il2cpp_assembly_loaded");
 				mono_assembly_open = (MONO_ASSEMBLY_OPEN)GetProcAddress(hMono, "il2cpp_assembly_open");
 				mono_image_open = (MONO_IMAGE_OPEN)GetProcAddress(hMono, "il2cpp_image_open");
-				mono_image_get_filename = (MONO_IMAGE_GET_FILENAME)GetProcAddress(hMono, "il2cpp_image_get_filename");
-
-				mono_class_get_nesting_type = (MONO_CLASS_GET_NESTING_TYPE)GetProcAddress(hMono, "mono_class_get_nesting_type");
-
-				il2cpp_field_static_get_value = (IL2CPP_FIELD_STATIC_GET_VALUE)GetProcAddress(hMono, "il2cpp_field_static_get_value");
-				il2cpp_field_static_set_value = (IL2CPP_FIELD_STATIC_SET_VALUE)GetProcAddress(hMono, "il2cpp_field_static_set_value");
 
 
 				il2cpp_domain_get_assemblies = (IL2CPP_DOMAIN_GET_ASSEMBLIES)GetProcAddress(hMono, "il2cpp_domain_get_assemblies");
@@ -481,11 +300,8 @@ void CPipeServer::InitMono()
 				il2cpp_class_from_type = (IL2CPP_CLASS_FROM_TYPE)GetProcAddress(hMono, "il2cpp_class_from_type");
 				il2cpp_string_chars = (IL2CPP_STRING_CHARS)GetProcAddress(hMono, "il2cpp_string_chars");
 
-				//mono_runtime_is_shutting_down = (MONO_RUNTIME_IS_SHUTTING_DOWN)GetProcAddress(hMono, "il2cpp_runtime_is_shutting_down");  //doesn't seem to exist in il2cpp....
 
-				mono_runtime_is_shutting_down = (MONO_RUNTIME_IS_SHUTTING_DOWN)GetProcAddress(hMono, "mono_runtime_is_shutting_down"); //some do, with this name...
-
-
+				mono_selfthread = mono_thread_attach(mono_domain_get());
 			}
 			else
 			{
@@ -502,7 +318,6 @@ void CPipeServer::InitMono()
 				mono_get_root_domain = (MONO_GET_ROOT_DOMAIN)GetProcAddress(hMono, "mono_get_root_domain");
 				mono_thread_attach = (MONO_THREAD_ATTACH)GetProcAddress(hMono, "mono_thread_attach");
 				mono_thread_detach = (MONO_THREAD_DETACH)GetProcAddress(hMono, "mono_thread_detach");
-                mono_thread_cleanup = (MONO_THREAD_CLEANUP)GetProcAddress(hMono, "mono_thread_cleanup");
 
 				mono_object_get_class = (MONO_OBJECT_GET_CLASS)GetProcAddress(hMono, "mono_object_get_class");
 
@@ -514,8 +329,6 @@ void CPipeServer::InitMono()
 				mono_image_get_assembly = (MONO_IMAGE_GET_ASSEMBLY)GetProcAddress(hMono, "mono_image_get_assembly");
 
 				mono_image_get_name = (MONO_IMAGE_GET_NAME)GetProcAddress(hMono, "mono_image_get_name");
-				mono_image_get_filename = (MONO_IMAGE_GET_FILENAME)GetProcAddress(hMono, "mono_image_get_filename");
-				
 				mono_image_get_table_info = (MONO_IMAGE_GET_TABLE_INFO)GetProcAddress(hMono, "mono_image_get_table_info");
 				mono_image_rva_map = (MONO_IMAGE_RVA_MAP)GetProcAddress(hMono, "mono_image_rva_map");
 
@@ -535,12 +348,10 @@ void CPipeServer::InitMono()
 				mono_class_get_method_from_name = (MONO_CLASS_GET_METHOD_FROM_NAME)GetProcAddress(hMono, "mono_class_get_method_from_name");
 				mono_class_get_fields = (MONO_CLASS_GET_FIELDS)GetProcAddress(hMono, "mono_class_get_fields");
 				mono_class_get_parent = (MONO_CLASS_GET_PARENT)GetProcAddress(hMono, "mono_class_get_parent");
-				mono_class_get_image = (MONO_CLASS_GET_IMAGE)GetProcAddress(hMono, "mono_class_get_image");
 				mono_class_is_generic = (MONO_CLASS_IS_GENERIC)GetProcAddress(hMono, "mono_class_is_generic");
 				mono_class_vtable = (MONO_CLASS_VTABLE)GetProcAddress(hMono, "mono_class_vtable");
 				mono_class_from_mono_type = (MONO_CLASS_FROM_MONO_TYPE)GetProcAddress(hMono, "mono_class_from_mono_type");
 				mono_class_get_element_class = (MONO_CLASS_GET_ELEMENT_CLASS)GetProcAddress(hMono, "mono_class_get_element_class");
-				mono_class_instance_size = (MONO_CLASS_INSTANCE_SIZE)GetProcAddress(hMono, "mono_class_instance_size");
 
 				mono_class_num_fields = (MONO_CLASS_NUM_FIELDS)GetProcAddress(hMono, "mono_class_num_fields");
 				mono_class_num_methods = (MONO_CLASS_NUM_METHODS)GetProcAddress(hMono, "mono_class_num_methods");
@@ -596,7 +407,6 @@ void CPipeServer::InitMono()
 				mono_object_new = (MONO_OBJECT_NEW)GetProcAddress(hMono, "mono_object_new");
 
 				mono_class_get_type = (MONO_CLASS_GET_TYPE)GetProcAddress(hMono, "mono_class_get_type");
-				mono_class_get_nesting_type = (MONO_CLASS_GET_NESTING_TYPE)GetProcAddress(hMono, "mono_class_get_nesting_type");
 
 				mono_method_desc_search_in_image = (MONO_METHOD_DESC_SEARCH_IN_IMAGE)GetProcAddress(hMono, "mono_method_desc_search_in_image");
 				mono_runtime_invoke = (MONO_RUNTIME_INVOKE)GetProcAddress(hMono, "mono_runtime_invoke");
@@ -608,31 +418,26 @@ void CPipeServer::InitMono()
 				mono_assembly_open = (MONO_ASSEMBLY_OPEN)GetProcAddress(hMono, "mono_assembly_open");
 				mono_image_open = (MONO_IMAGE_OPEN)GetProcAddress(hMono, "mono_image_open");
 
-				mono_field_static_get_value = (MONO_FIELD_STATIC_GET_VALUE)GetProcAddress(hMono, "mono_field_static_get_value");
-				mono_field_static_set_value = (MONO_FIELD_STATIC_SET_VALUE)GetProcAddress(hMono, "mono_field_static_set_value");
+				/*
+				if (mono_get_root_domain == NULL) OutputDebugStringA("mono_get_root_domain not assigned");
+				if (mono_thread_attach == NULL) OutputDebugStringA("mono_thread_attach not assigned");
+				if (mono_object_get_class == NULL) OutputDebugStringA("mono_object_get_class not assigned");
+				if (mono_class_get_name == NULL) OutputDebugStringA("mono_class_get_name not assigned");
+				if (mono_domain_foreach == NULL) OutputDebugStringA("mono_domain_foreach not assigned");
+				if (mono_domain_set == NULL) OutputDebugStringA("mono_domain_set not assigned");
+				if (mono_assembly_foreach == NULL) OutputDebugStringA("mono_assembly_foreach not assigned");
+				if (mono_assembly_get_image == NULL) OutputDebugStringA("mono_assembly_get_image not assigned");
+				if (mono_image_get_name == NULL) OutputDebugStringA("mono_image_get_name not assigned");
+				*/
 
-				mono_runtime_is_shutting_down = (MONO_RUNTIME_IS_SHUTTING_DOWN)GetProcAddress(hMono, "mono_runtime_is_shutting_down");
-
+				mono_selfthread = mono_thread_attach(mono_get_root_domain());
 			}
-
-			ConnectThreadToMonoRuntime();			
+			attached = TRUE;
+			
 		}
 		//else
 		//	OutputDebugStringA("Already attached");
 	}
-}
-
-void CPipeServer::ConnectThreadToMonoRuntime()
-{
-	if (il2cpp)
-		mono_selfthread = mono_thread_attach(mono_domain_get());
-	else
-	{
-		void* domain = mono_get_root_domain();
-		mono_selfthread = mono_thread_attach(domain);
-	}
-
-	attached = mono_selfthread != NULL;
 }
 
 void CPipeServer::Object_New()
@@ -656,7 +461,7 @@ void CPipeServer::Object_Init()
 		mono_runtime_object_init(object);
 		WriteByte(1);
 	}
-	catch (...)
+	catch (char *e)
 	{
 		WriteByte(0);
 		//OutputDebugStringA("Error initializing object:\n");
@@ -672,9 +477,10 @@ void CPipeServer::Object_GetClass()
 	char *classname;
 	void *klass;
 
-	ExpectingAccessViolations = FALSE;
+	//OutputDebugStringA("MONOCMD_OBJECT_GETCLASS");
 
 
+	//ExpectingAccessViolations = TRUE; //cause access violations to throw an exception
 	try
 	{
 		unsigned int i;
@@ -693,8 +499,8 @@ void CPipeServer::Object_GetClass()
 		if (klass != 0)
 		{
 			WriteQword((UINT64)klass);
-			WriteWord((WORD)strlen(classname));
-			Write(classname, (int)strlen(classname));
+			WriteWord(strlen(classname));
+			Write(classname, strlen(classname));
 		}
 		else
 		{
@@ -703,11 +509,14 @@ void CPipeServer::Object_GetClass()
 
 
 	}
-	catch (...)
+	catch (char *e)
 	{
-		//OutputDebugStringA("Object_GetClass exception caught");
+		//OutputDebugStringA("Error getting the class:\n");
+		//OutputDebugStringA(e);
 		WriteQword(0); //failure. Invalid object
 	}
+
+	//ExpectingAccessViolations = FALSE; //back to normal behaviour
 }
 
 void _cdecl DomainEnumerator(void *domain, std::vector<UINT64> *v)
@@ -731,7 +540,7 @@ void CPipeServer::EnumDomains(void)
 		mono_domain_foreach((MonoDomainFunc)DomainEnumerator, &v);
 
 
-		WriteDword((DWORD)v.size());
+		WriteDword(v.size());
 		for (i = 0; i < v.size(); i++)
 			WriteQword(v[i]);
 	}
@@ -762,14 +571,14 @@ void CPipeServer::EnumAssemblies()
 
 	if (il2cpp)
 	{
-		DWORD i;
+		int i;
 		
 		SIZE_T nrofassemblies=0;	
 		UINT_PTR *assemblies;
 		assemblies = il2cpp_domain_get_assemblies(mono_domain_get(), &nrofassemblies);
 
-		WriteDword((DWORD)nrofassemblies);
-		for (i = 0; i < (DWORD)nrofassemblies; i++)
+		WriteDword(nrofassemblies);
+		for (i = 0; i < nrofassemblies; i++)
 			WriteQword(assemblies[i]);
 
 	}
@@ -779,7 +588,7 @@ void CPipeServer::EnumAssemblies()
 		{
 			mono_assembly_foreach((GFunc)AssemblyEnumerator, &v);
 
-			WriteDword((DWORD)v.size());
+			WriteDword(v.size());
 			for (i = 0; i < v.size(); i++)
 				WriteQword(v[i]);
 		}
@@ -802,39 +611,17 @@ void CPipeServer::GetImageName()
 	void *image = (void *)ReadQword();
 	char *s = mono_image_get_name(image);
 
-	WriteWord((WORD)strlen(s));
-	Write(s, (int)strlen(s));
-}
-
-void CPipeServer::GetImageFileName()
-{
-	void *image = (void *)ReadQword();
-	char *s = mono_image_get_filename(image);
-
-	WriteWord((WORD)strlen(s));
-	Write(s, (int)strlen(s));
+	WriteWord(strlen(s));
+	Write(s, strlen(s));
 }
 
 #include <locale> 
 #include <codecvt> 
-
-
 WORD UTF8TOUTF16(char* szUtf8) {
-#if (_WINDOWS && (_MSC_VER <= 1916))
-	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> convert;
-	
-	try {
-		std::wstring dest=convert.from_bytes(szUtf8);
-		return *(WORD*)&dest[0];
-	}
-	catch (const std::range_error&) {
-		return NULL;
-	}
-#else
+
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
 	std::u16string dest = convert.from_bytes(szUtf8);
 	return *(WORD*)&dest[0];
-#endif
 }
 void CPipeServer::EnumClassesInImage()
 {
@@ -900,33 +687,33 @@ void CPipeServer::EnumClassesInImage()
 				{
 					char *name = mono_class_get_name(c);
 
-					WriteQword((UINT_PTR)c);
+				WriteQword((UINT_PTR)c);
 
 
-					std::string sName = std::string(name);
+				std::string sName = std::string(name);
 
-					if ((BYTE)name[0] == 0xEE) {
-						char szUeName[32];
-						sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(name));
-						sName = szUeName;
-					}
+				if ((BYTE)name[0] == 0xEE) {
+					char szUeName[32];
+					sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(name));
+					sName = szUeName;
+				}
 
-					if (c)
-					{
-						WriteWord((WORD)sName.size());
-						Write((PVOID)sName.c_str(), (WORD)sName.size());
-					}
-					else
-						WriteWord(0);
+				if (c)
+				{
+					WriteWord(sName.size());
+					Write((PVOID)sName.c_str(), sName.size());
+				}
+				else
+					WriteWord(0);
 
-					name = mono_class_get_namespace(c);
-					if (name)
-					{
-						WriteWord((WORD)strlen(name));
-						Write(name, (WORD)strlen(name));
-					}
-					else
-						WriteWord(0);
+				name = mono_class_get_namespace(c);
+				if (name)
+				{
+					WriteWord(strlen(name));
+					Write(name, strlen(name));
+				}
+				else
+					WriteWord(0);
 				}
 				else
 					WriteQword(0);
@@ -1003,7 +790,7 @@ void CPipeServer::EnumFieldsInClass()
 			WriteQword((UINT_PTR)fieldtype);
 			WriteDword(mono_type_get_type(fieldtype));
 			WriteQword((UINT_PTR)mono_field_get_parent(field));
-			WriteDword((DWORD)mono_field_get_offset(field));
+			WriteDword((UINT_PTR)mono_field_get_offset(field));
 			WriteDword(mono_field_get_flags(field));
 
 
@@ -1013,7 +800,7 @@ void CPipeServer::EnumFieldsInClass()
 			std::string sName = std::string(name);
 			std::string sType = std::string(type);
 			//check if name is x ...
-
+			char szUeName[32];
 			if ((BYTE)name[0] == 0xEE) {
 				char szUeName[32];
 				sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(name));
@@ -1025,13 +812,13 @@ void CPipeServer::EnumFieldsInClass()
 				sType = szUeName;
 			}
 
-			WriteWord((WORD)sName.size());
-			Write((LPVOID)sName.c_str(), (WORD)sName.size());
+			WriteWord(sName.size());
+			Write((LPVOID)sName.c_str(), sName.size());
 
 			if (type)
 			{
-				WriteWord((WORD)sType.size());
-				Write((LPVOID)sType.c_str(), (WORD)sType.size());
+				WriteWord(sType.size());
+				Write((LPVOID)sType.c_str(), sType.size());
 				//g_free(name);
 			}
 			else
@@ -1064,12 +851,11 @@ void CPipeServer::EnumMethodsInClass()
 			if ((BYTE)name[0] == 0xEE) {
 				char szUeName[32];
 				sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(name));
-
 				sName = szUeName;
 			}
 
-				WriteWord((WORD)sName.size());
-				Write((PVOID)sName.c_str(), (WORD)sName.size());
+				WriteWord(sName.size());
+				Write((PVOID)sName.c_str(), sName.size());
 		}
 	} while (method);
 
@@ -1092,7 +878,7 @@ void CPipeServer::CompileMethod()
 			void *klass = mono_method_get_class(method);
 			if (klass)
 			{
-				if ((mono_class_is_generic && (mono_class_is_generic(klass) == 0)) || (mono_class_is_generic==NULL)) //good luck if is_generic is missing (unity adds it but not all mono games are unity)
+				if (mono_class_is_generic(klass) == 0)
 				{
 					result = mono_compile_method(method);
 				}
@@ -1161,8 +947,8 @@ void CPipeServer::GetJitInfo()
 	if (il2cpp)
 	{
 		//not available, use the method enum function for il2cpp instead
-		ReadQword(); //Domain
-		ReadQword(); //Address
+		void *domain = (void *)ReadQword();
+		void *address = (void *)ReadQword();
 		WriteQword(0);
 	}
 	else
@@ -1177,7 +963,7 @@ void CPipeServer::GetJitInfo()
 		{
 			WriteQword((UINT_PTR)mono_jit_info_get_method(jitinfo));
 			WriteQword((UINT_PTR)mono_jit_info_get_code_start(jitinfo));
-			WriteDword((DWORD)mono_jit_info_get_code_size(jitinfo));
+			WriteDword((UINT_PTR)mono_jit_info_get_code_size(jitinfo));
 		}
 	}
 }
@@ -1239,8 +1025,8 @@ void CPipeServer::GetMethodName()
 	void *method = (void *)ReadQword();
 	char *methodname = mono_method_get_name(method);
 
-	WriteWord((WORD)strlen(methodname));
-	Write(methodname, (WORD)strlen(methodname));
+	WriteWord(strlen(methodname));
+	Write(methodname, strlen(methodname));
 }
 
 void CPipeServer::GetMethodClass()
@@ -1254,41 +1040,27 @@ void CPipeServer::GetMethodClass()
 void CPipeServer::GetKlassName()
 {
 	void *klass = (void *)ReadQword();
-	if (klass && mono_class_get_name)
-	{
+	char *methodname = mono_class_get_name(klass);
 
-		char *classname = mono_class_get_name(klass);
+	std::string sName = std::string(methodname);
 
-		std::string sName = std::string(classname);
-
-		if ((BYTE)classname[0] == 0xEE) {
-			char szUeName[32];
-			sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(classname));
-
-			sName = szUeName;
-		}
-
-		WriteWord((WORD)sName.size());
-		Write((PVOID)sName.c_str(), (WORD)(sName.size()));
+	if ((BYTE)methodname[0] == 0xEE) {
+		char szUeName[32];
+		sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(methodname));
+		sName = szUeName;
 	}
-	else
-	{
-		WriteWord(0);
-	}
+
+		WriteWord(sName.size());
+		Write((PVOID)sName.c_str(), sName.size());
 }
 
 void CPipeServer::GetClassNamespace()
 {
 	void *klass = (void *)ReadQword();
-	if (klass && mono_class_get_namespace)
-	{
-		char *classname = mono_class_get_namespace(klass);
+	char *methodname = mono_class_get_namespace(klass);
 
-		WriteWord((WORD)strlen(classname));
-		Write(classname, (WORD)strlen(classname));
-	}
-	else
-		WriteWord(0);
+	WriteWord(strlen(methodname));
+	Write(methodname, strlen(methodname));
 }
 
 void CPipeServer::FreeMethod()
@@ -1297,24 +1069,18 @@ void CPipeServer::FreeMethod()
 		mono_free_method((void *)ReadQword());
 }
 
-void CPipeServer::FreeObject()
-{
-	
-	//not yet implemented
-}
-
 void CPipeServer::DisassembleMethod()
 {	
 	void *method = (void *)ReadQword();
-	if (!il2cpp)
+	if (il2cpp)
 	{
 		void *methodheader = mono_method_get_header(method);
 		UINT32 codesize, maxstack;
 		void *ilcode = mono_method_header_get_code(methodheader, &codesize, &maxstack);
 		char *disassembly = mono_disasm_code(NULL, method, ilcode, (void *)((UINT_PTR)ilcode + codesize));
 
-		WriteWord((WORD)strlen(disassembly));
-		Write(disassembly, (WORD)strlen(disassembly));
+		WriteWord(strlen(disassembly));
+		Write(disassembly, strlen(disassembly));
 		g_free(disassembly);
 	}
 }
@@ -1336,15 +1102,12 @@ void CPipeServer::GetMethodParameters()
 
 		if (paramcount)
 		{
-			for (i = 0; i < paramcount; i++)
-			{
-				void *paramtype = il2cpp_method_get_param(method, i);
-
-				if (paramtype)
-					WriteDword(mono_type_get_type(paramtype));
-				else
-					WriteDword(0);
-			}
+			void *paramtype = il2cpp_method_get_param(method, i);
+			
+			if (paramtype)
+				WriteDword(mono_type_get_type(paramtype));
+			else
+				WriteDword(0);
 		}
 
 		{
@@ -1372,8 +1135,8 @@ void CPipeServer::GetMethodParameters()
 			{
 				if (names[i])
 				{
-					WriteByte((BYTE)strlen(names[i]));
-					Write(names[i], (BYTE)strlen(names[i]));
+					WriteByte(strlen(names[i]));
+					Write(names[i], strlen(names[i]));
 				}
 				else
 					WriteByte(0);
@@ -1382,17 +1145,12 @@ void CPipeServer::GetMethodParameters()
 			if (paramcount)
 			{
 				gpointer iter = NULL;
-				MonoType *paramtype;
-				
-				for (i=0; i< paramcount; i++)
-				{
-					paramtype = mono_signature_get_params((MonoMethodSignature*)methodsignature, &iter);
+				MonoType *paramtype = mono_signature_get_params((MonoMethodSignature*)methodsignature, &iter);
 
-					if (paramtype)
-						WriteDword(mono_type_get_type(paramtype));
-					else
-						WriteDword(0);
-				};
+				if (paramtype)
+					WriteDword(mono_type_get_type(paramtype));
+				else
+					WriteDword(0);
 			}
 
 			{
@@ -1467,8 +1225,8 @@ void CPipeServer::GetMethodSignature()
 			{
 				if (names[i])
 				{
-					WriteByte((BYTE)strlen(names[i]));
-					Write(names[i], (BYTE)strlen(names[i]));
+					WriteByte(strlen(names[i]));
+					Write(names[i], strlen(names[i]));
 				}
 				else
 					WriteByte(0);
@@ -1478,8 +1236,8 @@ void CPipeServer::GetMethodSignature()
 
 
 
-		WriteWord((WORD)strlen(sig));
-		Write(sig, (WORD)strlen(sig));
+		WriteWord(strlen(sig));
+		Write(sig, strlen(sig));
 		g_free(sig);
 
 		//12/5/2014:send the returntype as well
@@ -1490,8 +1248,8 @@ void CPipeServer::GetMethodSignature()
 			char *tname = mono_type_get_name(returntype);
 			if (tname)
 			{
-				WriteByte((BYTE)strlen(tname));
-				Write(tname, (unsigned int)(BYTE)strlen(tname));
+				WriteByte(strlen(tname));
+				Write(tname, strlen(tname));
 				g_free(tname);
 			}
 			else
@@ -1505,34 +1263,10 @@ void CPipeServer::GetMethodSignature()
 void CPipeServer::GetParentClass(void)
 {
 	void *klass = (void *)ReadQword();
-	UINT_PTR parent = 0;
-	if (klass)
-		 parent = mono_class_get_parent ? (UINT_PTR)mono_class_get_parent(klass) : 0;
+	UINT_PTR parent = (UINT_PTR)mono_class_get_parent(klass);
 
 	WriteQword(parent);
 }
-
-void CPipeServer::GetClassNestingType(void)
-{
-	UINT_PTR nestingtype = 0;
-	void *klass = (void *)ReadQword();
-	if (klass)
-		nestingtype = mono_class_get_nesting_type ? (UINT_PTR)mono_class_get_nesting_type(klass) : 0;
-
-	WriteQword(nestingtype);
-}
-
-
-void CPipeServer::GetClassImage(void)
-{
-    UINT_PTR image = 0;
-	void *klass = (void *)ReadQword();
-	if (klass)
-		image = mono_class_get_image ? (UINT_PTR)mono_class_get_image(klass) : 0;
-
-	WriteQword(image);
-}
-
 
 void CPipeServer::GetVTableFromClass(void)
 {
@@ -1761,13 +1495,7 @@ void* CPipeServer::ReadObject(void* domain, MonoTypeEnum type, void *addr)
 			Read(addr, size);
 		}
 		break;
-            
-    default:
-        break;
-            
 	}
-   
-    
 	return result;
 }
 
@@ -1787,21 +1515,13 @@ void CPipeServer::WriteObject(void* object)
 			//void *string = mono_object_to_string(object, NULL);
 			if (il2cpp)
 			{
-
 				wchar_t *ptr = il2cpp_string_chars(object);
-#ifdef _WINDOWS
 				int l = WideCharToMultiByte(CP_UTF8, 0, ptr, -1, NULL, 0, NULL, NULL);
 				char *c = (char *)malloc(l+1);
 				l = WideCharToMultiByte(CP_UTF8, 0, ptr, -1, c, l, NULL, NULL);
 				c[l] = 0;
 				WriteString(c);
 				free(c);
-#else
-                //todo: unsure about this
-                std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-                std::string dest = convert.to_bytes((char16_t *)ptr);
-                WriteString(dest.c_str());
-#endif
 			}
 			else
 			{
@@ -1952,25 +1672,16 @@ void CPipeServer::LoadAssemblyFromFile(void)
 		mono_domain_set(domain, FALSE);
 
 		void *assembly = mono_assembly_open(imageName, &status);
-		void *image = mono_assembly_get_image(assembly);
-		void *c = mono_class_from_name(image, "", "test");
-
 		WriteQword((UINT_PTR)assembly);
 
 		if (mono_jit_exec)
-		{
-			int argc;
-			char *argv = "BLA";
-			mono_jit_exec(domain, assembly, 1, &argv);
-		}
+			mono_jit_exec(domain, assembly, 0, NULL);
 	}
 }
 
 void CPipeServer::GetFullTypeName(void)
 {
 	//ExpectingAccessViolations = TRUE;
-    
-    //1-(8-1-4)
 
 	try
 	{
@@ -1985,30 +1696,28 @@ void CPipeServer::GetFullTypeName(void)
 			if (il2cpp)
 				fullname=il2cpp_type_get_name(ptype);								
 			else
-				fullname = mono_type_get_name_full ? mono_type_get_name_full(ptype, nameformat) : mono_type_get_name(ptype); //fallback on type_get_name in case of non exported mono_type_get_name_full
+				fullname = mono_type_get_name_full ? mono_type_get_name_full(ptype, nameformat) : NULL;
 
 			if (fullname) 
 			{
 				std::string sName = std::string(fullname);
 
-                if ((BYTE)fullname[0] == 0xEE) {
-                    char szUeName[32];
-                    auto plus = strchr(fullname, '+');
-                    if (plus) {
-                        sprintf_s(szUeName, 32, "\\u%04X+\\u%04X", UTF8TOUTF16(fullname), UTF8TOUTF16(plus+1));
-                        sName = szUeName;
-                    }
-                    else {
-                        sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(fullname));
-                        sName = szUeName;
-                    }
-                }
-
-                WriteWord((WORD)sName.size());
-                Write((PVOID)sName.c_str(), (WORD)sName.size());
+			if ((BYTE)fullname[0] == 0xEE) {
+				char szUeName[32];
+				auto plus = strchr(fullname, '+');
+				if (plus) {
+					sprintf_s(szUeName, 32, "\\u%04X+\\u%04X", UTF8TOUTF16(fullname), UTF8TOUTF16(plus+1));
+					sName = szUeName;
+				}
+				else {
+					sprintf_s(szUeName, 32, "\\u%04X", UTF8TOUTF16(fullname));
+					sName = szUeName;
+				}
 			}
-            else
-                WriteWord(0);
+
+			WriteWord(sName.size());
+			Write((PVOID)sName.c_str(), sName.size());
+			}
 		}
 		else
 		{
@@ -2028,10 +1737,7 @@ void CPipeServer::GetFullTypeName(void)
 void CPipeServer::IsGenericClass()
 {
 	void *klass = (void *)ReadQword();
-    if (mono_class_is_generic)
-        WriteByte(mono_class_is_generic(klass));
-    else
-        WriteByte(0); //not supported
+	WriteByte(mono_class_is_generic(klass));
 }
 
 void CPipeServer::IsIL2CPP()
@@ -2039,134 +1745,22 @@ void CPipeServer::IsIL2CPP()
 	WriteByte(il2cpp);
 }
 
-void CPipeServer::FillOptionalFunctionList()
-{
-    QWORD _mono_type_get_name_full=ReadQword();
-    
-    if ((mono_type_get_name_full==NULL) && (_mono_type_get_name_full!=0)) mono_type_get_name_full=(MONO_TYPE_GET_NAME_FULL)_mono_type_get_name_full;
-    
-    WriteByte(1);
-}
-
-void CPipeServer::GetStaticFieldValue()
-{
-	void* Vtable = (void*)ReadQword();
-	void* Field = (void*)ReadQword();
-
-	QWORD val = 0;
-	if (il2cpp)
-	{
-		if (il2cpp_field_static_get_value)
-		{
-			il2cpp_field_static_get_value(Field, &val);		
-		}
-
-	}
-	else
-	{
-		if (mono_field_static_get_value)
-        {
-            if (mono_field_get_flags)
-            {
-                int flags=mono_field_get_flags(Field);
-                if (flags & 0x10) //0x10=FIELD_ATTRIBUTE_STATIC
-                {
-                    if (mono_vtable_get_static_field_data)
-                    {
-                        void *sfd=mono_vtable_get_static_field_data(Vtable);
-                        
-                        if (sfd>(void*)0x10000)
-                        {
-	
-							if (mono_class_instance_size)
-							{
-								int sizeNeeded = mono_class_instance_size(mono_class_from_mono_type(mono_field_get_type(Field)));
-
-								if (sizeNeeded <= 8)
-								{
-									mono_field_static_get_value(Vtable, Field, &val);
-								}
-							}
-                            
-                        }
-                        
-                        
-                    }
-					else
-					{
-						int sizeNeeded = mono_class_instance_size(mono_class_from_mono_type(mono_field_get_type(Field)));
-						if (sizeNeeded <= 8)
-						{
-							mono_field_static_get_value(Vtable, Field, &val);
-						}
-					}
-                }
-            }
-        }
-	}
-
-	WriteQword(val);
-}
-
-
-void CPipeServer::SetStaticFieldValue()
-{
-	void* Vtable = (void*)ReadQword();
-	void* Field = (void*)ReadQword();
-	QWORD val = ReadQword();
-
-	if (il2cpp)
-	{
-		if (il2cpp_field_static_set_value)
-			il2cpp_field_static_set_value(Field, &val);
-	}
-	else
-	{
-		if (mono_field_static_set_value)
-			mono_field_static_set_value(Vtable, Field, &val);
-	}
-}
-
-
-
 void CPipeServer::Start(void)
 {
-   
 	BYTE command;
-	while (1)
+	while (TRUE)
 	{
-		if ((mono_runtime_is_shutting_down) && (mono_runtime_is_shutting_down()))
-			return;
-
 		CreatePipeandWaitForconnect();
 
-
-
-       
-        
 		try
 		{
-
-            
 			while (TRUE)
 			{
 				command = ReadByte();
-                ExpectingAccessViolations = TRUE;
-#ifdef _WINDOWS
+
+				ExpectingAccessViolations = TRUE;
 				ExpectingAccessViolationsThread = GetCurrentThreadId();
-#else
-                pthread_threadid_np(NULL, &ExpectingAccessViolationsThread);
-#endif
 
-				if (setjmp(onError))
-				{
-					OutputDebugString(L"setjmp returned 1");
-					throw("Error during execution");
-				}
-
-				if (limitedConnection)
-					ConnectThreadToMonoRuntime();					
-				
 
 				switch (command)
 				{
@@ -2205,11 +1799,6 @@ void CPipeServer::Start(void)
 				case MONOCMD_GETIMAGENAME:
 					GetImageName();
 					break;
-
-				case MONOCMD_GETIMAGEFILENAME:
-					GetImageFileName();
-					break;
-
 
 				case MONOCMD_ENUMCLASSESINIMAGE:
 					EnumClassesInImage();
@@ -2329,58 +1918,19 @@ void CPipeServer::Start(void)
 				case MONOCMD_ISIL2CPP:
 					IsIL2CPP();
 					break;
-                        
-                case MONOCMD_FILLOPTIONALFUNCTIONLIST:
-                    FillOptionalFunctionList();
-                    break;
-
-				case MONOCMD_GETSTATICFIELDVALUE:
-					GetStaticFieldValue();
-					break;
-
-				case MONOCMD_SETSTATICFIELDVALUE:
-					SetStaticFieldValue();
-					break;
-
-				case MONOCMD_GETCLASSIMAGE:
-					GetClassImage();
-					break;
-
-				case MONOCMD_GETCLASSNESTINGTYPE:
-					GetClassNestingType();
-					break;
-
-
-				case MONOCMD_FREE:
-					FreeObject();
-					break;
-
-				case MONOCMD_LIMITEDCONNECTION:
-					limitedConnection = true;
-					break;
-
 				}
 
+				
+
+				
 				ExpectingAccessViolations = FALSE;
-
-				if (limitedConnection) //beware: If profiling gets added someday, this will likely cause issues
-				{
-					if (mono_thread_detach)
-					{
-						mono_thread_detach(mono_selfthread);
-						attached = false;
-						mono_selfthread = NULL;
-					}
-				}
-
 			}
 		}
 		catch (char *e)
 		{
-			//Pipe error, or something else that wasn't caught. Exit the connection and start over
-            char s[200];
-            snprintf(s,200,"Pipe error: %s", e);
-			OutputDebugStringA(s);
+			//Pipe error, or something else that wasn't caught. Exit the connection and start over	
+			//OutputDebugStringA("Pipe error:\n");
+			//OutputDebugStringA(e);
 
 			if (attached)
 			{
@@ -2399,7 +1949,7 @@ void CPipeServer::Start(void)
 		}
 		catch (...)
 		{
-			OutputDebugStringA("Unexpected pipe error\n");
+			//OutputDebugStringA("Unexpected pipe error\n");
 			if (attached)
 			{
 				try

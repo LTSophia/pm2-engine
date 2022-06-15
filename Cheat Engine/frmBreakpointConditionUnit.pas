@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ComCtrls, betterControls;
+  StdCtrls, ComCtrls;
 
 type
 
@@ -25,7 +25,6 @@ type
     TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
     procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure rbEasyChange(Sender: TObject);
 
@@ -52,29 +51,15 @@ begin
   loadedFormPosition:=LoadFormPosition(self);
 end;
 
-procedure TfrmBreakpointCondition.FormDestroy(Sender: TObject);
-begin
-  SaveFormPosition(self);
-end;
-
 procedure TfrmBreakpointCondition.FormShow(Sender: TObject);
-var
-  minh: integer;
-  minw: integer;
-
 begin
   if loadedFormPosition=false then
   begin
-    autosize:=false;
-
-    minh:=canvas.TextHeight(label1.Caption)*15;
-    minw:=canvas.TextWidth(label1.Caption+'          ');
-
-    if clientwidth<minw then
-      clientwidth:=minw;
-
-    if clientheight<minh then
-      clientheight:=minh;
+    if tabsheet1.ClientWidth<(max(label1.width, label2.width)+8) then
+    begin
+      autosize:=false;
+      width:=width+(max(label1.width, label2.width)+8)-tabsheet1.ClientWidth;
+    end;
   end;
 end;
 

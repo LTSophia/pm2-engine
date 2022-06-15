@@ -8,9 +8,9 @@ uses {$ifdef darwin}macport,macportdefines,{$endif}
      {$ifdef windows}jwawindows, windows,{$endif}
      ExtCtrls , comctrls, Graphics, forms, StdCtrls,sysutils,Controls,
      SyncObjs,dialogs,LCLIntf,classes,autoassembler,
-     CEFuncProc,NewKernelHandler,CEDebugger,KernelDebugger, plugin, math,
+     CEFuncProc,NewKernelHandler,CEDebugger,kerneldebugger, plugin, math,
      debugHelper, debuggertypedefinitions, typinfo, ceguicomponents, strutils,
-     commonTypeDefs, luahandler, lua, betterControls;
+     commonTypeDefs, luahandler, lua;
 
 type TPluginFunc=function(parameters: pointer): pointer;
 function pluginsync(func: TPluginFunc; parameters: pointer): pointer; stdcall;
@@ -450,7 +450,7 @@ var
 begin
   result:=false;
   try
-    s:=symhandler.getNameFromAddress(address,true,true, false);
+    s:=symhandler.getNameFromAddress(address,true,true);
 
     l:=min(maxnamesize-1, length(s));
     copymemory(name,@s[1],l);
@@ -631,12 +631,7 @@ begin
     symhandler.waitforsymbolsloaded;
     result:=true;
   except
-    on e:exception do
-    begin
-      outputdebugstring('ce_InjectDLL('''+dllname+''','''+functiontocall+''') error: '+e.Message);
-      result:=false;
-    end;
-
+    result:=false;
   end;
 end;
 
@@ -1618,7 +1613,7 @@ var i: integer;
 begin
   for i:=0 to screen.FormCount-1 do
   begin
-    if (copy(screen.forms[i].name,1, 4)<>'UDF_') and ((screen.forms[i] is TCEForm)=false) then //if not a userdefined form
+    if copy(screen.forms[i].name,1, 4)<>'UDF_' then //if not a userdefined form
       screen.Forms[i].Visible:=false;
   end;
 
@@ -2624,8 +2619,6 @@ initialization
   plugindisassembler:=TDisassembler.create;
   plugindisassembler.showsymbols:=false;
   plugindisassembler.showmodules:=false;
-  plugindisassembler.showsections:=false;
-
   plugindisassembler.isdefault:=false;
 
   ComponentFunctionHandlerClass:=TComponentFunctionHandlerClass.create;

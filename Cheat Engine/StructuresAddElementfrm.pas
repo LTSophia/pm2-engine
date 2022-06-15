@@ -6,7 +6,7 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, LResources, betterControls;
+  Dialogs, StdCtrls, LResources;
 
 resourcestring
   rsSAE4Bytes = '4 Bytes';

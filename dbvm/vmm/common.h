@@ -6,7 +6,6 @@
 
 //#define DELAYEDSERIAL
 
-//#define USENMIFORWAIT
 #define AMDNP  //enable AMD nested paging support
 
 #ifdef DELAYEDSERIAL
@@ -93,9 +92,7 @@ typedef volatile struct _criticalSection
 {
   volatile int locked;
   volatile int apicid;
-  volatile int lockcount;
-  char *name;
-  int debuglevel;
+  int lockcount;
 #ifdef DEBUG
   int ignorelock;
 #endif
@@ -160,8 +157,7 @@ typedef union
 //extern void outportb(UINT64 port, UINT64 value);
 
 void bochsbp(void);
-
-#define jtagbp() asm volatile (".byte 0xf1");
+void jtagbp(void);
 
 /* Input a byte from a port */
 unsigned char inportb(unsigned int port);
@@ -178,8 +174,8 @@ extern void clearScreen(void);
 extern void debugbreak(void);
 
 extern void _cpuid(UINT64 *rax, UINT64 *rbx, UINT64 *rcx, UINT64 *rdx);
-extern UINT64 getRSP(void);
-extern UINT64 getRBP(void);
+extern ULONG getRSP(void);
+extern ULONG getRBP(void);
 
 int itoa(unsigned int value,int base, char *output,int maxsize);
 int lltoa(unsigned long long value,int base, char *output,int maxsize);
@@ -192,9 +188,7 @@ void printchar(char c, int x, int y, char foreground, char background);
 void printstring(char *s, int x, int y, char foreground, char background);
 void sendchar(char c);
 
-extern void _enableserial(void);
-
-void enableserial(void);
+extern void enableserial(void);
 
 
 
@@ -237,9 +231,6 @@ int strcoll(const char *s1, const char *s2);
 //#ifdef DEBUG
   void sendstring(char *s);
   void sendstringf(char *string, ...);
-#ifdef DEBUG
-  void sendstringf_nolock(char *string UNUSED, ...); //debug only
-#endif
 
   int sprintf(char *str, const char *format, ...);
   int snprintf(char *str, size_t size, const char *format, ...);
@@ -304,9 +295,6 @@ void sendDissectedFlags(PRFLAGS rflags);
 void csEnter(PcriticalSection CS);
 void csLeave(PcriticalSection CS);
 
-#ifdef DEBUG
-extern QWORD spinlocktimeout;
-#endif
 int spinlock(volatile int *CS); //returns 0
 
 void lockedQwordIncrement(volatile QWORD *address, QWORD inccount);
@@ -322,12 +310,6 @@ typedef struct textvideo {
 typedef TEXTVIDEO TEXTVIDEOLINE[80];
 
 unsigned char nosendchar[256];
-
-int emergencyOutputOnly;
-int emergencyOutputLevel;
-unsigned char emergencyOutputAPICID;
-
-
 
 int currentdisplayline;
 int currentdisplayrow;
@@ -432,7 +414,7 @@ typedef volatile struct _PDE_PAE
         unsigned PFN       : 28; // page-frame number
         unsigned reserved4 : 23;
         unsigned EXB       :  1;
-} __attribute__((__packed__)) _PDE_PAE, *PPDE_PAE;
+} __attribute__((__packed__)) *PPDE_PAE;
 
 typedef volatile struct _PDE2MB_PAE
 {
@@ -486,7 +468,7 @@ typedef struct _PPDPTE_PAE_BS
         unsigned A3        :  1; // available 3
         unsigned PFN       : 24; // page-frame number
         unsigned reserved3 : 28;
-} __attribute__((__packed__)) _PDPTE_PAE_BS, *PPDPTE_PAE_BS;
+} __attribute__((__packed__)) *PPDPTE_PAE_BS;
 
 typedef volatile struct _PPML4
 {

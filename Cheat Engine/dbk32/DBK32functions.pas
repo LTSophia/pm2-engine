@@ -1,4 +1,4 @@
- unit DBK32functions;
+unit DBK32functions;
 
 {$MODE Delphi}
 
@@ -15,7 +15,7 @@ uses
 
 {$endif}
 
-const currentversion=2000027;
+const currentversion=2000026;
 
 const FILE_ANY_ACCESS=0;
 const FILE_SPECIAL_ACCESS=FILE_ANY_ACCESS;
@@ -246,14 +246,14 @@ var hdevice: thandle=INVALID_HANDLE_VALUE; //handle to my the device driver
     hUltimapDevice: thandle=INVALID_HANDLE_VALUE;
     handlemap: TMap;
     handlemapMREW: TMultiReadExclusiveWriteSynchronizer;
-    driverloc, ultimapdriverloc: widestring;
+    driverloc, ultimapdriverloc: string;
     iamprotected:boolean;
     SDTShadow: DWORD;
     debugport: dword;
 
     ThreadsProcess,ThreadListEntry:dword;
 
-    processeventname, threadeventname: widestring;
+    processeventname, threadeventname: string;
     processevent,threadevent:thandle;
 
     ownprocess: thandle=0; //needed for simple kernelmemory access
@@ -275,7 +275,6 @@ var hdevice: thandle=INVALID_HANDLE_VALUE; //handle to my the device driver
 
 function CTL_CODE(DeviceType, Func, Method, Access : integer) : integer;
 function IsValidHandle(hProcess:THandle):BOOL; stdcall;
-function IsDBKHandle(hProcess:THandle):BOOL; stdcall;
 Function {OpenProcess}OP(dwDesiredAccess:DWORD;bInheritHandle:BOOL;dwProcessId:DWORD):THANDLE; stdcall;
 Function {OpenThread}OT(dwDesiredAccess:DWORD;bInheritHandle:BOOL;dwThreadId:DWORD):THANDLE; stdcall;
 function {ReadProcessMemory}RPM(hProcess:THANDLE;lpBaseAddress:pointer;lpBuffer:pointer;nSize:DWORD;var NumberOfBytesRead:PtrUInt):BOOL; stdcall;
@@ -304,7 +303,7 @@ function GetThreadListEntryOffset: dword; stdcall;
 
 function ReadPhysicalMemory(hProcess:THANDLE;lpBaseAddress:pointer;lpBuffer:pointer;nSize:DWORD;var NumberOfBytesRead:PTRUINT):BOOL; stdcall;
 function WritePhysicalMemory(hProcess:THANDLE;lpBaseAddress:pointer;lpBuffer:pointer;nSize:DWORD;var NumberOfBytesWritten:PTRUINT):BOOL; stdcall;
-function GetPhysicalAddress(hProcess:THandle;lpBaseAddress:pointer;var Address:qword): BOOL; stdcall;
+function GetPhysicalAddress(hProcess:THandle;lpBaseAddress:pointer;var Address:int64): BOOL; stdcall;
 function GetMemoryRanges(var ranges: TPhysicalMemoryRanges): boolean;
 function VirtualQueryExPhysical(hProcess: THandle; lpAddress: Pointer; var lpBuffer: TMemoryBasicInformation; dwLength: DWORD): DWORD; stdcall;
 
@@ -432,14 +431,14 @@ var kernel32dll: thandle;
 implementation
 
 {$ifdef windows}
-uses vmxfunctions, DBK64SecondaryLoader, NewKernelHandler, frmDriverLoadedUnit, CEFuncProc, Parsers, mainunit2;
+uses vmxfunctions, DBK64SecondaryLoader, NewKernelHandler, frmDriverLoadedUnit, CEFuncProc, Parsers;
 
 resourcestring
 
   rsInvalidMsrAddress = 'Invalid MSR address:';
   rsMsrsAreUnavailable = 'msrs are unavailable';
   rsCouldNotLaunchDbvm = 'Could not launch DBVM: The Intel-VT feature has been disabled in your BIOS';
-  rsYouAreMissingTheDriver = 'You are missing the driver. Try reinstalling '+strCheatEngine+', and try to disable your anti-virus before doing so.';
+  rsYouAreMissingTheDriver = 'You are missing the driver. Try reinstalling cheat engine, and try to disable your anti-virus before doing so.';
   rsDriverError = 'Driver error';
   rsFailureToConfigureTheDriver = 'Failure to configure the driver';
   rsFailureToConfigureTheUltimapDriver = 'Failure to configure the ultimap driver';
@@ -449,14 +448,14 @@ resourcestring
   rsTheServiceCouldntGetOpened = 'The service couldn''t get opened and also couldn''t get created.'+' Check if you have the needed rights to create a service, or call your system admin (Who''ll probably beat you up for even trying this). Until this is fixed you won''t be able to make use of the enhancements the driver gives you';
   rsTheDriverCouldntBeOpened = 'The driver couldn''t be opened! It''s not loaded or not responding. Luckely you are running dbvm so it''s not a total waste. Do you wish to force load the driver?';
   rsTheDriverCouldntBeOpenedTryAgain = 'The driver couldn''t be opened! It''s not loaded or not responding. I recommend to reboot your system and try again';
-  rsTheDriverThatIsCurrentlyLoaded = 'The driver that is currently loaded belongs to a different version of '+strCheatEngine+'. Please unload this driver or reboot.';
+  rsTheDriverThatIsCurrentlyLoaded = 'The driver that is currently loaded belongs to a different version of Cheat Engine. Please unload this driver or reboot.';
   rsTheDriverFailedToSuccessfullyInitialize = 'The driver failed to successfully initialize. Some functions may not completely work';
   rsAPCRules = 'APC rules';
-  rsPleaseRunThe64BitVersionOfCE = 'Please run the 64-bit version of '+strCheatEngine;
+  rsPleaseRunThe64BitVersionOfCE = 'Please run the 64-bit version of Cheat Engine';
   rsDBKError = 'DBK Error';
 
-var dataloc: widestring;
-    applicationPath: widestring;
+var dataloc: string;
+    applicationPath: string;
 
 type TVirtualAllocEx=function(hProcess: THandle; lpAddress: Pointer; dwSize, flAllocationType: DWORD; flProtect: DWORD): Pointer; stdcall;
 var VirtualAllocEx: TVirtualAllocEx;
@@ -831,10 +830,7 @@ begin
     cc:=IOCTL_CE_GETCR4;
     if deviceiocontrol(hdevice,cc,nil,0,@res,sizeof(res),x,nil) then
       result:=res;
-  end
-  else
-  if isRunningDBVM then
-    result:=dbvm_getRealCR4;
+  end;
 end;
 
 
@@ -909,7 +905,7 @@ begin
         x:=l.processid;
         result:=deviceiocontrol(hdevice,cc,@x,4,@_cr3,8,y,nil);
 
-       // outputdebugstring(pchar('GetCR3: return '+inttohex(_cr3,16)));
+        outputdebugstring(pchar('GetCR3: return '+inttohex(_cr3,16)));
         if result then CR3:=_cr3 else cr3:=$11223344;
       end;
 
@@ -949,7 +945,7 @@ begin
     x:=pid;
     result:=deviceiocontrol(hdevice,cc,@x,4,@_cr3,8,y,nil);
 
-    //outputdebugstring(pchar('GetCR3: return '+inttohex(_cr3,16)));
+    outputdebugstring(pchar('GetCR3: return '+inttohex(_cr3,16)));
 
     if (_cr3 and $fff)>0 then
     begin
@@ -1094,7 +1090,7 @@ end;
 
 
 
-function GetPhysicalAddress(hProcess:THandle;lpBaseAddress:pointer;var Address:qword): BOOL; stdcall;
+function GetPhysicalAddress(hProcess:THandle;lpBaseAddress:pointer;var Address:int64): BOOL; stdcall;
 type TInputstruct=record
   ProcessID: UINT64;
   BaseAddress: UINT64;
@@ -1339,13 +1335,6 @@ var ao: array [0..511] of byte;
     bufpointer2: pointer;
     towrite: dword;
 begin
-  if vmx_loaded and (dbvm_version>=$ce00000a) then
-  begin
-    NumberOfBytesWritten:=dbvm_write_physical_memory(qword(lpBaseAddress), lpBuffer, nSize);
-    exit(NumberOfBytesWritten=nSize);
-  end;
-
-
   result:=false;
   NumberOfByteswritten:=0;
   //find the hprocess in the handlelist, if it isn't use the normal method (I could of course use NtQueryProcessInformation but it's undocumented and I'm too lazy to dig it up
@@ -1411,7 +1400,7 @@ begin
     exit(numberofbytesread=nSize);
   end;
 
-  //OutputDebugString('Using normal dbk method');
+  OutputDebugString('Using normal dbk method');
 
   result:=false;
   numberofbytesread:=0;
@@ -1480,17 +1469,6 @@ begin
   end;
 end;
 
-function IsDBKHandle(hProcess:THandle):BOOL; stdcall;
-var l: THandleListEntry;
-begin
-  result:=false;
-  handlemapmrew.Beginread;
-  try
-    result:=handlemap.HasId(hProcess);
-  finally
-    handlemapmrew.Endread;
-  end;
-end;
 
 function IsValidHandle(hProcess:THandle):BOOL; stdcall;
 var l: THandleListEntry;
@@ -1585,8 +1563,6 @@ begin
   result:=false;
   numberofbytesread:=0;
   //find the hprocess in the handlelist, if it isn't use the normal method (I could of course use NtQueryProcessInformation but it's undocumented and I'm too lazy to dig it up
-
-  if handlemapmrew=nil then exit(windows.ReadProcessMemory(hProcess,pointer(ptrUint(lpBaseAddress)),lpBuffer,nSize,NumberOfBytesRead));
 
   handlemapmrew.Beginread;
   validhandle:=handlemap.GetData(hProcess,l);
@@ -2870,7 +2846,7 @@ begin
     result:=deviceiocontrol(hdevice,cc,@input,sizeof(Input),nil,0,cc,nil);
 
 
-    configure_vmx(vmx_password1, vmx_password2, vmx_password3);
+    configure_vmx(vmx_password1, vmx_password2);
 
     if parameters<>nil then
     begin
@@ -3129,15 +3105,15 @@ var hscManager: thandle;
     hservice, hUltimapService: thandle;
 
 var sav: pchar;
-    apppath: pwidechar;
+    apppath: pchar;
 
 
 
  //   win32kaddress: ptrUint;
  //   win32size:dword;
-    servicename,sysfile: widestring;
-    ultimapservicename, ultimapsysfile: widestring;
-    vmx_p1_txt,vmx_p2_txt,vmx_p3_txt: string;
+    servicename,sysfile: string;
+    ultimapservicename, ultimapsysfile: string;
+    vmx_p1_txt,vmx_p2_txt: string;
 
 
     reg: tregistry;
@@ -3147,8 +3123,6 @@ var sav: pchar;
 //    servicestatus: _service_status;
 procedure DBK32Initialize;
 begin
-
-  outputdebugstring('DBK32Initialize');
   try
     if hdevice=INVALID_HANDLE_VALUE then
     begin
@@ -3167,8 +3141,8 @@ begin
       apppath:=nil;
       hSCManager := OpenSCManager(nil, nil, GENERIC_READ or GENERIC_WRITE);
       try
-        getmem(apppath,510);
-        GetModuleFileNameW(0, apppath, 250);
+        getmem(apppath,250);
+        GetModuleFileName(0,apppath,250);
 
         applicationpath:=extractfilepath(apppath);
 
@@ -3178,14 +3152,14 @@ begin
         else
           dataloc:=dataloc+'driver64.dat';
 
+        outputdebugstring('b');
         if not fileexists(dataloc) then
         begin
-
-          servicename:='CEDRIVER73';
+          outputdebugstring('b1');
+          servicename:='CEDRIVER60';
           ultimapservicename:='ULTIMAP2';
           processeventname:='DBKProcList60';
           threadeventname:='DBKThreadList60';
-
           if iswow64 then
           begin
             sysfile:='dbk64.sys';
@@ -3199,8 +3173,6 @@ begin
 
           vmx_p1_txt:='76543210';
           vmx_p2_txt:='fedcba98';
-          vmx_p3_txt:='90909090';
-
         end
         else
         begin
@@ -3212,7 +3184,6 @@ begin
           readln(driverdat,sysfile);
           readln(driverdat,vmx_p1_txt);
           readln(driverdat,vmx_p2_txt);
-          readln(driverdat,vmx_p3_txt);
           readln(driverdat,ultimapservicename);
           readln(driverdat,ultimapsysfile);
           closefile(driverdat);
@@ -3226,7 +3197,7 @@ begin
 
 
       try
-        configure_vmx(strtoint64('$'+vmx_p1_txt), strtoint('$'+vmx_p2_txt), StrToInt64('$'+vmx_p3_txt)  );
+        configure_vmx(strtoint('$'+vmx_p1_txt), strtoint('$'+vmx_p2_txt) );
       except
         //couldn't parse the password
       end;
@@ -3240,6 +3211,7 @@ begin
         exit;
       end;
 
+
       if hscmanager<>0 then
       begin
         //try loading ultimap
@@ -3248,18 +3220,18 @@ begin
 
         if fileexists(ultimapdriverloc) then
         begin
-          hUltimapService := OpenServiceW(hSCManager, pwidechar(ultimapservicename), SERVICE_ALL_ACCESS);
+          hUltimapService := OpenService(hSCManager, pchar(ultimapservicename), SERVICE_ALL_ACCESS);
           if hUltimapService=0 then
           begin
-            hUltimapService:=CreateServiceW(
+            hUltimapService:=CreateService(
                hSCManager,           // SCManager database
-               pwidechar(ultimapservicename),   // name of service
-               pwidechar(ultimapservicename),   // name to display
+               pchar(ultimapservicename),   // name of service
+               pchar(ultimapservicename),   // name to display
                SERVICE_ALL_ACCESS,   // desired access
                SERVICE_KERNEL_DRIVER,// service type
                SERVICE_DEMAND_START, // start type
                SERVICE_ERROR_NORMAL, // error control type
-               pwidechar(ultimapdriverloc),     // service's binary
+               pchar(ultimapdriverloc),     // service's binary
                nil,                  // no load ordering group
                nil,                  // no tag identifier
                nil,                  // no dependencies
@@ -3270,17 +3242,17 @@ begin
           else
           begin
             //make sure the service points to the right file
-            ChangeServiceConfigW(hultimapservice,
+            ChangeServiceConfig(hultimapservice,
                                 SERVICE_KERNEL_DRIVER,
                                 SERVICE_DEMAND_START,
                                 SERVICE_ERROR_NORMAL,
-                                pwidechar(ultimapdriverloc),
+                                pchar(ultimapdriverloc),
                                 nil,
                                 nil,
                                 nil,
                                 nil,
                                 nil,
-                                pwidechar(ultimapservicename));
+                                pchar(ultimapservicename));
           end;
 
         end;
@@ -3298,14 +3270,18 @@ begin
             reg.WriteString('A','\Device\'+ultimapservicename);
             reg.WriteString('B','\DosDevices\'+ultimapservicename);
 
-            if startservice(hultimapservice,0,pointer(sav)) then
+            if startservice(hultimapservice,0,pointer(sav))=false then
+            begin
+              outputdebugstring('Failed to load ultimap2:'+inttostr(GetLastError));
+            end
+            else
               OutputDebugString('started ultimap2');
 
             closeservicehandle(hUltimapService);
             hUltimapService:=0;
           end;
 
-          hultimapDevice := CreateFileW(pwidechar('\\.\'+ultimapservicename),
+          hultimapDevice := CreateFile(pchar('\\.\'+ultimapservicename),
                         GENERIC_READ or GENERIC_WRITE,
                         FILE_SHARE_READ or FILE_SHARE_WRITE,
                         nil,
@@ -3317,23 +3293,28 @@ begin
           reg.DeleteValue('B');
 
           freeandnil(reg);
-        end;
+        end
+        else
+          OutputDebugString('Failed to open/create ultimap service');
 
+
+        if hultimapDevice=INVALID_HANDLE_VALUE then
+          OutputDebugString('Failed to open ultimap device');
 
         //load DBK
 
-        hService := OpenServiceW(hSCManager, pwidechar(servicename), SERVICE_ALL_ACCESS);
+        hService := OpenService(hSCManager, pchar(servicename), SERVICE_ALL_ACCESS);
         if hService=0 then
         begin
-          hService:=CreateServiceW(
+          hService:=CreateService(
              hSCManager,           // SCManager database
-             pwidechar(servicename),   // name of service
-             pwidechar(servicename),   // name to display
+             pchar(servicename),   // name of service
+             pchar(servicename),   // name to display
              SERVICE_ALL_ACCESS,   // desired access
              SERVICE_KERNEL_DRIVER,// service type
              SERVICE_DEMAND_START, // start type
              SERVICE_ERROR_NORMAL, // error control type
-             pwidechar(driverloc),     // service's binary
+             pchar(driverloc),     // service's binary
              nil,                  // no load ordering group
              nil,                  // no tag identifier
              nil,                  // no dependencies
@@ -3344,21 +3325,20 @@ begin
         else
         begin
           //make sure the service points to the right file
-          ChangeServiceConfigW(hservice,
+          ChangeServiceConfig(hservice,
                               SERVICE_KERNEL_DRIVER,
                               SERVICE_DEMAND_START,
                               SERVICE_ERROR_NORMAL,
-                              pwidechar(driverloc),
+                              pchar(driverloc),
                               nil,
                               nil,
                               nil,
                               nil,
                               nil,
-                              pwidechar(servicename));
+                              pchar(servicename));
 
 
         end;
-
 
         if hservice<>0 then
         begin
@@ -3399,7 +3379,7 @@ begin
         end;
 
         hdevice:=INVALID_HANDLE_VALUE;
-        hDevice := CreateFileW(pwidechar('\\.\'+servicename),
+        hDevice := CreateFile(pchar('\\.\'+servicename),
                       GENERIC_READ or GENERIC_WRITE,
                       FILE_SHARE_READ or FILE_SHARE_WRITE,
                       nil,
@@ -3473,9 +3453,7 @@ begin
 
 
         closeservicehandle(hscmanager);
-      end
-      else
-        OutputDebugString('hscmanager=0');
+      end;
     end;
 
   finally

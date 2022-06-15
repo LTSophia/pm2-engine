@@ -1,4 +1,4 @@
-#pragma warning( disable: 4100 4101 4103 4189)
+#pragma warning( disable: 4100 4101 4103)
 
 
 #include "IOPLDispatcher.h"
@@ -927,10 +927,8 @@ NTSTATUS DispatchIoctl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 				initializeDBVM((PCWSTR)(UINT_PTR)pinp->dbvmimgpath);
 
-				if (pinp->cpuid == 0xffffffff) {
+				if (pinp->cpuid == 0xffffffff)
 					forEachCpu(vmxoffload_dpc, NULL, NULL, NULL, vmxoffload_override);
-					cleanupDBVM();
-				}
 				else
 					forOneCpu((CCHAR)pinp->cpuid, vmxoffload_dpc, NULL, NULL, NULL, vmxoffload_override);
 
@@ -2158,15 +2156,12 @@ NTSTATUS DispatchIoctl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 		case IOCTL_CE_VMXCONFIG:
 			{
-#pragma pack(1)
 				struct input
 				{
 					ULONG Virtualization_Enabled;
-					QWORD Password1;
+					ULONG Password1;
 					ULONG Password2;
-					QWORD Password3;
   				} *pinp;
-#pragma pack()
 				
 
 				DbgPrint("IOCTL_CE_VMXCONFIG called\n");	
@@ -2178,10 +2173,6 @@ NTSTATUS DispatchIoctl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				{
 					vmx_password1=pinp->Password1;
 					vmx_password2=pinp->Password2;
-					vmx_password3=pinp->Password3;
-
-					DbgPrint("new passwords are: %p-%x-%p\n", (void*)vmx_password1, vmx_password2, (void*)vmx_password3);
-
 					__try
 					{
 						vmx_version=vmx_getversion();
@@ -2441,7 +2432,7 @@ NTSTATUS DispatchIoctl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 			LowAddress.QuadPart = 0;
 			HighAddress.QuadPart = 0xffffffffffffffffI64;
 			SkipBytes.QuadPart = 0;
-			mdl = MmAllocatePagesForMdlEx(LowAddress, HighAddress, SkipBytes, (SIZE_T)pagecount * 4096, MmCached, MM_ALLOCATE_REQUIRE_CONTIGUOUS_CHUNKS | MM_ALLOCATE_FULLY_REQUIRED); //do not free this, EVER
+			mdl = MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes, pagecount * 4096); //do not free this, EVER
 			if (mdl)
 			{
 				int i;
@@ -2471,13 +2462,11 @@ NTSTATUS DispatchIoctl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 								{
 									int j;
 									int r = vmx_add_memory(mi->List, mi->Count);
-
-								
 									DbgPrint("vmx_add_memory for %d pages returned %d\n", mi->Count, r);
 
 									for (j = 0; j < mi->Count; j++)
 									{
-										DbgPrint("%d : %p\n", j, (void*)((UINT_PTR)mi->List[j]));
+										DbgPrint("%d : %p\n", j, (void*)mi->List[j]);
 									}
 
 

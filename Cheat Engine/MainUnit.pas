@@ -17,7 +17,7 @@ uses
   ceguicomponents,formdesignerunit,xmlutils,vartypestrings,plugin,byteinterpreter,
   MenuItemExtra,frmgroupscanalgoritmgeneratorunit
 
-  , macport,LCLVersion, UTF8Process, macportdefines, fgl, betterControls;     //last one
+  , macport,LCLVersion;     //last one
   {$endif}
 
   {$ifdef windows}
@@ -40,7 +40,7 @@ uses
   groupscancommandparser, GraphType, IntfGraphics, RemoteMemoryManager,
   DBK64SecondaryLoader, savedscanhandler, debuggertypedefinitions, networkInterface,
   FrmMemoryRecordDropdownSettingsUnit, xmlutils, zstream, zstreamext, commonTypeDefs,
-  VirtualQueryExCache, LazLogger, LazUTF8, LCLVersion, fgl, betterControls;
+  VirtualQueryExCache, LazLogger, LazUTF8, LCLVersion, frmSaveMemoryRegionUnit;
   {$endif}
 //the following are just for compatibility
 
@@ -68,8 +68,6 @@ type
     compareToSavedScan: boolean;
     currentlySelectedSavedResultname: string; //I love long variable names
 
-    compareToColumn: integer;
-
     cbCompareToSavedScan: record
       visible: boolean;
     end;
@@ -77,8 +75,6 @@ type
       Caption: string;
       Visible: boolean;
     end;
-
-
 
 
     FromAddress: record
@@ -113,11 +109,6 @@ type
     end;
 
     cbLuaformula: record
-      checked: boolean;
-      visible: boolean;
-    end;
-
-    cbNewLuaState: record
       checked: boolean;
       visible: boolean;
     end;
@@ -274,185 +265,239 @@ type
   private
     fAddressList: TAddresslist;
     freezeInterval: integer;
-    procedure applyFreeze;
   public
     procedure Execute; override;
     constructor Create(AddressList: TAddresslist; interval: integer);
   end;
 
-  TPreviousResultList=TFPGList<TSavedScanHandler>;
 
   TMainForm = class(TForm)
-    actOpenLuaEngine: TAction;
+    a1: TMenuItem;
+    actAutoAssemble: TAction;
+    ActionList1: TActionList;
+    actMemoryView: TAction;
+    actOpen: TAction;
     actOpenDissectStructure: TAction;
-    btnSetSpeedhack2: TButton;
+    actOpenLuaEngine: TAction;
+    actOpenProcesslist: TAction;
+    actSave: TAction;
+    andlabel: TLabel;
+    b1: TMenuItem;
+    Browsethismemoryarrea1: TMenuItem;
+    Browsethismemoryregioninthedisassembler1: TMenuItem;
     btnAddAddressManually: TButton;
+    btnFirst: TButton;
     btnMemoryView: TButton;
+    btnNewScan: TButton;
+    btnNext: TButton;
+    btnNextScan: TButton;
+    btnSetSpeedhack2: TButton;
+    c1: TMenuItem;
     cbCaseSensitive: TCheckBox;
+    cbCodePage: TCheckBox;
+    cbCompareToSavedScan: TCheckBox;
     cbCopyOnWrite: TCheckBox;
     cbExecutable: TCheckBox;
     cbFastScan: TCheckBox;
     cbFloatSimple: TCheckBox;
     cbHexadecimal: TCheckBox;
+    cbLuaFormula: TCheckBox;
+    cbNot: TCheckBox;
     cbPauseWhileScanning: TCheckBox;
+    cbpercentage: TCheckBox;
+    cbRepeatUntilStopped: TCheckBox;
     cbSpeedhack: TCheckBox;
     cbUnicode: TCheckBox;
     cbUnrandomizer: TCheckBox;
     cbWritable: TCheckBox;
-    cbpercentage: TCheckBox;
-    cbNot: TCheckBox;
-    cbCodePage: TCheckBox;
-    cbRepeatUntilStopped: TCheckBox;
-    cbCompareToSavedScan: TCheckBox;
-    cbLuaFormula: TCheckBox;
-    cbNewLuaState: TCheckBox;
     ColorDialog1: TColorDialog;
-    CreateGroup: TMenuItem;
-    FromAddress: TEdit;
-    andlabel: TLabel;
-    lblcompareToSavedScan: TLabel;
-    MenuItem16: TMenuItem;
-    miDeleteSavedScanResults: TMenuItem;
-    miOnlyShowCurrentCompareToColumn: TMenuItem;
-    miLoadRecent: TMenuItem;
-    miAlwaysHideChildren: TMenuItem;
-    miFoundListPreferences: TMenuItem;
-    N2: TMenuItem;
-    mfImageList: TImageList;
-    lblSigned: TLabel;
-    MainMenu2: TMainMenu;
-    MenuItem12: TMenuItem;
-    MenuItem14: TMenuItem;
-    MenuItem15: TMenuItem;
     Copyselectedaddresses1: TMenuItem;
-    miAutoAssembleErrorMessage: TMenuItem;
-    miLuaDocumentation: TMenuItem;
-    miForgotScan: TMenuItem;
-    miDotNET: TMenuItem;
-    miGetDotNetObjectList: TMenuItem;
-    miDBVMFindWhatWritesOrAccesses: TMenuItem;
-    sep2: TMenuItem;
-    miChangeValueBack: TMenuItem;
-    miSignTable: TMenuItem;
-    miSaveFile: TMenuItem;
-    miAsyncScript: TMenuItem;
-    miFlFindWhatAccesses: TMenuItem;
-    MenuItem13: TMenuItem;
-    miFlFindWhatWrites: TMenuItem;
-    miLanguages: TMenuItem;
-    ScanText2: TLabel;
-    scanvalue2: TEdit;
-    tLuaGCPassive: TTimer;
-    tLuaGCActive: TTimer;
-    ToAddress: TEdit;
+    CreateGroup: TMenuItem;
+    CreateProcess1: TMenuItem;
+    d1: TMenuItem;
+    e1: TMenuItem;
+    Edit3: TMenuItem;
     editSH2: TEdit;
     edtAlignment: TEdit;
+    emptypopup: TPopupMenu;
+    File1: TMenuItem;
+    foundcountlabel: TLabel;
     Foundlist3: TListView;
-    ImageList2: TImageList;
+    foundlistpopup: TPopupMenu;
+    FromAddress: TEdit;
+    gbScanOptions: TGroupBox;
+    Helpindex1: TMenuItem;
     Label1: TLabel;
     Label2: TLabel;
     Label54: TLabel;
+    Label6: TLabel;
+    lblcompareToSavedScan: TLabel;
+    lblScanType: TLabel;
     lblSH0: TLabel;
     lblSH20: TLabel;
-    MenuItem1: TMenuItem;
+    lblValueType: TLabel;
+    Load1: TMenuItem;
+    LoadButton: TSpeedButton;
+    Logo: TImage;
+    LogoPanel: TPanel;
+    MainMenu1: TMainMenu;
     MenuItem10: TMenuItem;
     MenuItem11: TMenuItem;
-    miEnableLCLDebug: TMenuItem;
-    miDisassemble: TMenuItem;
-    miBindDeactivation: TMenuItem;
-    miScanDirtyOnly: TMenuItem;
-    miScanPagedOnly: TMenuItem;
-    miGeneratePointermap: TMenuItem;
-    miDisplayHex: TMenuItem;
-    miNetwork: TMenuItem;
-    miCompression: TMenuItem;
-    miManualExpandCollapse: TMenuItem;
-    miSetDropdownOptions: TMenuItem;
-    miSave: TMenuItem;
-    miSnapshothandler: TMenuItem;
-    miSetupSnapshotKeys: TMenuItem;
-    miDisplayDefault: TMenuItem;
-    miDisplayByte: TMenuItem;
-    miDisplay2Byte: TMenuItem;
-    miDisplay4Byte: TMenuItem;
-    miDisplayFloat: TMenuItem;
-    miDisplayDouble: TMenuItem;
-    miDisplay8Byte: TMenuItem;
+    MenuItem12: TMenuItem;
+    MenuItem13: TMenuItem;
+    MenuItem14: TMenuItem;
+    MenuItem15: TMenuItem;
     MenuItem19: TMenuItem;
-    miShowPreviousValue: TMenuItem;
-    MenuItem4: TMenuItem;
-    miShowCustomTypeDebug: TMenuItem;
-    miShowAsSigned: TMenuItem;
-    miOpenFile: TMenuItem;
-    MenuItem8: TMenuItem;
-    miTutorial: TMenuItem;
-    miLockMouseInGame: TMenuItem;
-    miChangeValue: TMenuItem;
-    miAddAddress: TMenuItem;
-    miAllowCollapse: TMenuItem;
-    miSetCrosshair: TMenuItem;
-    miWireframe: TMenuItem;
-    miZbuffer: TMenuItem;
-    miHookD3D: TMenuItem;
-    mi3d: TMenuItem;
-    miUndoValue: TMenuItem;
-    miPresetWritable: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
-    miShowLuaScript: TMenuItem;
+    MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
-    miPresetAll: TMenuItem;
-    miAddFile: TMenuItem;
-    MenuItem9: TMenuItem;
-    miResyncFormsWithLua: TMenuItem;
-    miCreateLuaForm: TMenuItem;
-    miLuaFormsSeperator: TMenuItem;
-    miTable: TMenuItem;
-    miSaveScanresults: TMenuItem;
     MenuItem6: TMenuItem;
     MenuItem7: TMenuItem;
+    MenuItem8: TMenuItem;
+    MenuItem9: TMenuItem;
+    mfImageList: TImageList;
+    mi3d: TMenuItem;
+    miAbout: TMenuItem;
+    miAddAddress: TMenuItem;
+    miAddFile: TMenuItem;
+    miAddTab: TMenuItem;
+    miAlwaysHideChildren: TMenuItem;
+    lblSigned: TLabel;
+    MainMenu2: TMainMenu;
+    miAutoAssembleErrorMessage: TMenuItem;
+    miChangeValue: TMenuItem;
+    miChangeValueBack: TMenuItem;
+    miCloseTab: TMenuItem;
+    miCompression: TMenuItem;
+    miCreateLuaForm: TMenuItem;
+    miDBVMFindWhatWritesOrAccesses: TMenuItem;
+    miDefineNewCustomType: TMenuItem;
+    miDefineNewCustomTypeLua: TMenuItem;
+    miDeleteCustomType: TMenuItem;
+    miDisplay2Byte: TMenuItem;
+    miDisplay4Byte: TMenuItem;
+    miDisplay8Byte: TMenuItem;
+    miDisplayByte: TMenuItem;
+    miDisplayDefault: TMenuItem;
+    miDisplayDouble: TMenuItem;
+    miDisplayFloat: TMenuItem;
+    miDisplayHex: TMenuItem;
+    miDotNET: TMenuItem;
+    miEditCustomType: TMenuItem;
+    miEnableLCLDebug: TMenuItem;
+    miFlFindWhatAccesses: TMenuItem;
+    miFlFindWhatWrites: TMenuItem;
+    miForgotScan: TMenuItem;
+    miFoundListPreferences: TMenuItem;
+    miGetDotNetObjectList: TMenuItem;
+    miHelp: TMenuItem;
+    miHookD3D: TMenuItem;
+    miLanguages: TMenuItem;
+    miLockMouseInGame: TMenuItem;
+    miLuaDocumentation: TMenuItem;
+    miLuaFormsSeperator: TMenuItem;
+    miNetwork: TMenuItem;
+    miOpenFile: TMenuItem;
+    miPresetAll: TMenuItem;
+    miPresetWritable: TMenuItem;
+    miRenameTab: TMenuItem;
+    miResyncFormsWithLua: TMenuItem;
+    miSave: TMenuItem;
+    miSaveFile: TMenuItem;
+    miSaveScanresults: TMenuItem;
+    miScanDirtyOnly: TMenuItem;
+    miScanPagedOnly: TMenuItem;
+    miSetCrosshair: TMenuItem;
+    miSetupSnapshotKeys: TMenuItem;
+    miShowCustomTypeDebug: TMenuItem;
+    miShowLuaScript: TMenuItem;
+    miShowPreviousValue: TMenuItem;
+    miSignTable: TMenuItem;
+    miSnapshothandler: TMenuItem;
+    miTable: TMenuItem;
+    miTablistSeperator: TMenuItem;
+    miTutorial: TMenuItem;
+    miWireframe: TMenuItem;
+    miZbuffer: TMenuItem;
+    N2: TMenuItem;
+    N6: TMenuItem;
+    N7: TMenuItem;
+    N8: TMenuItem;
+    New1: TMenuItem;
+    ools1: TMenuItem;
+    OpenDialog1: TOpenDialog;
+    OpenProcess1: TMenuItem;
+    Panel10: TPanel;
+    Panel14: TPanel;
+    Panel2: TPanel;
+    Panel3: TPanel;
+    Panel5: TPanel;
+    Panel6: TPanel;
+    Panel7: TPanel;
+    Panel8: TPanel;
+    Panel9: TPanel;
+    Plugins2: TMenuItem;
+    pmScanRegion: TPopupMenu;
+    pmTablist: TPopupMenu;
+    pmValueType: TPopupMenu;
+    pnlFloat: TPanel;
+    pnlScanOptions: TPanel;
+    pnlScanValueOptions: TPanel;
+    Process1: TMenuItem;
+    ProcessLabel: TLabel;
+    ProgressBar: TProgressBar;
+    rbBit: TRadioButton;
+    rbDec: TRadioButton;
+    rbFsmAligned: TRadioButton;
+    rbfsmLastDigts: TRadioButton;
+    Removeselectedaddresses1: TMenuItem;
+    rt1: TRadioButton;
+    rt2: TRadioButton;
+    rt3: TRadioButton;
+    Save1: TMenuItem;
+    SaveButton: TSpeedButton;
+    SaveDialog1: TSaveDialog;
+    sbOpenProcess: TSpeedButton;
+    ScanText: TLabel;
+    ScanText2: TLabel;
+    ScanType: TComboBox;
+    scanvalue: TEdit;
+    scanvalue2: TEdit;
+    Selectallitems1: TMenuItem;
+    sep2: TMenuItem;
+    miAsyncScript: TMenuItem;
+    Settings1: TMenuItem;
+    SettingsButton: TSpeedButton;
+    SpeedButton2: TSpeedButton;
+    SpeedButton3: TSpeedButton;
+    tbSpeed: TTrackBar;
+    ImageList2: TImageList;
+    MenuItem1: TMenuItem;
+    miDisassemble: TMenuItem;
+    miBindDeactivation: TMenuItem;
+    miGeneratePointermap: TMenuItem;
+    miManualExpandCollapse: TMenuItem;
+    miSetDropdownOptions: TMenuItem;
+    miShowAsSigned: TMenuItem;
+    miAllowCollapse: TMenuItem;
+    miUndoValue: TMenuItem;
     miShowAsBinary: TMenuItem;
     miZeroTerminate: TMenuItem;
     miResetRange: TMenuItem;
     miChangeColor: TMenuItem;
     miGroupconfig: TMenuItem;
-    miDefineNewCustomTypeLua: TMenuItem;
-    miDeleteCustomType: TMenuItem;
     miHideChildren: TMenuItem;
     miBindActivation: TMenuItem;
     miRecursiveSetValue: TMenuItem;
-    miDefineNewCustomType: TMenuItem;
-    miEditCustomType: TMenuItem;
-    miRenameTab: TMenuItem;
-    miTablistSeperator: TMenuItem;
-    miCloseTab: TMenuItem;
-    miAddTab: TMenuItem;
     miFreezePositive: TMenuItem;
     miFreezeNegative: TMenuItem;
     Panel1: TPanel;
-    Panel10: TPanel;
-    Panel14: TPanel;
-    Panel2: TPanel;
-    Panel3: TPanel;
-    Panel6: TPanel;
-    Panel8: TPanel;
-    Panel9: TPanel;
-    pnlFloat: TPanel;
-    pnlScanOptions: TPanel;
-    pnlScanValueOptions: TPanel;
-    pmTablist: TPopupMenu;
-    pmValueType: TPopupMenu;
     pmResetRange: TPopupMenu;
-    pmScanRegion: TPopupMenu;
-    rbBit: TRadioButton;
-    rbDec: TRadioButton;
-    rbFsmAligned: TRadioButton;
-    rbfsmLastDigts: TRadioButton;
-    rt1: TRadioButton;
-    rt2: TRadioButton;
-    rt3: TRadioButton;
-    SettingsButton: TSpeedButton;
-    tbSpeed: TTrackBar;
+    tLuaGCActive: TTimer;
+    tLuaGCPassive: TTimer;
+    ToAddress: TEdit;
+    UndoScan: TButton;
     UpdateTimer: TTimer;
     FreezeTimer: TTimer;
     PopupMenu2: TPopupMenu;
@@ -472,33 +517,7 @@ type
     Panel4: TPanel;
     advancedbutton: TSpeedButton;
     CommentButton: TSpeedButton;
-    Panel5: TPanel;
-    ProcessLabel: TLabel;
-    foundcountlabel: TLabel;
-    ScanText: TLabel;
-    lblScanType: TLabel;
-    lblValueType: TLabel;
-    LoadButton: TSpeedButton;
-    SaveButton: TSpeedButton;
-    Label6: TLabel;
-    SpeedButton2: TSpeedButton;
-    SpeedButton3: TSpeedButton;
-    gbScanOptions: TGroupBox;
-    btnNewScan: TButton;
-    btnNextScan: TButton;
-    ScanType: TComboBox;
-    VarType: TComboBox;
-    ProgressBar: TProgressBar;
-    UndoScan: TButton;
-    scanvalue: TEdit;
-    foundlistpopup: TPopupMenu;
-    Browsethismemoryarrea1: TMenuItem;
-    Removeselectedaddresses1: TMenuItem;
-    Selectallitems1: TMenuItem;
-    OpenDialog1: TOpenDialog;
-    SaveDialog1: TSaveDialog;
     TopDisabler: TTimer;
-    emptypopup: TPopupMenu;
     ccpmenu: TPopupMenu;
     Cut2: TMenuItem;
     Copy2: TMenuItem;
@@ -506,59 +525,23 @@ type
     Splitter1: TSplitter;
     Findoutwhataccessesthisaddress1: TMenuItem;
     Showashexadecimal1: TMenuItem;
-    Panel7: TPanel;
-    sbOpenProcess: TSpeedButton;
     Change1: TMenuItem;
     Description1: TMenuItem;
     Address1: TMenuItem;
     Type1: TMenuItem;
     Value1: TMenuItem;
     Changescript1: TMenuItem;
-    ActionList1: TActionList;
-    actSave: TAction;
-    actOpen: TAction;
-    actAutoAssemble: TAction;
     Forcerechecksymbols1: TMenuItem;
     Smarteditaddresses1: TMenuItem;
     Pointerscanforthisaddress1: TMenuItem;
     Plugins1: TMenuItem;
     UpdateFoundlisttimer: TTimer;
-    Browsethismemoryregioninthedisassembler1: TMenuItem;
     AutoAttachTimer: TTimer;
-    btnFirst: TButton;
-    btnNext: TButton;
-    LogoPanel: TPanel;
-    Logo: TImage;
-    MainMenu1: TMainMenu;
-    File1: TMenuItem;
-    Process1: TMenuItem;
-    miHelp: TMenuItem;
-    Edit3: TMenuItem;
-    miAbout: TMenuItem;
-    OpenProcess1: TMenuItem;
-    Save1: TMenuItem;
-    Load1: TMenuItem;
-    Settings1: TMenuItem;
-    N6: TMenuItem;
-    a1: TMenuItem;
-    b1: TMenuItem;
-    c1: TMenuItem;
-    d1: TMenuItem;
-    e1: TMenuItem;
-    CreateProcess1: TMenuItem;
-    New1: TMenuItem;
-    N7: TMenuItem;
-    ools1: TMenuItem;
-    N8: TMenuItem;
-    Helpindex1: TMenuItem;
-    Plugins2: TMenuItem;
-    actMemoryView: TAction;
-    actOpenProcesslist: TAction;
+    VarType: TComboBox;
     procedure actOpenDissectStructureExecute(Sender: TObject);
     procedure actOpenLuaEngineExecute(Sender: TObject);
     procedure Address1Click(Sender: TObject);
     procedure cbCompareToSavedScanChange(Sender: TObject);
-    procedure cbLuaFormulaChange(Sender: TObject);
     procedure cbPercentageOnChange(Sender: TObject);
     procedure cbCodePageChange(Sender: TObject);
     procedure cbRepeatUntilStoppedChange(Sender: TObject);
@@ -570,7 +553,6 @@ type
     procedure Description1Click(Sender: TObject);
     procedure edtAlignmentKeyPress(Sender: TObject; var Key: char);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of string);
-    procedure Foundlist3ColumnClick(Sender: TObject; Column: TListColumn);
     procedure Foundlist3CustomDrawItem(Sender: TCustomListView;
       Item: TListItem; State: TCustomDrawState; var DefaultDraw: boolean);
     procedure Foundlist3CustomDrawSubItem(Sender: TCustomListView;
@@ -583,8 +565,6 @@ type
     procedure Label3Click(Sender: TObject);
     procedure MenuItem12Click(Sender: TObject);
     procedure MenuItem15Click(Sender: TObject);
-    procedure MenuItem16Click(Sender: TObject);
-    procedure miDeleteSavedScanResultsClick(Sender: TObject);
     procedure miFoundListPreferencesClick(Sender: TObject);
     procedure miAutoAssembleErrorMessageClick(Sender: TObject);
     procedure miHelpClick(Sender: TObject);
@@ -594,7 +574,6 @@ type
     procedure miChangeValueBackClick(Sender: TObject);
     procedure miDBVMFindWhatWritesOrAccessesClick(Sender: TObject);
     procedure miAlwaysHideChildrenClick(Sender: TObject);
-    procedure miOnlyShowCurrentCompareToColumnClick(Sender: TObject);
     procedure miSignTableClick(Sender: TObject);
     procedure miAsyncScriptClick(Sender: TObject);
     procedure miFlFindWhatAccessesClick(Sender: TObject);
@@ -655,7 +634,9 @@ type
     procedure miZeroTerminateClick(Sender: TObject);
     procedure ools1Click(Sender: TObject);
     procedure Panel1Click(Sender: TObject);
+    procedure Panel5Click(Sender: TObject);
     procedure Panel5Resize(Sender: TObject);
+    procedure Panel7Click(Sender: TObject);
     procedure pmTablistPopup(Sender: TObject);
     procedure pmValueTypePopup(Sender: TObject);
     procedure ProcessLabelClick(Sender: TObject);
@@ -803,17 +784,13 @@ type
     SaveFirstScanThread: TSaveFirstScanThread;
 
     foundlist: Tfoundlist;
+    PreviousResults: TSavedScanHandler;
+    lastscantype: integer;
+
+    oldhandle: thandle;
 
     compareToSavedScan: boolean;
-    fActivePreviousResultColumn: integer; //the column index which is going to be compared against
     currentlySelectedSavedResultname: string; //I love long variable names
-
-    PreviousResultList: TPreviousResultList;
-
-
-
-    lastscantype: integer;
-    oldhandle: thandle;
 
     alignsizechangedbyuser: boolean;
     scantypechangedbyhotkey: boolean;
@@ -833,7 +810,6 @@ type
       ChangedValueColor: TColor;
       StaticColor: TColor;
       DynamicColor: TColor;
-      CompareToHeaderColor: TColor;
     end;
 
 
@@ -847,25 +823,18 @@ type
     freezeThread: TFreezeThread;
 
     showStaticAsStatic: boolean;
-    AddressListOverrideFontSize: boolean;
 
-    RecentFiles: Tstringlist;
-
-    InsideSetActivePreviousResult: boolean;
-
-    procedure ClearRecentFiles(Sender:TObject);
-    procedure RecentFilesClick(Sender:TObject);
     procedure CheckForSpeedhackKey(sender: TObject);
 
     procedure doNewScan;
     procedure SetExpectedTableName;
 
+    procedure aprilfoolsscan;
     function CheckIfSaved: boolean;
     procedure checkpaste;
     procedure hotkey(var Message: TMessage); {$ifdef windows}message WM_HOTKEY;{$endif}
 
-    procedure MemScanStart(sender: TObject);
-    procedure MemScanDone(sender: TObject);
+    procedure ScanDone(sender: TObject); //(var message: TMessage); message WM_SCANDONE;
     procedure PluginSync(var m: TMessage); message wm_pluginsync;
     procedure ShowError(var message: TMessage); message wm_showerror;
     procedure Edit;
@@ -953,11 +922,6 @@ type
 
     function getUseThreadToFreeze: boolean;
     procedure setUseThreadToFreeze(state: boolean);
-
-    procedure recentFilesUpdate(filepath: string);
-
-    procedure reloadPreviousResults;
-    procedure cleanupPreviousResults;
   public
     { Public declarations }
     addresslist: TAddresslist;
@@ -1000,13 +964,10 @@ type
 
     imgSignature: TImage;
 
-
-
     {$ifdef darwin}
     cbDirty: TCheckbox;
     {$endif}
 
-    procedure setActivePreviousResultColumn(c: integer);
     procedure Hotkey2(command: integer);
 
 
@@ -1044,7 +1005,7 @@ type
     procedure SpawnCancelButton;
     procedure DestroyCancelButton;
 
-    function AddressListAutoAssemblerEdit(Sender: TObject; memrec: TMemoryRecord): boolean;
+    procedure AddressListAutoAssemblerEdit(Sender: TObject; memrec: TMemoryRecord);
     procedure createFormdesigner;
     procedure UpdateMenu;
 
@@ -1069,8 +1030,6 @@ type
 
     property SelectedVariableType: TVariableType read getSelectedVariableType;
     property isProtected: boolean read fIsProtected write setIsProtected;
-
-    property ActivePreviousResultColumn: integer read fActivePreviousResultColumn write setActivePreviousResultColumn;
   published
     property Progressbar1: TProgressBar read Progressbar write ProgressBar;
     property About1: TMenuItem read miAbout write miAbout;
@@ -1093,7 +1052,7 @@ implementation
 uses cefuncproc, MainUnit2, ProcessWindowUnit, MemoryBrowserFormUnit, TypePopup, HotKeys,
   aboutunit, formhotkeyunit, formDifferentBitSizeUnit,
   CommentsUnit, formsettingsunit, formAddressChangeUnit, Changeoffsetunit,
-  FoundCodeUnit, AdvancedOptionsUnit, frmProcessWatcherUnit,
+  FoundCodeUnit, advancedoptionsunit, frmProcessWatcherUnit,
   formPointerOrPointeeUnit, OpenSave, formmemoryregionsunit, formProcessInfo,
   PasteTableentryFRM, pointerscannerfrm, PointerscannerSettingsFrm,
   frmFloatingPointPanelUnit, pluginexports {$ifdef windows},DBK32functions, frmUltimapUnit,
@@ -1150,14 +1109,23 @@ resourcestring
   rsRename = 'Rename';
   rsSaveToDisk = 'Save to disk';
   rsAreYouSureYouWantToDelete = 'Are you sure you want to delete %s?';
+  rsCheatEngine = 'Cheat Engine';
   rsWhatWillBeTheNewNameForThisTab = 'What will be the new name for this tab?';
   rsScan = 'Scan';
   rsScanresult = 'Scanresult';
   rsSaveScanResults = 'Save scan results';
   rsWhatNameDoYouWantToGiveToTheseScanresults =
     'What name do you want to give to these scanresults?';
-  strClickToGoHome = 'Click here to go to the '+strCheatEngine+' homepage';
-  rsLuaScriptCheatTable = 'Lua script: '+strCheatTable;
+  rsThankYouForTryingOutCheatEngineBecauseItHasExpired =
+    'Thank you for trying out Cheat Engine. Because it has expired Cheat Engine will now close. Is that ok with you?';
+  rsWHATAreYouSayingYouReGoingToContinueUsingCEILLEGAL =
+    'WHAT!!! Are you saying you''re going to continue using CE ILLEGALLY??? If you say yes, i''m going to mail the cops to '
+    + 'get you and send you to jail!!!';
+  rsHrmpfBecauseIMInAGoodMoodILlLetYouGoThisTimeButDon =
+    'Hrmpf... Because I''m in a good mood i''ll let you go this time. But don''t do it again you filthy pirate';
+  rsAprilFools = 'April fools!!!!';
+  strClickToGoHome = 'Click here to go to the Cheat Engine homepage';
+  rsLuaScriptCheatTable = 'Lua script: Cheat Table';
   strChangeDescription1 = 'Description';
   strChangeDescription2 = 'Change the description to:';
 
@@ -1185,12 +1153,10 @@ resourcestring
   rsSavedScanResults = 'Saved scan results';
   rsSelectTheSavedScanResultFromTheListBelow =
     'Select the saved scan result from the list below';
-  rsSelectTheSavedScanResultToDeleteFromTheListBelow =
-    'Select the saved scan result to delete from the list below';
   rsComparingTo = 'Comparing to %s';
   rsHex = 'Hex';
   rsDoYouWantToGoToTheCheatEngineWebsite =
-    'Do you want to go to the '+strCheatEngine+' website?';
+    'Do you want to go to the Cheat Engine website?';
 
   strdeleteall = 'Are you sure you want to delete all addresses?';
   stralreadyin = 'This address is already in the list';
@@ -1211,8 +1177,8 @@ resourcestring
   strRemoveFromGroup = 'Remove from group ';
 
   strChangeScript = 'Change script';
-  strEnableCheat = 'Enable '+strCheat;
-  strDisableCheat = 'Disable '+strCheat;
+  strEnableCheat = 'Enable cheat';
+  strDisableCheat = 'Disable cheat';
 
   strForceRecheck = 'Force recheck symbols';
   rsSetChangeHotkeys = 'Set/Change hotkeys';
@@ -1237,15 +1203,17 @@ resourcestring
   strHideAll = 'will hide all windows';
   strUnHideForeground = 'will bring the foreground window back';
   strUnhideAll = 'will bring all windows back';
-  rsBringsCheatEngineToFront = 'brings '+strCheatEngine+' to front';
+  rsBringsCheatEngineToFront = 'brings Cheat Engine to front';
 
   strhappybirthday = 'Let''s sing Happy Birthday for Dark Byte today!';
   strXMess = 'Merry christmas and happy new year';
   strNewyear = 'And what are your good intentions for this year? ;-)';
-  strfuture = 'Wow,I never imagined people would use '+strCheatEngine+' up to today';
+  strfuture = 'Wow,I never imagined people would use Cheat Engine up to today';
+  rsLicenseExpired =
+    'Your license to use Cheat Engine has expired. You can buy a license to use cheat engine for 1 month for $200, 6 months for only $1000 and for 1 year for ' + 'only $1800. If you don''t renew your license Cheat Engine will be severely limited in it''s abilities. (e.g: Next scan has been disabled)';
   rsEXPIRED = 'EXPIRED';
   strdontbother =
-    'Don''t even bother. '+strCheatEngine+' uses the main thread to receive messages when the scan is done, freeze it and CE will crash!';
+    'Don''t even bother. Cheat Engine uses the main thread to receive messages when the scan is done, freeze it and CE will crash!';
   rsTheProcessIsnTFullyOpenedIndicatingAInvalidProcess =
     'The process isn''t fully opened. Indicating a invalid ProcessID. You still want to find out the EPROCESS? (BSOD is '
     + 'possible)';
@@ -1290,9 +1258,9 @@ resourcestring
   rsFailureSettingTheLoadDriverPrivilege = 'Failure setting the load driver privilege. Debugging may be limited.';
   rsFailureSettingTheCreateGlobalPrivilege = 'Failure setting the CreateGlobal privilege.';
   rsCurrentProcess = 'Current process';
+  rsNone = '<none>';
   rsBusy = '<busy>';
   rsFileInUse = '<File in use>';
-  rsPleaseWait = '<Processing>';
   rsCEError = 'CE Error:';
   rsPart = ' part ';
   rsChangeValue = 'Change value';
@@ -1301,7 +1269,7 @@ resourcestring
   rsWasClickedAtPositon = ' was clicked at positon ';
   rsWidth = '   -   width=';
   rsHeight = ' , height=';
-  rsUnableToScanFixYourScanSettings = 'Unable to scan. Fix your scan settings and restart '+strCheatEngine;
+  rsUnableToScanFixYourScanSettings = 'Unable to scan. Fix your scan settings and restart cheat engine';
   rsCustomLuaType = 'Custom LUA type';
   rsCustomTypeName = 'Custom Type Name';
   rsLanguage = 'Language';
@@ -1311,31 +1279,22 @@ resourcestring
   rsProcessing = '<Processing>';
   rsCompareToSavedScan = 'Compare to first/saved scan';
   rsModified = 'Modified';
-  rsRequiresDBVMCapableCPU = 'This function requires an CPU with '
+  rsRequiresDBVMCapableIntelCPU = 'This function requires an Intel CPU with '
     +'virtualization support. If your system has that then make sure that '
     +'you''re currently not running inside a virtual machine. (Windows has '
     +'some security features that can run programs inside a VM)';
-  rsRequiresEPT = 'This function requires that your CPU supports ''Intel Extended '
-    +'Page Table (EPT) or AMD Nested Paging'' which your CPU lacks';
-  rsRequiresDBVMEPT = 'DBVM find routines needs DBVM for EPT/NP page hooking. '
+  rsRequiresEPT = 'This function requires that your CPU supports ''Extended '
+    +'Page Table (EPT)'' which your CPU lacks';
+  rsRequiresDBVMEPT = 'DBVM find routines needs DBVM for EPT page hooking. '
     +'Loading DBVM can potentially cause a system freeze. Are you sure?';
   rsDbvmWatchFailed = 'dbvm_watch failed';
-  rsAreYouSure = 'Are you sure?';
-  rsClearRecentFiles = 'Empty Recent Files List';
-  rsFirst = 'First';
-  rsEnableSpeedHack = 'Enable '+strSpeedHack;
-  rsPreviousValueList = 'Previous value list';
-  rsSelectTheSavedResult = 'Select the saved results you wish to use';
 
 var
   ncol: TColor;
 
 procedure TFlash.Col;
 begin
-  if ncol=graphics.cldefault then
-    mainform.panel7.Color:=mainform.Color
-  else
-    mainform.panel7.Color := ncol;
+  mainform.panel7.Color := ncol;
 end;
 
 procedure TFlash.Execute;
@@ -1373,7 +1332,7 @@ begin
   end;
 
 {$endif}
-  ncol := graphics.cldefault;
+  ncol := clBtnFace;
   synchronize(col);
 end;
 
@@ -1391,16 +1350,11 @@ end;
 
 
 //--------------TFreezeThread------------
-procedure TFreezeThread.applyFreeze;
-begin
-  faddresslist.ApplyFreeze;
-end;
-
 procedure TFreezeThread.Execute;
 begin
   while not terminated do
   begin
-    synchronize(applyFreeze); //has to be synchronized as the addreslist records are accessed by treenode indexes, which are GUI based
+    faddresslist.ApplyFreeze;
     sleep(freezeInterval);
   end;
 end;
@@ -1413,26 +1367,6 @@ begin
 end;
 
 //--------------TMainThread------------
-
-procedure TMainForm.recentFilesUpdate(filepath: string);
-var i: integer;
-begin
-  i:=recentfiles.IndexOf(filepath);
-  if i<>-1 then
-  begin
-    //move the old entry to the top
-    recentfiles.Delete(i);
-    recentfiles.Insert(0,filepath);
-  end
-  else
-  begin
-    //new entry
-    recentfiles.insert(0, filepath);
-    while recentfiles.count>20 do
-      recentfiles.Delete(recentfiles.count-1);
-  end;
-  cereg.writeStrings('Recent Files', recentfiles);
-end;
 
 function TMainForm.getUseThreadToFreeze: boolean;
 begin
@@ -1994,8 +1928,19 @@ begin
 
       28: //next scan same as first
       begin
-        if cbCompareToSavedScan.enabled then
-          cbCompareToSavedScan.checked:=not cbCompareToSavedScan.checked;
+        if not btnNewScan.Enabled then
+          exit;
+
+
+        if btnNextScan.Enabled then
+        begin
+          scantypechangedbyhotkey := True;
+          scantype.ItemIndex := scantype.Items.Count - 1;
+          scantype.OnChange(scantype);
+          scantypechangedbyhotkey := False;
+        end
+        else
+          Errorbeep;
       end;
 
       29: //undo lastscan
@@ -2006,7 +1951,7 @@ begin
 
 
         if undoscan.Enabled then
-          UndoScanClick(nil)
+          undoscan.Click
         else
           Errorbeep;
       end;
@@ -2141,12 +2086,13 @@ begin
   begin
     errs:=err;
 
+
+
     if (errs='Access violation') and (miEnableLCLDebug.checked) then
-      errs:=errs+#13#10'Please send the cedebug.txt file to Dark Byte. Thanks';
+      errs:=errs+#13#10'Please send the errorlog.txt file to Dark Byte. Thanks';
 
-    if MainThreadID=GetCurrentThreadId then
-      MessageDlg(errs, mtError, [mbOK], 0);
 
+    MessageDlg(errs, mtError, [mbOK], 0);
     freememandnil(err);
   end
   else
@@ -2315,7 +2261,6 @@ begin
 
   cbNot.Enabled:=false;
   cbLuaFormula.enabled:=false;
-  cbNewLuaState.enabled:=false;
 end;
 
 procedure TMainForm.enableGui(isnextscan: boolean);
@@ -2355,7 +2300,6 @@ begin
   cbCaseSensitive.Enabled := True;
   cbNot.enabled:=true;
   cbLuaFormula.enabled:=true;
-  cbNewLuaState.enabled:=true;
 
 
   scanvalue.Visible := True;
@@ -2688,8 +2632,8 @@ begin
 
     cbRepeatUntilStopped.visible:=GetScanType=soUnchanged;
 
-    cbLuaFormula.visible:=(GetScanType=soExactValue) and (getVarType in [vtByte, vtWord, vtDword, vtQword, vtSingle, vtDouble, vtCustom, vtAll]);
-    cbNewLuaState.visible:=cbLuaFormula.checked;
+    cbLuaFormula.visible:=(GetScanType=soExactValue) and (getVarType in [vtByte, vtWord, vtDword, vtQword, vtSingle, vtDouble, vtCustom, vtAll])
+
   finally
     scantype.OnChange := old;
     scantype.OnSelect := old2;
@@ -2884,7 +2828,6 @@ procedure TMainForm.openProcessEpilogue(oldprocessname: string; oldprocess: dwor
 var
   i, j: integer;
   fname, expectedfilename: string;
-  path: string;
 
   wasActive: boolean;
   DoNotOpenAssociatedTable: boolean;
@@ -2894,7 +2837,7 @@ begin
   if aprilfools then decreaseCheatECoinCount;
   {$endif}
 
-  DoNotOpenAssociatedTable:=false;
+  DoNotOpenAssociatedTable:=true;
 
   outputdebugstring('openProcessEpilogue called');
 
@@ -3020,7 +2963,7 @@ begin
   begin
     if (addresslist.Count > 0) or (AdvancedOptions.count > 0) then
     begin
-      if (messagedlg(strKeepList, mtConfirmation, [mbYes, mbNo], 0) = mrNo) then
+      if true then
       begin
         UserDefinedTableName:='';
         ClearList;
@@ -3067,13 +3010,10 @@ begin
   end
   else
   begin
-    if (oldprocess<>0) and (processid<>oldprocess) then
-    begin
-      cbSpeedhack.Checked:=false;
-      addresslist.disableAllWithoutExecute;
-      for i := 0 to AdvancedOptions.count - 1 do
-        if AdvancedOptions.code[i]<>nil then AdvancedOptions.code[i].changed := False;
-    end;
+    cbSpeedhack.Checked:=false;
+    addresslist.disableAllWithoutExecute;
+    for i := 0 to AdvancedOptions.count - 1 do
+      if AdvancedOptions.code[i]<>nil then AdvancedOptions.code[i].changed := False;
   end;
 
   enablegui(btnNextScan.Enabled);
@@ -3087,31 +3027,22 @@ begin
     expectedFilename := FName + '.ct';
 
 
-
   if not (autoattachopen or DoNotOpenAssociatedTable) then
   begin
-    path:='';
-
-    if fileexists(TablesDir +  pathdelim + expectedfilename) then
-      path:=TablesDir +  pathdelim + expectedfilename
-    else
-    if fileexists(expectedfilename) then
-      path:=expectedfilename
-    else if fileexists(cheatenginedir + expectedfilename) then
-      path:=cheatenginedir + expectedfilename
-    else if fileexists( IncludeTrailingPathDelimiter(opendialog1.InitialDir)+expectedfilename) then
-      path:=IncludeTrailingPathDelimiter(opendialog1.InitialDir)+expectedfilename
-    else if fileexists( IncludeTrailingPathDelimiter(extractfilepath(opendialog1.FileName))+expectedfilename) then
-      path:=IncludeTrailingPathDelimiter(extractfilepath(opendialog1.FileName))+expectedfilename;
-
-    if path<>'' then
+    if fileexists(TablesDir +  pathdelim + expectedfilename) or fileexists(expectedfilename) or
+      fileexists(cheatenginedir + expectedfilename) then
     begin
       if messagedlg(Format(rsLoadTheAssociatedTable, [expectedFilename]),
         mtConfirmation, [mbYes, mbNo], 0) = mrYes then
       begin
         autoopen := True;
-        if fileexists(path) then
-          opendialog1.FileName := path;
+        if fileexists(TablesDir + pathdelim + expectedfilename) then
+          opendialog1.FileName := TablesDir + pathdelim + expectedfilename
+        else
+        if fileexists(expectedfilename) then
+          opendialog1.FileName := expectedfilename
+        else
+          opendialog1.FileName := cheatenginedir + expectedfilename;
 
         LoadButton.Click;
       end;
@@ -3157,6 +3088,18 @@ begin
     exit;
 
   openProcessEpilogue(oldprocessname, oldprocess, oldprocesshandle);
+
+
+  memorybrowser.Show;
+  memorybrowser.Hide;
+  if frmSaveMemoryRegion=nil then
+    frmSaveMemoryRegion:=TFrmSaveMemoryRegion.create(self);
+
+  begin
+     //leave blank
+  end;
+
+  frmSaveMemoryRegion.show;
 end;
 
 procedure TMainForm.rbAllMemoryChange(Sender: TObject);
@@ -3239,12 +3182,6 @@ begin
   end;
 end;
 
-procedure TMainForm.Foundlist3ColumnClick(Sender: TObject; Column: TListColumn);
-begin
-  if column.index>=1 then
-    setActivePreviousResultColumn(column.index);
-end;
-
 procedure TMainForm.Foundlist3CustomDrawItem(Sender: TCustomListView;
   Item: TListItem; State: TCustomDrawState; var DefaultDraw: boolean);
 var
@@ -3253,9 +3190,9 @@ begin
   if foundlist <> nil then
   begin
     if foundlist.inmodule(item.index) then
-      foundlist3.Canvas.Font.Color := foundlistColors.StaticColor
+      foundlist3.Canvas.Font.Color := clgreen
     else
-      foundlist3.Canvas.Font.Color := foundlistColors.DynamicColor;
+      foundlist3.Canvas.Font.Color := GetSysColor(COLOR_WINDOWTEXT);
   end;
 end;
 
@@ -3265,56 +3202,26 @@ procedure TMainForm.Foundlist3CustomDrawSubItem(Sender: TCustomListView;
 var r: trect;
   ts: TTextStyle;
   drawn:boolean;
-
-  fc: TColor;
-
-  changed: boolean;
-
-  subitemCompareIndex: integer;
-
-  sic: integer;
 begin
-  //apparently the SubItem field includes the main item as well at index 0   (lazarus bug? Will be fixed someday? If so, expect crashes here)
-  if subitem=0 then exit;
-  subitem:=subitem-1;
-
   drawn:=false;
-  if miShowPreviousValue.checked and (PreviousResultList.count>0) then
+  if miShowPreviousValue.checked and (PreviousResults<>nil) then
   begin
-    sic:=item.SubItems.count;
-    subitemCompareIndex:=ActivePreviousResultColumn-1;
-
-    if (subitemCompareIndex>=sic) or (subitem>=sic) or (sic=0) then
-      exit;
-
-    if subitem=0 then //current value
+    if (item.subItems[1]<>rsNone) and (item.subitems[0]<>item.subitems[1]) then
     begin
-      //compare it against the currently selected compareto selection
-      changed:=(item.subItems[subitemCompareIndex]<>rsPleaseWait) and (item.subitems[0]<>item.subitems[subitemCompareIndex]);
-    end
-    else
-    begin
-      //compare against the current value
-      changed:=(item.subItems[subitem]<>rsPleaseWait) and (item.subitems[0]<>item.subitems[subitem]);
-    end;
-
-    if changed then
-    begin
-      sender.Canvas.Font.color:=foundlistColors.ChangedValueColor;
+      sender.Canvas.Font.color:=clred;
       sender.canvas.font.Style:=sender.canvas.font.Style+[fsBold];
       sender.canvas.Refresh;
-
       drawn:=true;
 
       {$ifdef darwin}
       //no color or customdrawn support
-      //item.subitems[0]:='* '+item.subitems[0]+' *';
+      item.subitems[0]:='* '+item.subitems[0]+' *';
       {$endif}
     end;
   end;
   if(not drawn)then
   begin
-    sender.Canvas.Font.color:=foundlistColors.NormalValueColor;
+    sender.Canvas.Font.color:=GetSysColor(COLOR_WINDOWTEXT);
   end;
 end;
 
@@ -3327,15 +3234,12 @@ procedure TMainForm.cbCompareToSavedScanChange(Sender: TObject);
 var
   s: tstringlist;
   l: TfrmSelectionList;
-  i,selindex: integer;
 
-  str: string;
 begin
   if cbCompareToSavedScan.checked then
   begin
     s := TStringList.Create;
     try
-      selindex:=-1;
       if (memscan.getsavedresults(s) > 1) then
       begin
         //popup a window where the user can select the scanresults
@@ -3345,52 +3249,55 @@ begin
         l.label1.Caption := rsSelectTheSavedScanResultFromTheListBelow;
         l.ItemIndex := 0;
 
-        selindex:=l.ItemIndex;
-
         if (l.showmodal = mrOk) and (l.ItemIndex <> -1) then
           currentlySelectedSavedResultname := l.selected
         else
           exit;
       end
       else
-        currentlySelectedSavedResultname := rsFirst;
+        currentlySelectedSavedResultname := 'First';
 
-      //compareToSavedScan := True;
-      //lblcompareToSavedScan.Visible := s.Count>1;
-      //lblcompareToSavedScan.Caption := '('+currentlySelectedSavedResultname+')';
+      compareToSavedScan := True;
+      lblcompareToSavedScan.Visible := s.Count>1;
+      lblcompareToSavedScan.Caption := '('+currentlySelectedSavedResultname+')';
     finally
       freeandnil(s);
     end;
 
-    for i:=0 to PreviousResultList.count-1 do
-    begin
-      str:=uppercase(PreviousResultList[i].name);
-      if str=uppercase(currentlySelectedSavedResultname) then
-      begin
-        ActivePreviousResultColumn:=i+2;
-        foundlist3.Refresh;
-        exit;
-      end;
+
+    try
+      if PreviousResults<>nil then
+        freeandnil(PreviousResults);
+
+      PreviousResults:=TSavedScanHandler.create(memscan.getScanFolder, currentlySelectedSavedResultname);
+      PreviousResults.AllowNotFound:=true;
+      PreviousResults.AllowRandomAccess:=true;
+      foundlist3.Refresh;
+    except
     end;
 
-    //language issues...
-    if selindex<>-1 then
-      ActivePreviousResultColumn:=2+selindex;
+    foundlist3.Column[2].Caption:=rsSaved;
+
   end
   else
   begin
-    //unchecked, so compare against the last scan results
     compareToSavedScan := False;
     lblcompareToSavedScan.Visible := False;
 
-    ActivePreviousResultColumn:=2; //the TMP one
-    foundlist3.Refresh;
-  end;
-end;
+    try
+      if PreviousResults<>nil then
+        freeandnil(PreviousResults);
 
-procedure TMainForm.cbLuaFormulaChange(Sender: TObject);
-begin
-  cbNewLuaState.visible:=cbLuaFormula.Visible and cbLuaFormula.Checked;
+      PreviousResults:=TSavedScanHandler.create(memscan.getScanFolder, 'TMP');
+      PreviousResults.AllowNotFound:=true;
+      PreviousResults.AllowRandomAccess:=true;
+      foundlist3.Refresh;
+    except
+    end;
+
+    foundlist3.Column[2].Caption:=rsPrevious;
+
+  end;
 end;
 
 procedure TMainForm.cbCodePageChange(Sender: TObject);
@@ -3584,37 +3491,9 @@ begin
 
 end;
 
-procedure TMainForm.MenuItem16Click(Sender: TObject);
-{$ifdef darwin}
-var p: TProcessUTF8;
-  path: string;
-{$endif}
-begin
-  {$ifdef darwin}
-  p:=TProcessUTF8.Create(self);
-  path:=ExtractFilePath(application.ExeName)+'tutorial-aarch64.app/Contents/MacOS/tutorial-aarch64';
-  //OutputDebugString('path='+path);
-  p.Executable:=(path);
-  p.Execute;
-  {$endif}
-end;
-
 procedure TMainForm.MenuItem12Click(Sender: TObject);
-{$ifdef darwin}
-var p: TProcessUTF8;
-  path: string;
-{$endif}
 begin
-  {$ifdef darwin}
-  p:=TProcessUTF8.Create(self);
-  path:=ExtractFilePath(application.ExeName)+'tutorial-x86_64.app/Contents/MacOS/tutorial-x86_64';
-
-  OutputDebugString('path='+path);
-  p.Executable:=(path);
-  p.Execute;
-  {$else}
-  shellexecute(0, 'open', pchar(cheatenginedir+{$ifdef altname}'rtmtutorial-x86_64.exe'{$else}'Tutorial-x86_64.exe'{$endif}), nil, nil, sw_show);
-  {$endif}
+  shellexecute(0, 'open', pchar(cheatenginedir+'Tutorial-x86_64.exe'), nil, nil, sw_show);
 end;
 
 procedure TMainForm.MenuItem15Click(Sender: TObject);
@@ -3647,42 +3526,6 @@ begin
   end;
 end;
 
-
-
-procedure TMainForm.miDeleteSavedScanResultsClick(Sender: TObject);
-var
-  s: tstringlist;
-  l: TfrmSelectionList;
-  i: integer;
-
-  tobedeleted: string;
-begin
-  s:=tstringlist.create;
-  i:=memscan.getsavedresults(s);
-  if i=1 then exit;
-
-
-  s.Delete(0);
-  l := TfrmSelectionList.Create(self, s);
-  l.Caption := rsSavedScanResults;
-  l.label1.Caption := rsSelectTheSavedScanResultFromTheListBelow;
-  l.ItemIndex := 0;
-
-  if (l.showmodal = mrOk) and (l.ItemIndex <> -1) then
-    tobedeleted := l.selected;
-
-  s.free;
-
-  if compareToSavedScan and (currentlySelectedSavedResultname=tobedeleted) then
-    cbCompareToSavedScan.checked:=false;
-
-
-
-  memscan.deleteSavedResult(tobedeleted);
-  reloadPreviousResults;
-end;
-
-
 procedure TMainForm.miFoundListPreferencesClick(Sender: TObject);
 var
   f: TfrmFoundlistPreferences;
@@ -3691,14 +3534,12 @@ begin
   f:=TfrmFoundlistPreferences.Create(self);
 
   f.Font.assign(foundlist3.font);
-  f.NormalValueColor:=foundlistColors.NormalValueColor;
-  f.ChangedValueColor:=foundlistColors.ChangedValueColor;
+  f.NormalValueColor:=GetSysColor(COLOR_WINDOWTEXT);
+  f.ChangedValueColor:=clRed;
   f.BackgroundColor:=foundlist3.color;
-  f.StaticColor:=foundlistColors.StaticColor;
-  f.DynamicColor:=foundlistColors.DynamicColor;
+  f.StaticColor:=clGreen;
+  f.DynamicColor:=GetSysColor(COLOR_WINDOWTEXT);
   f.ShowStaticAsStatic:=showStaticAsStatic;
-  f.CompareToHeaderColor:=foundlistColors.compareToHeadercolor;
-  f.UseThisFontSize:=AddressListOverrideFontSize;
   if f.showmodal=mrok then
   begin
     foundlist3.font.Assign(f.font);
@@ -3708,9 +3549,7 @@ begin
     foundlistColors.ChangedValueColor:=f.ChangedValueColor;
     foundlistColors.StaticColor:=f.StaticColor;
     foundlistColors.DynamicColor:=f.DynamicColor;
-    foundlistcolors.compareToHeadercolor:=f.CompareToHeaderColor;;
     showStaticAsStatic:=f.ShowStaticAsStatic;
-    AddressListOverrideFontSize:=f.UseThisFontSize;
 
 
 
@@ -3718,16 +3557,14 @@ begin
     try
       Reg.RootKey := HKEY_CURRENT_USER;
 
-      if Reg.OpenKey('\Software\'+strCheatEngine+'\FoundList'+darkmodestring, True) then
+      if Reg.OpenKey('\Software\Cheat Engine\FoundList', True) then
       begin
         reg.WriteInteger('FoundList.NormalValueColor', foundlistcolors.NormalValueColor);
         reg.WriteInteger('FoundList.ChangedValueColor', foundlistcolors.ChangedValueColor);
         reg.WriteInteger('FoundList.StaticColor', foundlistcolors.StaticColor);
         reg.WriteInteger('FoundList.DynamicColor', foundlistcolors.DynamicColor);
         reg.WriteInteger('FoundList.BackgroundColor',foundlist3.Color);
-        reg.WriteInteger('FoundList.CompareToHeaderColor', foundlistcolors.CompareToHeaderColor);
         reg.WriteBool('FoundList.ShowStaticAsStatic',ShowStaticAsStatic);
-        reg.WriteBool('FoundList.OverrideFontSize',AddressListOverrideFontSize);
 
         SaveFontToRegistry(foundlist3.font, reg);
       end;
@@ -3754,19 +3591,15 @@ end;
 
 procedure TMainForm.miLuaDocumentationClick(Sender: TObject);
 begin
-  {$ifdef darwin}
-  OpenDocument(pchar(ExtractFilePath(application.ExeName)+'../Lua/celua.txt'));
-  {$else}
   ShellExecute(0,'open',pchar(ExtractFilePath(application.ExeName)+'celua.txt'),nil,nil,SW_SHOW);
-  {$endif}
-
 end;
 
 procedure TMainForm.miForgotScanClick(Sender: TObject);
 begin
   if (foundlist.count=0) or (memscan.lastScanWasRegionScan) then exit;
 
-  cleanupPreviousResults;
+  if PreviousResults<>nil then
+    freeandnil(PreviousResults);
 
   foundlist.Deinitialize; //unlock file handles
 
@@ -3846,11 +3679,7 @@ end;
 procedure TMainForm.miSaveClick(Sender: TObject);
 begin
   if fileexists(savedialog1.FileName) then
-  begin
-    savetable(savedialog1.FileName, false);
-
-    recentFilesUpdate(savedialog1.filename);
-  end
+    savetable(savedialog1.FileName, false)
   else
     actSave.Execute;
 end;
@@ -3909,7 +3738,7 @@ end;
 procedure TMainForm.miSetDropdownOptionsClick(Sender: TObject);
 begin
   if addresslist.selectedrecord<>nil then
-    TFrmMemoryRecordDropdownSettings.create(addresslist.SelectedRecord, addresslist).showmodal;
+    TFrmMemoryRecordDropdownSettings.create(addresslist.SelectedRecord).showmodal;
 end;
 
 
@@ -3973,11 +3802,9 @@ end;
 procedure TMainForm.miHookD3DClick(Sender: TObject);
 begin
   {$ifdef windows}
-  if MessageDlg('Are you sure you wish to hook Direct3D?', mtConfirmation, [mbyes,mbno],0)=mryes then
-  begin
-    safed3dhook;
-    updated3dgui;
-  end;
+  safed3dhook;
+
+  updated3dgui;
   {$endif}
 end;
 
@@ -4061,6 +3888,8 @@ begin
     frmTrainerGenerator.Close;
     exit;
   end;
+
+
 
   frmTrainerGenerator.Show;
   {$endif}
@@ -4216,7 +4045,7 @@ begin
   while miTable.Count > 5 do
   begin
     if miTable.Items[4] <> miLuaFormsSeperator then
-      miTable[4].Free
+      miTable.Delete(4)
     else
       break;
   end;
@@ -4279,7 +4108,7 @@ begin
 
   //and now the files
   while miTable.Count > miTable.indexOf(miAddFile) + 1 do
-    miTable[miTable.indexOf(miAddFile) + 1].free;
+    miTable.Delete(miTable.indexOf(miAddFile) + 1);
 
   for i := 0 to luafiles.Count - 1 do
   begin
@@ -4338,7 +4167,8 @@ var
   br: TRect;
 begin
   f := tceform.CreateNew(nil);
-  f.DesignTimePPI:=screen.PixelsPerInch;
+
+
   f.autosize := False;
 
   j := 1;
@@ -4371,9 +4201,6 @@ begin
   formdesigner.designForm(f);
 
   formdesigner.Show;
-
-  f.clientwidth:=ScaleX(200,96);
-  f.clientheight:=ScaleY(200,96);
 
   f.Show;
 
@@ -4514,14 +4341,12 @@ var
   customtypes: TStringList;
   i: integer;
   islua: boolean;
-  oldpos: integer;
 begin
   reg := tregistry.Create;
-  oldpos:=vartype.ItemIndex;
   vartype.OnChange := nil;
   //disable the onchange event so CreateCustomType doesn't keep setting it
   try
-    if reg.OpenKey('\Software\'+strCheatEngine+'\CustomTypes\', False) then
+    if reg.OpenKey('\Software\Cheat Engine\CustomTypes\', False) then
     begin
       CustomTypes := TStringList.Create;
       try
@@ -4529,7 +4354,7 @@ begin
 
         for i := 0 to CustomTypes.Count - 1 do
         begin
-          if reg.OpenKey('\Software\'+strCheatEngine+'\CustomTypes\' + CustomTypes[i], False) then
+          if reg.OpenKey('\Software\Cheat Engine\CustomTypes\' + CustomTypes[i], False) then
           begin
             try
               islua := False;
@@ -4552,7 +4377,6 @@ begin
     freeandnil(reg);
     RefreshCustomTypes;
   finally
-    vartype.itemindex:=oldpos;
     vartype.OnChange := VarTypeChange;   //set the onchange event back
   end;
 end;
@@ -4600,7 +4424,7 @@ begin
       mtConfirmation, [mbNo, mbYes], 0) = mrYes then
     begin
       reg := tregistry.Create;
-      reg.DeleteKey('\Software\'+strCheatEngine+'\CustomTypes\' + ct.Name);
+      reg.DeleteKey('\Software\Cheat Engine\CustomTypes\' + ct.Name);
       ct.remove;
       RefreshCustomTypes;
     end;
@@ -4639,7 +4463,7 @@ begin
       begin
         //delete the old one
         reg := Tregistry.Create;
-        reg.DeleteKey('\Software\'+strCheatEngine+'\CustomTypes\' + oldname);
+        reg.DeleteKey('\Software\Cheat Engine\CustomTypes\' + oldname);
         freeandnil(reg);
       end;
     end;
@@ -4648,7 +4472,7 @@ begin
 
     //Add/change this to the registry
     reg := Tregistry.Create;
-    if Reg.OpenKey('\Software\'+strCheatEngine+'\CustomTypes\' + ct.Name, True) then
+    if Reg.OpenKey('\Software\Cheat Engine\CustomTypes\' + ct.Name, True) then
     begin
       reg.WriteString('Script', script);
       if lua then
@@ -4897,7 +4721,7 @@ begin
 
   scanstate.compareToSavedScan := comparetosavedscan;
   scanstate.currentlySelectedSavedResultname := currentlySelectedSavedResultname;
-  scanstate.compareToColumn := ActivePreviousResultColumn;
+  //I love long variable names
 
   scanstate.cbCompareToSavedScan.visible := cbCompareToSavedScan.Visible;
 
@@ -4985,8 +4809,6 @@ begin
   scanstate.cbnot.checked:=cbNot.checked;
   scanstate.cbLuaformula.visible:=cbLuaFormula.Visible;
   scanstate.cbLuaformula.checked:=cbLuaFormula.Checked;
-  scanstate.cbNewLuaState.visible:=cbNewLuaState.Visible;
-  scanstate.cbNewLuaState.checked:=cbNewLuaState.checked;
 
   if cbpercentage <> nil then
   begin
@@ -5030,12 +4852,15 @@ begin
     scanstate.foundlist := TFoundList.Create(foundlist3, scanstate.memscan);    //build again
     scanstate.memscan.OnInitialScanDone:=memscan.OnInitialScanDone;
     scanstate.memscan.OnScanDone:=memscan.OnScanDone;
-    scanstate.memscan.OnScanStart:=memscan.OnScanStart;
   end;
 
   savecurrentstate(scanstate);
-  reloadPreviousResults;
-  ActivePreviousResultColumn:=2;
+
+  //initial scans don't have a previous scan
+  scanstate.cbCompareToSavedScan.visible:=false;
+  scanstate.lblcompareToSavedScan.Visible := False;
+  scanstate.compareToSavedScan := False;
+
 end;
 
 procedure TMainForm.ScanTabListTabChange(Sender: TObject; oldselection: integer);
@@ -5052,8 +4877,6 @@ begin
   begin
     //load
     mainform.BeginFormUpdate;
-    foundlist3.beginupdate;
-    foundlist.Deinitialize;
 
     foundlistDisplayOverride:=0;
 
@@ -5063,8 +4886,8 @@ begin
     rbdec.Onclick := nil;
     cbHexadecimal.OnClick := nil;
 
-    //cleanupPreviousResults;
-
+    if PreviousResults<>nil then
+      freeandnil(PreviousResults);
 
 
     scanvalue.Text := newstate.scanvalue.Text;
@@ -5159,10 +4982,13 @@ begin
 
 
 
+    mainform.EndFormUpdate;
 
 
+    foundlist3.beginupdate;
 
 
+    foundlist.Deinitialize;
 
     memscan := newstate.memscan;
     foundlist := newstate.foundlist;
@@ -5188,6 +5014,19 @@ begin
     foundcount := foundlist.Initialize(getvartype, memscan.customtype);
 
 
+    try
+      PreviousResults:=TSavedScanHandler.create(memscan.getScanFolder, currentlySelectedSavedResultname);
+
+      PreviousResults.AllowNotFound:=true;
+      PreviousResults.AllowRandomAccess:=true;
+    except
+      PreviousResults:=nil;
+    end;
+
+
+
+
+
     cbunicode.Visible := newstate.cbunicode.visible;
     cbunicode.checked := newstate.cbunicode.checked;
     cbCodePage.Visible := newstate.cbCodePage.visible;
@@ -5202,8 +5041,6 @@ begin
     cbNot.checked:=newstate.cbNot.Checked;
     cbLuaFormula.visible:=newstate.cbLuaformula.visible;
     cbLuaFormula.checked:=newstate.cbLuaformula.checked;
-    cbNewLuaState.visible:=newstate.cbNewLuaState.visible;
-    cbNewLuaState.Checked:=newstate.cbNewLuaState.checked;
 
     if newstate.foundlist3.ItemIndex=-1 then
       newstate.foundlist3.ItemIndex:=0;
@@ -5218,7 +5055,7 @@ begin
       foundlist3.multiselect:=true;
     end;
 
-
+    foundlist3.endupdate;
 
     foundlistDisplayOverride:=newstate.foundlistDisplayOverride;
 
@@ -5226,14 +5063,6 @@ begin
     cbFloatSimple.checked:=newstate.cbfloatSimple.Checked;
 
     UpdateFloatRelatedPositions;
-
-    reloadPreviousResults;
-    ActivePreviousResultColumn:=newstate.compareToColumn;
-
-   // Panel5Resize(nil);
-    foundlist3.endupdate;
-
-    mainform.EndFormUpdate;
 
     //    foundlist3.TopItem:=foundlist3.items[newstate.foundlist.itemindex];
   end;
@@ -5276,15 +5105,13 @@ begin
 
 
     scantablist.PopupMenu := pmTablist;
-    scantablist.color := panel5.GetRGBColorResolvingParent; //Color;
+    scantablist.color := panel5.Color;
     scantablist.Parent:=panel5;
     scantablist.Anchors := [akTop, akLeft, akRight];
 
     scantablist.Height := scantablist.Canvas.TextHeight('WwJjDdQq')+4;
 
     label6.AnchorSideTop.Control:=scantablist;
-
-
     //lblcompareToSavedScan.AnchorSideTop.Control:=scantablist;
 
 
@@ -5306,8 +5133,8 @@ begin
     tabcounter := 3;
 
 
-    //scantablist.Color := clBtnFace;
-    scantablist.Brush.Color := panel5.color;
+    scantablist.Color := clBtnFace;
+    scantablist.Brush.Color := clBtnFace;
 
 
 
@@ -5399,7 +5226,6 @@ begin
     begin
       memscan.saveresults(n);
       cbCompareToSavedScan.caption:=rsCompareToSavedScan;
-      reloadPreviousResults;
     end;
   end;
 end;
@@ -5458,64 +5284,68 @@ begin
 
 end;
 
+procedure TMainForm.Panel5Click(Sender: TObject);
+begin
+
+end;
+
 
 procedure TMainForm.Panel5Resize(Sender: TObject);
 var
   widthleft,w,aw: integer;
-  i: integer;
-
-  f: double;
 begin
  // scanvalue2.width:=(((panel5.width-5)-scanvalue.left+((andlabel.width+10) div 2)) div 2);
-  if sender<>nil then
-  begin
-    w:=(panel5.clientwidth-scanvalue.left)-5 ;
-    aw:=andlabel.width+8;
-    scanvalue2.width:=(w div 2) - (aw div 2);
-  end;
+  w:=(panel5.clientwidth-scanvalue.left)-5 ;
+  aw:=andlabel.width+8;
+  scanvalue2.width:=(w div 2) - (aw div 2);
+
+  {cbSpeedhack.left := panel5.clientwidth - cbspeedhack.Width;
+  cbUnrandomizer.left := cbspeedhack.left;
+  gbScanOptions.Left := cbUnrandomizer.left - gbScanOptions.Width - 3;
+
+  speedbutton3.top := foundlist3.top + foundlist3.Height - speedbutton3.Height;
+  speedbutton3.left := foundlist3.left + foundlist3.Width + 2;
+
+
+  ScanText.left := scanvalue.left; //lazarus rev  25348 32-bit fix
+  if ScanText2 <> nil then
+    scantext2.left := scanvalue2.Left;
+
+  if andlabel <> nil then
+    andlabel.Left := scanvalue2.Left - 20;
+
+
+  lblcompareToSavedScan.left :=
+    btnNewScan.left + ((((btnNextScan.left + btnNextScan.Width) - btnNewScan.left) div 2) -
+    (lblcompareToSavedScan.Width div 2));
+
+  if cbpercentage <> nil then
+    cbpercentage.left := scantype.left + scantype.Width + 5;
+
+  }
 
   //resize the foundlist columns. Do NOT do this in the onresize of the foundlist
   widthleft:=foundlist3.clientwidth-foundlist3.Columns[0].Width;
 
   if miShowPreviousValue.checked then
   begin
-    if miOnlyShowCurrentCompareToColumn.checked then
-    begin
-      //old method
-      w:=widthleft div 2;
-      foundlist3.columns[1].width:=ceil(w*1.1);
-      for i:=2 to foundlist3.columns.count-1 do
-      begin
-        if foundlist3.columns[i].visible then
-          foundlist3.columns[i].width:=trunc(w*0.9);
-      end;
-    end
+    if widthleft>0 then
+      w:=widthleft div 2
     else
-    begin
+      w:=1;
 
-      if (widthleft>0) and (foundlist3.ColumnCount>1) then
-        w:=widthleft div (foundlist3.ColumnCount-1)
-      else
-        w:=4;
-
-      //column 1 will get a %10 longer size than the compare against columns
-      f:=w*1.1;
-      foundlist3.columns[1].width:=ceil(f);
-
-      widthleft:=widthleft-foundlist3.columns[1].width;
-      if (widthleft>0) and (foundlist3.ColumnCount>2) then
-        w:=widthleft div (foundlist3.ColumnCount-2)
-      else
-        w:=4;
-
-      for i:=2 to foundlist3.ColumnCount-1 do
-        foundlist3.columns[i].width:=TWidth(w);
-    end;
+    foundlist3.columns[1].width:=TWidth(w);
+    foundlist3.columns[2].width:=foundlist3.columns[1].width;
   end
   else
   begin
     foundlist3.columns[1].width:=widthleft;
   end;
+
+end;
+
+procedure TMainForm.Panel7Click(Sender: TObject);
+begin
 
 end;
 
@@ -5556,46 +5386,55 @@ begin
 end;
 
 procedure TMainForm.miShowPreviousValueClick(Sender: TObject);
-var
-  reg: Tregistry;
-  i: integer;
+var reg: Tregistry;
 begin
   //Show/Hide the previousValue column
   //
 
   if miShowPreviousValue.checked then
   begin
-    miOnlyShowCurrentCompareToColumn.enabled:=true;
-    if miOnlyShowCurrentCompareToColumn.checked then
-    begin
-      foundlist3.Column[2].visible:=true;
-      for i:=3 to foundlist3.columncount-1 do
-        foundlist3.column[i].Visible:=false;
-    end
-    else
-    begin
-      for i:=2 to foundlist3.columncount-1 do
-        foundlist3.column[i].Visible:=true;
-    end;
+    foundlist3.column[1].Width:=foundlist3.column[1].width div 2;
+    foundlist3.Column[2].visible:=true;
   end
   else
   begin
-    miOnlyShowCurrentCompareToColumn.checked:=false;
-    miOnlyShowCurrentCompareToColumn.enabled:=false;
-    for i:=2 to foundlist3.columncount-1 do
-      foundlist3.column[i].Visible:=false;
+    foundlist3.Column[2].visible:=false;
   end;
-
-
-  Panel5Resize(nil);
+  //foundlist3.AutoWidthLastColumn:=false;
+  //foundlist3.AutoWidthLastColumn:=true;
 
   cereg.writeBool('Show previous value column', miShowPreviousValue.checked);
 end;
 
 
 
+
+procedure TMainForm.aprilfoolsscan;
+begin
+  if aprilfools then
+  begin
+    if messagedlg(rsThankYouForTryingOutCheatEngineBecauseItHasExpired,
+      mtInformation, [mbYes, mbNo], 0) = mrYes then
+    begin
+      ShowMessage(rsAprilFools);
+
+    end
+    else
+    begin
+      if messagedlg(rsWHATAreYouSayingYouReGoingToContinueUsingCEILLEGAL,
+        mtWarning, [mbYes, mbNo], 0) = mrYes then
+        ShowMessage(
+          rsHrmpfBecauseIMInAGoodMoodILlLetYouGoThisTimeButDon)
+      else
+        ShowMessage(rsAprilFools);
+    end;
+
+    Caption := cenorm;
+    aprilfools := False;
+  end;
+end;
+
 procedure TMainForm.doNewScan;
-var c: TListColumn ;
 begin
   if SaveFirstScanThread <> nil then //stop saving the results of the fist scan
   begin
@@ -5604,13 +5443,8 @@ begin
     FreeAndNil(SaveFirstScanThread);
   end;
 
-  cleanupPreviousResults;
-  //create a dummy previous column
-  c:=foundlist3.Columns.Add;
-  c.caption:=rsPrevious;
-  c.tag:=foundlistColors.CompareToHeaderColor;
-  fActivePreviousResultColumn:=2;
-
+  if PreviousResults<>nil then
+    freeandnil(PreviousResults);
 
   fastscan := formsettings.cbFastscan.Checked;
   //close files in case of a bug i might have missed...
@@ -5655,6 +5489,8 @@ begin
   if formsettings.cbPauseWhenScanningOnByDefault.checked then
     cbPauseWhileScanning.Checked:=true;
   {$endif}
+
+  foundlist3.Column[2].Caption:=rsPrevious;
 
   cbpercentage.checked:=false;
 end;
@@ -5728,7 +5564,7 @@ var
 
   errormode: dword;
   minworkingsize, maxworkingsize: ptruint;
-  //reg: tregistry;
+  reg: tregistry;
 
   PODirectory, Lang, FallbackLang: string;
 
@@ -5740,10 +5576,6 @@ var
   createlog: boolean;
   s: string;
 begin
-  PreviousResultList:=TPreviousResultList.Create;
-
-
-
   {$if (LCL_FULLVERSION > 1060400) and (lcl_fullversion <=1080200)}
   Foundlist3.Dragmode:=dmManual; //perhaps this gets fixed in later lcl versions, but for now, it sucks
   {$endif}
@@ -5782,10 +5614,8 @@ begin
   {$endif}
   {$endif}
 
-  {$if defined(CPU386) or defined(CPUX86_64)}
   Set8087CW($133f);
   SetSSECSR($1f80);
-  {$endif}
 
   //FormDropFiles fix for win7, win8 and later (window message filter update)
   {$ifdef windows}
@@ -5833,7 +5663,7 @@ begin
   if FileExists(s) then
     createlog:=true
   else
-    createlog:=false;
+    createlog:=cereg.readBool('Debug');
 
   miEnableLCLDebug.Checked:=createlog;
 
@@ -5857,6 +5687,7 @@ begin
   frmLuaTableScript.ScriptMode := smLua;
 
   frmLuaTableScript.Caption := rsLuaScriptCheatTable;
+  frmLuaTableScript.New1.Visible := False;
   frmLuaTableScript.Save1.OnClick := miSave.onclick;
   frmLuaTableScript.SaveAs1.OnClick:= save1.OnClick;
 
@@ -6048,11 +5879,10 @@ begin
   miResetRange.click;
 
   isbit := False;
-  {$if defined(CPU386) or defined(CPUX86_64)}
+
   old8087CW := Get8087CW;
   Set8087CW($133f);
   SetSSECSR($1f80);
-  {$endif}
 
 
 
@@ -6175,11 +6005,11 @@ begin
   end;
 
 
-  RecentFiles:=tstringlist.Create;
-  cereg.readStrings('Recent Files', RecentFiles);
-
-
-  cbSpeedhack.caption:=rsEnableSpeedHack;
+  foundlistColors.NormalValueColor:=GetSysColor(COLOR_WINDOWTEXT);
+  foundlistColors.ChangedValueColor:=clRed;
+  foundlistColors.StaticColor:=clGreen;
+  foundlistColors.DynamicColor:=GetSysColor(COLOR_WINDOWTEXT);
+  showStaticAsStatic:=true;
 
 
   {$ifdef darwin}
@@ -6201,14 +6031,6 @@ begin
   copy1.ShortCut:=TextToShortCut('Meta+C');
   paste1.ShortCut:=TextToShortCut('Meta+V');
   menuitem1.ShortCut:=TextToShortCut('Meta+A');
-
-  miTutorial.Visible:=false;
-  menuitem15.Visible:=false;
-
-
-  if MacIsArm64 then
-    MenuItem16.visible:=true;
-
   {$endif}
 end;
 
@@ -6492,7 +6314,7 @@ begin
     begin
       tempaddress := tmemoryrecord(updatelist[i]).getBaseAddress;
       Inc(tempaddress, calculate);
-      tmemoryrecord(updatelist[i]).interpretableaddress := symhandler.getNameFromAddress(tempaddress, True, True, False);
+      tmemoryrecord(updatelist[i]).interpretableaddress := symhandler.getNameFromAddress(tempaddress, True, True);
     end;
   end;
 
@@ -7276,7 +7098,7 @@ begin
 
   miSetDropdownOptions.visible:=addresslist.selcount > 0;
 
-  miDBVMFindWhatWritesOrAccesses.visible:={$ifdef windows}Findoutwhataccessesthisaddress1.Visible and isDBVMCapable{$else}false{$endif}; //02/24/2019: Most cpu's support EPT/NP now
+  miDBVMFindWhatWritesOrAccesses.visible:={$ifdef windows}Findoutwhataccessesthisaddress1.Visible and isIntel and isDBVMCapable{$else}false{$endif}; //02/24/2019: Most cpu's support EPT now
   sep2.Visible:=miDBVMFindWhatWritesOrAccesses.Visible;
 
   miDBVMFindWhatWritesOrAccesses.enabled:={$ifdef windows}DBKLoaded or isRunningDBVM{$else}false{$endif};
@@ -7331,7 +7153,7 @@ begin
     Removeselectedaddresses1.enabled := not (GetVarType in [vtBinary, vtByteArray, vtAll]);
 
   miChangeValue.enabled:=Browsethismemoryarrea1.enabled;
-  miChangeValueBack.enabled:=Browsethismemoryarrea1.enabled and (PreviousResultList.count>0);
+  miChangeValueBack.enabled:=Browsethismemoryarrea1.enabled;
   miAddAddress.enabled:=Browsethismemoryarrea1.enabled;
 
   //updatwe the display override
@@ -7411,15 +7233,15 @@ var
   bit: byte;
   selected: array of integer;
 begin
+
   if SaveFirstScanThread <> nil then
   begin
     SaveFirstScanThread.WaitFor; //wait till it's done
     FreeAndNil(SaveFirstScanThread);
   end;
 
-  for i:=0 to PreviousResultList.count-1 do
-    PreviousResultList[i].deinitialize;
-
+  if PreviousResults<>nil then
+    PreviousResults.deinitialize;
 
   if foundlist3.selcount = 1 then //use itemindex (faster)
   begin
@@ -7461,8 +7283,10 @@ begin
 
   foundcount:=foundlist.Reinitialize;
 
-  for i:=0 to PreviousResultList.count-1 do
-    PreviousResultList[i].reinitialize;
+  if PreviousResults<>nil then
+    PreviousResults.reinitialize;
+
+
 
 end;
 
@@ -7586,6 +7410,9 @@ begin
     pluginhandler.free;
     pluginhandler:=nil;
   end;
+
+
+
 end;
 
 
@@ -7653,9 +7480,9 @@ begin
     LoadDBK32;
 
   canuseept:=hasEPTSupport;
-  if (isDBVMCapable=false) then
+  if (isintel=false) or (isDBVMCapable=false) then
   begin
-    messagedlg(rsRequiresDBVMCapableCPU, mtError, [mbok], 0);
+    messagedlg(rsRequiresDBVMCapableIntelCPU, mtError, [mbok], 0);
     exit;
   end;
 
@@ -7768,14 +7595,6 @@ begin
   end;
 end;
 
-procedure TMainForm.miOnlyShowCurrentCompareToColumnClick(Sender: TObject);
-begin
-  ActivePreviousResultColumn:=ActivePreviousResultColumn;
-  cereg.writeBool('Only show current compare column', miOnlyShowCurrentCompareToColumn.Checked);
-
-  Panel5Resize(nil);
-end;
-
 procedure TMainForm.Findoutwhataccessesthisaddress1Click(Sender: TObject);
 var
   address: ptrUint;
@@ -7799,9 +7618,8 @@ begin
           address := addresslist.selectedRecord.GetRealAddress
         else
         if res = mrYes then
-        begin
-          addresslist.selectedRecord.parseAddressString(addresslist.selectedRecord.interpretableaddress, address);
-        end
+          address := symhandler.getAddressFromName(
+            addresslist.selectedRecord.interpretableaddress)
         else
           exit;
       end;
@@ -7838,9 +7656,8 @@ begin
           address := addresslist.selectedRecord.GetRealAddress
         else
         if res = mrYes then
-        begin
-          addresslist.selectedRecord.parseAddressString(addresslist.selectedRecord.interpretableaddress, address);
-        end
+          address := symhandler.getAddressFromName(
+            addresslist.selectedRecord.interpretableaddress)
         else
           exit;
       end;
@@ -7934,19 +7751,24 @@ var
 
 begin
 
-  if (sender=undoscan) or (messagedlg(strConfirmUndo, mtConfirmation, [mbYes, mbNo], 0) = mrYes) then
+  if messagedlg(strConfirmUndo, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
-    foundlist3.BeginUpdate;
-    cleanupPreviousResults;
+    if PreviousResults<>nil then
+      freeandnil(PreviousResults);
+
 
     foundlist.Deinitialize;
     memscan.undolastscan;
     foundcount := foundlist.Initialize(getvartype, memscan.CustomType);
 
-    reloadPreviousResults;
+    try
+      previousresults:=TSavedScanHandler.create(memscan.GetScanFolder, currentlySelectedSavedResultname);
+      previousresults.AllowNotFound:=true;
+      PreviousResults.AllowRandomAccess:=true;
+    except
+    end;
 
     undoscan.Enabled := False;
-    foundlist3.EndUpdate;
   end;
 end;
 
@@ -8021,13 +7843,9 @@ var
   {$endif}
   extrasize: integer;
   s: string;
-
-  rname: string;
 begin
   if onetimeonly then
     exit;
-
-
 
   fontmultiplication:=ProcessLabel.Height/15; //normal dpi/font settings have this at 15.
 
@@ -8035,10 +7853,8 @@ begin
 
 
   onetimeonly := True;
-  {$if defined(CPU386) or defined(CPUX86_64)}
   Set8087CW($133f);
   SetSSECSR($1f80);
-  {$endif}
 
   loadt := False;
   editsh2.Text := format('%.1f', [1.0]);
@@ -8048,9 +7864,9 @@ begin
   try
     Reg.RootKey := HKEY_CURRENT_USER;
 
-    if not Reg.OpenKey('\Software\'+strCheatEngine, False) then //can't be opened. Clean install
+    if not Reg.OpenKey('\Software\Cheat Engine', False) then //can't be opened. Clean install
     begin
-      if Reg.OpenKey('\Software\'+strCheatEngine, True) then
+      if Reg.OpenKey('\Software\Cheat Engine', True) then
       begin
         //write some default data into the registry
         reg.WriteBool('Undo', True);
@@ -8073,7 +7889,7 @@ begin
   begin
     reg.WriteBool('First Time User', False);
 
-
+    {$ifdef windows}    //mac: languages come later
     if formsettings.lbLanguages.Count>1 then
     begin
       i:=ShowSelectionList(self, rsLanguage, rsChooseLanguage, formSettings.lbLanguages.Items, s);
@@ -8083,14 +7899,10 @@ begin
         formsettings.btnSelectLanguage.Click;
       end;
     end;
-
+    {$endif}
 
     if messagedlg(rsTryTutorial, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-    {$ifdef darwin}
-      MenuItem12.click;
-    {$else}
       miTutorial.Click;
-    {$endif}
   end;
 
   if reg.ValueExists('Show previous value column') then
@@ -8099,8 +7911,9 @@ begin
     miShowPreviousValueClick(miShowPreviousValue);
   end;
 
-  if reg.ValueExists('Only show current compare column') then
-    miOnlyShowCurrentCompareToColumn.checked:=reg.ReadBool('Only show current compare column');
+
+
+
 
 
   //  animatewindow(mainform.Handle,10000,AW_CENTER);
@@ -8133,6 +7946,10 @@ begin
   if (month = 4) and (day = 1) then
     aprilfools := True;
 
+{  if aprilfools = True then
+    Messagedlg(
+      rsLicenseExpired, mtWarning, [mbOK], 0);
+}
 
   //aprilfools:=true;
   {$ifdef windows}
@@ -8193,27 +8010,17 @@ begin
   memscan := tmemscan.Create(ProgressBar);
   memscan.GuiScanner:=true;
   memscan.OnGuiUpdate:=MemscanGuiUpdate;
-  memscan.OnInitialScanDone:=MemScanDone;
-  memscan.OnScanStart:=MemScanStart;
+  memscan.OnInitialScanDone:=scandone;
 
   foundlist := tfoundlist.Create(foundlist3, memscan);
 
 
   logo.Width:=settingsbutton.width;
-
-  {$ifdef altname}
-  rname:='IMAGES_ALT_CELOGO';
-  {$else}
-  rname:='IMAGES_CELOGO';
-  {$endif}
-
   {$ifdef windows}
-  {$ifndef altname}
   if logo.Width>=90 then
   {$endif}
-  {$endif}
   begin
-    rs := TResourceStream.Create(HInstance, rname, RT_RCDATA);
+    rs := TResourceStream.Create(HInstance, 'IMAGES_CELOGO', RT_RCDATA);
     logopic:=TPicture.Create;
     logopic.LoadFromStreamWithFileExt(rs,'.PNG');
     logo.Picture:=logopic;
@@ -8229,7 +8036,7 @@ begin
 
   if logo.Width>=80 then
   begin
-    rs := TResourceStream.Create(HInstance, rname, RT_RCDATA);
+    rs := TResourceStream.Create(HInstance, 'IMAGES_CELOGO', RT_RCDATA);
     logopic:=TPicture.Create;
     logopic.LoadFromStreamWithFileExt(rs,'.PNG');
     logo.Picture:=logopic;
@@ -8290,36 +8097,16 @@ begin
   panel6.clientheight:=cbPauseWhileScanning.top+cbPauseWhileScanning.height+2;
   gbScanOptions.ClientHeight:=panel6.top+panel6.height+2;
 
-  fromaddress.font.name:='Courier';
-  toaddress.font.name:='Courier';
-  i:=GetFontData(font.Handle).Height;
-  fromaddress.Font.Height:=i;
-  toaddress.Font.Height:=i;
-
-  if Reg.OpenKey('\Software\'+strCheatEngine+'\FoundList'+darkmodestring, false) then
+  if Reg.OpenKey('\Software\Cheat Engine\FoundList', false) then
   begin
     if reg.ValueExists('FoundList.NormalValueColor') then foundlistcolors.NormalValueColor:=reg.ReadInteger('FoundList.NormalValueColor');
     if reg.ValueExists('FoundList.ChangedValueColor') then foundlistcolors.ChangedValueColor:=reg.ReadInteger('FoundList.ChangedValueColor');
     if reg.ValueExists('FoundList.StaticColor') then foundlistcolors.StaticColor:=reg.ReadInteger('FoundList.StaticColor');
     if reg.ValueExists('FoundList.DynamicColor') then foundlistcolors.DynamicColor:=reg.ReadInteger('FoundList.DynamicColor');
     if reg.ValueExists('FoundList.BackgroundColor') then foundlist3.color:=reg.ReadInteger('FoundList.BackgroundColor');
-    if reg.ValueExists('FoundList.CompareToHeaderColor') then foundlistcolors.compareToHeadercolor:=reg.ReadInteger('FoundList.CompareToHeaderColor');
     if reg.ValueExists('FoundList.ShowStaticAsStatic') then showStaticAsStatic:=reg.ReadBool('FoundList.ShowStaticAsStatic');
-    if reg.ValueExists('FoundList.OverrideFontSize') then AddressListOverrideFontSize:=reg.ReadBool('FoundList.OverrideFontSize');
 
     LoadFontFromRegistry(foundlist3.font,reg);
-    if not AddressListOverrideFontSize then Foundlist3.Font.Height:=i;
-  end
-  else
-  begin
-    foundlistColors.NormalValueColor:=clWindowtext;
-    foundlistColors.ChangedValueColor:=clRed;
-    foundlistColors.StaticColor:=clGreen;
-    foundlistColors.DynamicColor:=clWindowtext;
-    foundlistColors.CompareToHeaderColor:=clGreen;
-
-    showStaticAsStatic:=true;
-    Foundlist3.Font.Height:=i;
   end;
   freeandnil(reg);
 
@@ -8441,6 +8228,18 @@ begin
 
   panel9.borderspacing.Top:=(scantype.height div 2)-(cbNot.Height div 2);
 
+  i:=GetFontData(font.Handle).Height;
+
+
+  fromaddress.Font.Height:=i;
+  toaddress.Font.Height:=i;
+  Foundlist3.Font.Height:=i;
+
+
+
+
+
+
   if cleanrun then //clean setup
   begin
     foundlist3.Column[0].AutoSize:=true;
@@ -8515,8 +8314,6 @@ begin
     1: rt2.checked:=true;
     2: rt3.checked:=true;
   end;
-
-  ActivePreviousResultColumn:=2;
 
 end;
 
@@ -8634,7 +8431,7 @@ end;
 procedure TMainForm.SettingsClick(Sender: TObject);
 var
 
-  oldScanDone, oldInitialScanDone, oldScanStart: TNotifyEvent;
+  oldScanDone, oldInitialScanDone: TNotifyEvent;
 begin
 
   suspendhotkeyhandler;
@@ -8675,23 +8472,19 @@ begin
     if memscan <> nil then
     begin
       oldScanDone:=memscan.OnScanDone;
-      oldScanStart:=memscan.OnScanStart;
       oldInitialScanDone:=memscan.OnInitialScanDone;
       memscan.Free;
     end
     else
     begin
       oldScanDone:=nil;
-      oldScanStart:=MemScanStart;
-      oldInitialScanDone:=MemScanDone;
+      oldInitialScanDone:=scanDone;
     end;
 
     memscan := tmemscan.Create(ProgressBar);
     memscan.GuiScanner:=true;
-    memscan.OnScanStart:=memscanStart;
     memscan.OnGuiUpdate:=memscanGuiUpdate;
     memscan.OnScanDone:=oldScanDone;
-    memscan.OnScanStart:=oldScanStart;
     memscan.OnInitialScanDone:=oldInitialScanDone;
   end;
 end;
@@ -8859,7 +8652,7 @@ begin
   reg := Tregistry.Create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\'+strCheatEngine, True) then
+    if Reg.OpenKey('\Software\Cheat Engine', True) then
       reg.WriteString('Initial tables dir', dir);
 
   finally
@@ -8919,8 +8712,6 @@ begin
 
       UserDefinedTableName:=Opendialog1.filename;
       reinterpretaddresses;
-
-      recentFilesUpdate(Opendialog1.filename);
     except
       on e:exception do
         MessageDlg('This table failed to load: '+e.message,mtError,[mbok],0);
@@ -8963,8 +8754,6 @@ begin
     SaveIntialTablesDir(extractfilepath(savedialog1.filename));
 
     UserDefinedTableName:=savedialog1.filename;
-
-    recentFilesUpdate(savedialog1.filename);
   end
   else Savedialog1.FileName:=oldFileName;
 end;
@@ -8985,12 +8774,11 @@ begin
   memrec.endEdit; //release it so the user can delete it if he/she wants to
 end;
 
-function TMainForm.AddressListAutoAssemblerEdit(Sender: TObject; memrec: TMemoryRecord): boolean;
+procedure TMainForm.AddressListAutoAssemblerEdit(Sender: TObject; memrec: TMemoryRecord);
 var
   x: TFrmAutoInject;
   y: array of integer;
 begin
-  result:=false;  //not used
   if memrec.AsyncProcessing then exit;
 
   if memrec.isBeingEdited then
@@ -9012,7 +8800,6 @@ begin
     begin
       //name:='AAEditScript';
       new1.Enabled := False;
-      miNewTab.Visible := false;
 
       editscript := True;
       editscript2 := True;
@@ -9339,7 +9126,7 @@ end;
 procedure TMainForm.Foundlist3Data(Sender: TObject; Item: TListItem);
 var
   extra: dword;
-  Value, s, PreviousValue: string;
+  Value, PreviousValue: string;
   Address: ptruint;
   addressString: string;
   valuetype: TVariableType;
@@ -9353,10 +9140,8 @@ var
   error: string;
 
   hexadecimal: boolean;
-
-  PreviousValueList: tstringlist=nil;
-  i: integer;
 begin
+
   //put in data
   ct:=foundlist.CustomType;
 
@@ -9370,9 +9155,8 @@ begin
     if (address=0) then
     begin
       item.Caption := rsProcessing;
-      for i:=1 to foundlist3.ColumnCount-1 do
-        item.subitems.add(rsProcessing);
-
+      item.subitems.add(rsProcessing);
+      item.subitems.add(rsProcessing);
       exit;
     end;
 
@@ -9421,7 +9205,7 @@ begin
     end;
 
 
-    PreviousValue:=value;
+    PreviousValue:='';
 
 
     if foundlist.vartype = vtBinary then //binary
@@ -9453,10 +9237,8 @@ begin
       end;
     end;
 
-    if miShowPreviousValue.checked and (previousresultlist<>nil) then
+    if miShowPreviousValue.checked and (PreviousResults<>nil) then
     begin
-      PreviousValue:='';
-      PreviousValueList:=tstringlist.create;
       //get the previous value of this entry
       invalid:=false;
       case foundlist.vartype of
@@ -9475,31 +9257,16 @@ begin
 
       if not invalid then
       begin
-
-        for i:=0 to PreviousResultList.count-1 do
+        p:=PreviousResults.getpointertoaddress(address, ssvt, ct);
+        if p=nil then
         begin
-          if foundlist3.columns[i+2].Visible then
-          begin
-            //p:=PreviousResultList[i].getpointertoaddress(address, ssvt, ct);
-
-            if PreviousResultList[i].getStringFromAddress(address, s,hexadecimal,foundlist.isSigned, valuetype, ct)=false then //valuetype and CT are only used if the memscan was a vtAll type
-            begin
-              if PreviousResultList[i].lastFail=1 then
-                s:=rsPleaseWait
-              else
-                s:=rsBusy+' : '+inttostr(PreviousResultList[i].lastFail);
-            end;
-          end
+          if PreviousResults.lastFail=1 then
+            previousvalue:=rsFileInUse
           else
-            s:='';
-
-          previousvaluelist.add(s);
-
-          {$ifdef darwin}
-          if i+2=fActivePreviousResultColumn then
-            PreviousValue:=s;
-          {$endif}
-        end;
+            previousvalue:=rsBusy+' : '+inttostr(PreviousResults.lastFail)
+        end
+        else
+          previousvalue:=readAndParsePointer(address, p, valuetype, ct, hexadecimal, foundlist.isSigned);
       end;
     end;
 
@@ -9508,20 +9275,14 @@ begin
 
     {$ifdef darwin}
     //no ownerdraw support for macos listview
-    if (previousvalue<>rsPleaseWait) and (value<>previousvalue) then
+    if (previousvalue<>rsNone) and (value<>previousvalue) then
       value:='* '+value+' *';
     {$endif}
 
 
     item.Caption := AddressString;
     item.subitems.add(Value);
-    if previousvaluelist<>nil then
-    begin
-      for i:=0 to previousvaluelist.count-1 do
-        item.subitems.add(previousvaluelist[i]);
-    end;
-
-
+    item.subitems.add(previousvalue);
 
 
   except
@@ -9551,15 +9312,8 @@ begin
         item.subitems.add(Value);
         item.subitems.add(error);
       end;
-
-      if PreviousResultList<>nil then
-        for i:=1 to PreviousResultList.count-1 do
-          item.subitems.add('');
     end;
   end;
-
-  if previousvaluelist<>nil then
-    freeandnil(previousvaluelist);
 end;
 
 procedure TMainForm.UpdateFoundlisttimerTimer(Sender: TObject);
@@ -9595,7 +9349,7 @@ end;
 
 procedure TMainForm.miTutorialClick(Sender: TObject);
 begin
-  shellexecute(0, 'open', pchar(cheatenginedir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}), nil, nil, sw_show);
+  shellexecute(0, 'open', pchar(cheatenginedir+'Tutorial-i386.exe'), nil, nil, sw_show);
 end;
 
 procedure TMainForm.miFlFindWhatAccessesClick(Sender: TObject);
@@ -9656,8 +9410,6 @@ var
 begin
   //show a list of possible options. Previous, last scan, savedscan
   if memscan=nil then exit;
-  if PreviousResultList.count=0 then exit;
-  if GetVarType in [vtBinary, vtByteArray, vtAll, vtGrouped] then exit;
 
   bytesize:=memscan.Getbinarysize div 8;
   if bytesize=0 then exit;
@@ -9667,13 +9419,12 @@ begin
   memscan.getsavedresults(s);
   s.insert(0,'Last Scan');
 
-  i:=ShowSelectionList(self, rsPreviousValueList, rsSelectTheSavedResult, s, currentlySelectedSavedResultname);
+  i:=ShowSelectionList(self,'Previous value liss','Select the saved results you wish to use',s,currentlySelectedSavedResultname);
   s.free;
   if i=-1 then exit;
   if i=0 then currentlySelectedSavedResultname:='TMP';
 
   savedscan:=TSavedScanHandler.create(memscan.getScanFolder, currentlySelectedSavedResultname);
-  savedscan.memscan:=memscan;
   savedscan.AllowNotFound:=true;
   savedscan.AllowRandomAccess:=true;
 
@@ -9878,18 +9629,12 @@ begin
                 if ProcessHandler.processid = newPID then
                   exit; //already attached to the newest one
 
-                if newPID=GetCurrentProcessId then
-                  continue; //Do not autoattach to self
-
-                openprocessPrologue;
-
                 oldpid := ProcessHandler.processid;
                 oldphandle := processhandler.processhandle;
 
                 ProcessHandler.processid := newPID;
                 unpause;
                 DetachIfPossible;
-
 
 
                 MainForm.ProcessLabel.Caption := pl.strings[j];
@@ -9947,7 +9692,8 @@ begin
   {$endif}
 
 
-  cleanupPreviousResults;
+  if PreviousResults<>nil then
+    freeandnil(PreviousResults);
 
   if (memscan=nil) or (foundlist=nil) then raise exception.create(rsUnableToScanFixYourScanSettings);
 
@@ -10026,7 +9772,6 @@ begin
       ScanTabList.Enabled := False;
 
     memscan.luaformula:=cbLuaFormula.visible and cbLuaFormula.checked;
-    memscan.NewLuaState:=cbNewLuaState.Checked;
     memscan.busyformIsModal:=true;
 
     memscan.firstscan(GetScanType2, getVarType2, roundingtype,
@@ -10048,13 +9793,7 @@ begin
   end;
 end;
 
-procedure TMainForm.MemScanStart(sender: TObject);
-begin
-  foundlist.Deinitialize; //unlock file handles
-  cleanupPreviousResults;
-end;
-
-procedure TMainForm.MemScanDone(sender: TObject);
+procedure TMainForm.ScanDone(sender: TObject);
 var
   i: integer;
   canceled: boolean;
@@ -10112,17 +9851,23 @@ begin
   c:=memscan.GetFoundCount;
   foundcount := c;
 
-  cleanupPreviousResults;
+  if PreviousResults<>nil then
+    freeandnil(PreviousResults);
 
   if not compareToSavedScan then
     previous:='TMP'
   else
     previous:=currentlySelectedSavedResultname;
 
-  reloadPreviousResults;
-  for i:=0 to PreviousResultList.count-1 do
-    if PreviousResultList[i].name=previous then
-      ActivePreviousResultColumn:=i+2;
+
+  try
+    PreviousResults:=TSavedScanHandler.create(memscan.getScanFolder, previous);
+    PreviousResults.AllowNotFound:=true;
+    PreviousResults.AllowRandomAccess:=true;
+  except
+    PreviousResults:=nil;
+  end;
+
 
   if (foundlist3.items.Count <> foundcount) and (not foundlist.isUnknownInitialValue) then
   begin
@@ -10248,7 +9993,10 @@ begin
   else
     percentage := False;
 
+  if PreviousResults<>nil then
+    freeandnil(PreviousResults);
 
+  foundlist.Deinitialize; //unlock file handles
 
   if cbPauseWhileScanning.Checked then
   begin
@@ -10272,7 +10020,6 @@ begin
   memscan.inverseScan:=cbNot.Checked and cbnot.Visible;
   memscan.codePage:=cbCodePage.checked;
   memscan.luaformula:=cbLuaFormula.visible and cbLuaFormula.checked;
-  memscan.NewLuaState:=cbNewLuaState.checked;
 
   memscan.busyformIsModal:=not ((GetScanType=soUnchanged) and cbRepeatUntilStopped.checked);
 
@@ -10370,13 +10117,6 @@ begin
     flashprocessbutton.Free;
   end;
 
-  if freezethread<>nil then
-  begin
-    freezeThread.Terminate;
-    freezeThread.WaitFor;
-    freeandnil(freezeThread);
-  end;
-
   setlength(x,7);
   x[0]:=addresslist.headers.Sections[0].Width;
   x[1]:=addresslist.headers.Sections[1].Width;
@@ -10387,6 +10127,9 @@ begin
   x[6]:=foundlist3.columns[0].Width;
 
   saveformposition(self, x);
+
+  cereg.writeBool('Debug', miEnableLCLDebug.checked);
+
 
   if foundlist <> nil then
     foundlist.Deinitialize;
@@ -10412,7 +10155,6 @@ begin
     end;
     FreeAndNil(scantablist);
   end;
-
 
 end;
 
@@ -10486,7 +10228,6 @@ begin
 end;
 
 procedure TMainForm.cbSpeedhackChange(Sender: TObject);
-var ss: TShiftState;
 begin
   if cbSpeedhack.Checked then
   begin
@@ -10494,25 +10235,12 @@ begin
       if speedhack <> nil then
         FreeAndNil(speedhack);
 
-      ss:=GetKeyShiftState;
-
-
       speedhack := TSpeedhack.Create;
     except
       on e: Exception do
       begin
-        lua_getglobal(luavm, 'activateAlternateSpeedhack');//failure. check if there is an alternative in lua
-        if lua_isfunction(luavm,-1) then
-        begin
-          lua_pushboolean(luavm,true);
-          lua_pcall(luavm, 1,0,0);
-          exit;
-        end
-        else
-          lua_pop(luavm,1);
-
         cbSpeedhack.Checked := False;
-        MessageDlg(e.message,mtError,[mbok],0);
+        raise Exception.Create(e.Message);
       end;
     end;
   end
@@ -10689,59 +10417,10 @@ begin
   addresslist.Clear;
 end;
 
-procedure TMainForm.ClearRecentFiles(Sender:TObject);
-begin
-  if MessageDlg(rsAreYouSure, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-  begin
-    recentfiles.Clear;
-    cereg.writeStrings('Recent Files', recentfiles);
-  end;
-end;
-
-procedure TMainForm.RecentFilesClick(Sender:TObject);
-var filename: string;
-begin
-  if CheckIfSaved then
-  begin
-    filename:=RecentFiles[tmenuitem(sender).Tag];
-    LoadTable(filename,false);
-    SaveDialog1.FileName:=filename;
-    OpenDialog1.FileName:=filename;
-    recentFilesUpdate(filename);
-  end;
-end;
-
 procedure TMainForm.File1Click(Sender: TObject);
-var
-  i: integer;
-  m: TMenuItem;
 begin
+
   miSaveScanresults.Enabled := memscan.nextscanCount > 0;
-  miLoadRecent.Visible:=RecentFiles.Count>0;
-
-  miLoadRecent.Clear;
-  for i:=0 to RecentFiles.count-1 do
-  begin
-    m:=tmenuitem.Create(miLoadRecent);
-    m.Caption:=RecentFiles[i];
-    m.OnClick:=RecentFilesClick;
-    m.tag:=i;
-
-    miLoadRecent.Add(m);
-  end;
-
-  m:=tmenuitem.Create(miLoadRecent);
-  m.Caption:='-';
-  miLoadRecent.Add(m);
-
-  m:=tmenuitem.Create(miLoadRecent);
-  m.Name:='miEmptyRecentFilesList';
-  m.Caption:=rsClearRecentFiles;
-  m.OnClick:=ClearRecentFiles;
-  miLoadRecent.Add(m);
-
-
-  miDeleteSavedScanResults.visible:=memscan.SavedScanCount>0;
 end;
 
 procedure TMainForm.actOpenProcesslistExecute(Sender: TObject);
@@ -10896,184 +10575,6 @@ begin
     boundsupdater.enabled:=true;
 end;
 
-procedure TMainForm.reloadPreviousResults;
-var
-  l: tstringlist;
-  i: integer;
-  c: TListColumn;
-  ssh: TSavedScanHandler;
-
-  oldsizes: array of integer;
-begin
-  oldsizes:=[];
-  l:=nil;
-  setlength(oldsizes, foundlist3.ColumnCount);
-  for i:=0 to foundlist3.columncount-1 do
-    oldsizes[i]:=foundlist3.columns[i].Width;
-
-  foundlist3.BeginUpdate;
-  try
-    cleanupPreviousResults;
-    if getVarType in [vtGrouped, vtString, vtUnicodeString, vtByteArray] then exit;
-
-
-    l:=tstringlist.create;
-
-
-    c:=foundlist3.Columns.Add;
-    c.caption:=rsPrevious;
-    if c.Index=fActivePreviousResultColumn then
-      c.tag:=foundlistColors.CompareToHeaderColor;
-
-    c.visible:=(c.Index>=2) and miShowPreviousValue.checked and ((miOnlyShowCurrentCompareToColumn.Checked=false) or (c.index=fActivePreviousResultColumn));
-
-    try
-      ssh:=TSavedScanHandler.create(memscan.getScanFolder, 'TMP');
-    except
-      exit; //invalid state (e.g newscan)
-    end;
-    ssh.memscan:=memscan;
-    ssh.AllowNotFound:=true;
-    ssh.AllowRandomAccess:=true;
-    PreviousResultList.add(ssh);
-
-
-
-    memscan.getsavedresults(l);
-
-    for i:=l.count-1 downto 0 do
-    begin
-      c:=foundlist3.Columns.Add;
-      c.caption:=l[i];
-      if c.Index=fActivePreviousResultColumn then
-        c.tag:=foundlistColors.CompareToHeaderColor;
-
-      c.visible:=(c.Index>=2) and miShowPreviousValue.checked and ((miOnlyShowCurrentCompareToColumn.Checked=false) or (c.index=fActivePreviousResultColumn));
-
-
-      ssh:=TSavedScanHandler.create(memscan.getScanFolder, l[i], true);
-      ssh.memscan:=memscan;
-      ssh.AllowNotFound:=true;
-      ssh.AllowRandomAccess:=true;
-
-      PreviousResultList.Add(ssh);
-    end;
-  finally
-
-    if l<>nil then
-      freemem(l);
-
-    if foundlist3.ColumnCount=length(oldsizes) then
-    begin
-      for i:=0 to length(oldsizes)-1 do
-        foundlist3.Column[i].Width:=oldsizes[i];
-    end
-    else
-      panel5resize(nil); //columncount changed
-
-    foundlist3.EndUpdate;
-  end;
-
-end;
-
-procedure TMainForm.cleanupPreviousResults;
-//do a foundlist3.beginupdate first if this is just part of repopulating
-var i: integer;
-begin
-  foundlist3.BeginUpdate;
-  for i:=0 to PreviousResultList.Count-1 do
-  begin
-    if PreviousResultList[i]<>nil then
-      PreviousResultList[i].free;
-  end;
-
-  PreviousResultList.Clear;
-
-  //first 2 columns are address and current value, the ones following are the previous value
-  while foundlist3.Columns.count>2 do
-    foundlist3.Columns.Delete(2);
-
-  foundlist3.EndUpdate;
-end;
-
-procedure TMainForm.setActivePreviousResultColumn(c: integer);
-var
-  i: integer;
-  {$ifdef darwin}
-  s: string;
-  {$endif}
-begin
-  if InsideSetActivePreviousResult then exit;
-
-  InsideSetActivePreviousResult:=true;
-
-  cbCompareToSavedScan.OnChange:=nil;
-
-  if (c>=2) and (c<foundlist3.ColumnCount) then
-  begin
-    for i:=2 to foundlist3.ColumnCount-1 do
-    begin
-      foundlist3.Column[i].Tag:=0;
-
-
-      {$ifdef darwin}
-      s:=foundlist3.Column[i].caption;
-      foundlist3.Column[i].caption:=s.DeQuotedString('*');
-      {$endif}
-
-      if miOnlyShowCurrentCompareToColumn.Checked then
-      begin
-        if (i>=2) then
-          foundlist3.Columns[i].Visible:=(i=c) and miShowPreviousValue.checked; //only make the current compare column visible
-
-      end
-      else
-        foundlist3.Columns[i].Visible:=(i>=2) and miShowPreviousValue.checked;
-
-    end;
-
-    fActivePreviousResultColumn:=c;
-
-    if miOnlyShowCurrentCompareToColumn.Checked=false then //people that disable this likely want it the way the old CE showed it
-    begin
-      foundlist3.Column[c].tag:=foundlistColors.CompareToHeaderColor;
-
-      {$ifdef darwin}
-      s:=foundlist3.Column[c].caption;
-
-      foundlist3.Column[c].caption:=s.QuotedString('*');
-      {$endif}
-    end;
-
-    if (c-2)<PreviousResultList.count then
-      currentlySelectedSavedResultname:=PreviousResultList[c-2].name;
-
-    if c>=3 then
-    begin
-      cbCompareToSavedScan.checked:=true;
-      compareToSavedScan := True;
-      if PreviousResultList.count>2 then  //last, first are default
-      begin
-        lblcompareToSavedScan.Visible := true;
-        lblcompareToSavedScan.Caption := '('+currentlySelectedSavedResultname+')';
-      end
-      else
-         lblcompareToSavedScan.Visible := false;
-    end
-    else
-    begin
-      cbCompareToSavedScan.checked := false;
-      lblcompareToSavedScan.Visible := false;
-    end;
-  end;
-
-
-  cbCompareToSavedScan.OnChange:=cbCompareToSavedScanChange;
-
-  foundlist3.Refresh;
-  InsideSetActivePreviousResult:=false;
-end;
-
 initialization
   DecimalSeparator := '.';
   ThousandSeparator := ',';
@@ -11082,4 +10583,3 @@ initialization
 
 end.
 
-open

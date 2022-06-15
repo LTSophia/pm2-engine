@@ -13,14 +13,12 @@ uses
   {$endif}
   NewKernelHandler, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls, Buttons, LResources, commonTypeDefs, frmFindDialogUnit,
-  Menus, ComCtrls, frmStackviewunit, frmFloatingPointPanelUnit, disassembler,
-  debuggertypedefinitions, betterControls, LastDisassembleData;
+  Menus, ComCtrls, frmStackviewunit, frmFloatingPointPanelUnit, disassembler, debuggertypedefinitions;
 
 type
   TTraceDebugInfo=class
   private
   public
-    cr3:qword;
     instruction: string;
     instructionsize: integer;
     referencedAddress: ptrUint;
@@ -44,20 +42,9 @@ type
     procedure saveToStream(s: tstream);
     constructor createFromStream(s: tstream);
     destructor destroy; override;
-  end;
+end;
 
-  TDBVMStatusUpdater=class(TPanel)
-  private
-    found: TLabel;
-    progressbar: TProgressbar;
-    cancelButton: TButton;
-    timer: TTimer;
-    procedure CancelAndGetResultClick(sender: TObject);
-    procedure checkDBVMTracerStatus(sender: TObject);
-  public
-    OnTraceDone: TNotifyEvent;
-    constructor Create(TheOwner: TComponent); override;
-  end;
+type
 
   { TfrmTracer }
 
@@ -81,19 +68,16 @@ type
     ESIlabel: TLabel;
     ESlabel: TLabel;
     ESPlabel: TLabel;
-    FontDialog1: TFontDialog;
     FSlabel: TLabel;
     GSlabel: TLabel;
     ftImageList: TImageList;
-    lblAddressed: TLabel;
     lblInstruction: TLabel;
+    lblAddressed: TLabel;
     lvTracer: TTreeView;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
-    MenuItem7: TMenuItem;
-    N1: TMenuItem;
     miRealignCompare: TMenuItem;
     miNewTrace: TMenuItem;
     miOpenTraceForCompare: TMenuItem;
@@ -109,7 +93,6 @@ type
     Panel1: TPanel;
     Panel2: TPanel;
     Panel3: TPanel;
-    Panel4: TPanel;
     pnlRegisters: TPanel;
     pnlSegments: TPanel;
     pnlFlags: TPanel;
@@ -140,7 +123,6 @@ type
       Y: Integer);
     procedure MenuItem5Click(Sender: TObject);
     procedure MenuItem6Click(Sender: TObject);
-    procedure MenuItem7Click(Sender: TObject);
     procedure miNewTraceClick(Sender: TObject);
     procedure miOpenTraceForCompareClick(Sender: TObject);
     procedure miLoadClick(Sender: TObject);
@@ -168,7 +150,7 @@ type
 
     comparetv: TTreeView;
 
-   // traceaddress: dword;
+    traceaddress: dword;
     fpp: TfrmFloatingPointPanel;
     isConfigured: boolean;
     dereference: boolean;
@@ -186,7 +168,6 @@ type
     fSkipconfig: boolean;
 
     stepover: boolean;
-    stepoverrep: boolean;
     nosystem: boolean;
 
     finddialog: TfrmFindDialog;
@@ -199,14 +180,8 @@ type
     registerCompareIgnore: array [0..16] of boolean;
 
     da: TDisassembler;
-    {$ifdef windows}
-    dacr3: TCR3Disassembler;
-    {$endif}
 
     defaultBreakpointMethod: TBreakpointmethod;
-
-    physicaladdress: qword;
-    DBVMStatusUpdater: TDBVMStatusUpdater;
 
     procedure configuredisplay;
     procedure setSavestack(x: boolean);
@@ -220,13 +195,10 @@ type
     function getEntry(index: integer): TTraceDebugInfo;
     function getCount: integer;
     function getSelectionCount: integer;
-    procedure DBVMTraceDone(sender: TObject);
   public
     { Public declarations }
     returnfromignore: boolean;
 
-    isdbvminterface: boolean; //faster than xxx is tdbvmdebuggerinterface
-    LastDisassembleData: TLastDisassembleData;
     procedure setDataTrace(state: boolean);
     procedure addRecord;
     procedure finish;
@@ -245,16 +217,11 @@ implementation
 uses  LuaByteTable, clipbrd, CEDebugger, debughelper, MemoryBrowserFormUnit, frmTracerConfigUnit,
   ProcessHandlerUnit, Globals, Parsers, strutils, CEFuncProc,
   LuaHandler, symbolhandler, byteinterpreter,
-  tracerIgnore, LuaForm, lua, lualib,lauxlib, LuaClass,vmxfunctions, DBK32functions,
-  DebuggerInterfaceAPIWrapper, DBVMDebuggerInterface, mainunit2, fontSaveLoadRegistry,
-  Registry;
+  tracerIgnore, LuaForm, lua, lualib,lauxlib, LuaClass;
 
 resourcestring
   rsSearch = 'Search';
-  rsTypeTheLUAConditionYouWantToSearchForExampleEAX0x1 = 'Type the (LUA) condition you want to search for (Example: EAX==0x1234)    '#13#10'Also available: referencedAddress (integer), referencedBytes (bytetable), instruction (string)';
-  rsWaitingForTraceToStart = 'Waiting for trace to start';
-  rsDBVMBreakAndTraceNeedsDBVM = 'DBVM Break and Trace needs DBVM. Loading '
-    +'DBVM can potentially cause a system freeze. Are you sure?';
+  rsTypeTheLUAConditionYouWantToSearchForExampleEAX0x1 = 'Type the (LUA) condition you want to search for (Example: EAX==0x1234)';
 
 destructor TTraceDebugInfo.destroy;
 begin
@@ -291,28 +258,17 @@ procedure TTraceDebugInfo.fillbytes(datasize: integer);
 begin
   getmem(bytes, datasize);
   bytesize:=0;
-  if cr3=0 then
-    ReadProcessMemory(processhandle, pointer(referencedaddress), bytes, datasize, bytesize)
-  {$ifdef windows}
-  else
-    ReadProcessMemoryCR3(cr3, pointer(referencedaddress), bytes, datasize, bytesize){$endif};
+  ReadProcessMemory(processhandle, pointer(referencedaddress), bytes, datasize, bytesize);
 end;
 
 procedure TTraceDebugInfo.SaveStack;
 begin
   getmem(stack.stack, savedStackSize);
-
-  if cr3=0 then
+  if ReadProcessMemory(processhandle, pointer(c.{$ifdef cpu64}Rsp{$else}esp{$endif}), stack.stack, savedStackSize, stack.savedsize)=false then
   begin
-    if ReadProcessMemory(processhandle, pointer(c.{$ifdef cpu64}Rsp{$else}esp{$endif}), stack.stack, savedStackSize, stack.savedsize)=false then
-    begin
-      stack.savedsize:=4096-(c.{$ifdef cpu64}Rsp{$else}esp{$endif} mod 4096);
-      ReadProcessMemory(processhandle, pointer(c.{$ifdef cpu64}Rsp{$else}esp{$endif}), stack.stack, stack.savedsize, stack.savedsize);
-    end;
-  end
-  {$ifdef windows}
-  else
-    ReadProcessMemoryCR3(cr3, pointer(c.{$ifdef cpu64}Rsp{$else}esp{$endif}), stack.stack, savedStackSize, stack.savedsize){$endif};
+    stack.savedsize:=4096-(c.{$ifdef cpu64}Rsp{$else}esp{$endif} mod 4096);
+    ReadProcessMemory(processhandle, pointer(c.{$ifdef cpu64}Rsp{$else}esp{$endif}), stack.stack, stack.savedsize, stack.savedsize);
+  end;
 end;
 
 constructor TTraceDebugInfo.createFromStream(s: tstream);
@@ -373,119 +329,6 @@ begin
 end;
 
 
-//----------------------TDBVMStatusUpdater-------------------------
-procedure TDBVMStatusUpdater.CancelAndGetResultClick(sender: TObject);
-begin
-  dbvm_cloak_traceonbp_stoptrace;
-  if assigned(OnTraceDone) then
-    OnTraceDone(self);
-end;
-
-procedure TDBVMStatusUpdater.checkDBVMTracerStatus(sender: TObject);
-var
-  status: integer;
-  count, max: dword;
-  s: string;
-begin
-  OutputDebugString('checkDBVMTracerStatus');
-  status:=dbvm_cloak_traceonbp_getstatus(count,max);
-
-  OutputDebugString(format('status=%d count=%d max=%d',[status, count, max]));
-
-  case status of
-    0: s:='No trace active';
-    1: s:='Trace ready to spring';
-    2: s:='Trace activated and recording';
-    3: s:='Trace finished recording';
-    else s:='Unknown status';
-  end;
-  if status<>0 then
-    s:=s+#13#10+format('%d/%d',[count, max]);
-
-  if status=2 then
-  begin
-    if progressbar.style<>pbstNormal then
-      progressbar.Style:=pbstNormal;
-
-    if cancelbutton=nil then
-    begin
-      cancelButton:=tbutton.create(self);
-      cancelbutton.caption:='Cancel and get results';
-      cancelbutton.autosize:=true;
-      cancelbutton.parent:=self;
-      cancelbutton.AnchorSideTop.Control:=progressbar;
-      cancelbutton.AnchorSideTop.side:=asrBottom;
-      cancelbutton.AnchorSideLeft.control:=self;
-      cancelbutton.AnchorSideLeft.side:=asrCenter;
-
-      cancelbutton.BorderSpacing.top:=4;
-      cancelbutton.BorderSpacing.bottom:=4;
-      cancelbutton.OnClick:=CancelAndGetResultClick;
-    end;
-
-    if max<>0 then
-    begin
-      progressbar.position:=trunc((count/max)*100);
-      found.caption:=format('%d/%d  (%d %%)', [count, max, progressbar.position]);
-    end;
-  end;
-
-
-  if status=3 then //time to close
-  begin
-    progressbar.Position:=100;
-    if assigned(OnTraceDone) then
-      OnTraceDone(self);
-  end;
-end;
-
-constructor TDBVMStatusUpdater.Create(TheOwner: TComponent);
-begin
-  inherited create(TheOwner);
-  OutputDebugString('TDBVMStatusUpdater.create');
-  OutputDebugString('create progressbar');
-  progressbar:=TProgressBar.create(self);
-  progressbar.parent:=self;
-  progressbar.style:=pbstMarquee;
-
-  OutputDebugString('create found label');
-  found:=TLabel.create(self);
-  found.caption:=rsWaitingForTraceToStart;
-  found.parent:=self;
-  found.WordWrap:=true;
-
-  found.AnchorSideTop.control:=self;
-  found.anchorsideTop.side:=asrTop;
-  found.anchorsideleft.control:=self;
-  found.anchorsideleft.side:=asrCenter;
-  found.borderspacing.Top:=4;
-  found.anchors:=[akleft,aktop,akright];
-
-  progressbar.AnchorSideTop.control:=found;
-  progressbar.anchorsideTop.side:=asrBottom;
-  progressbar.anchorsideleft.control:=self;
-  progressbar.anchorsideleft.side:=asrLeft;
-  progressbar.anchorsideright.control:=self;
-  progressbar.anchorsideright.side:=asrright;
-  progressbar.borderspacing.Top:=4;
-  progressbar.borderspacing.Bottom:=4;
-  progressbar.anchors:=[akleft,aktop,akright];
-
-
-
-  autosize:=true;
-
-  OutputDebugString('create timer');
-  Timer:=TTimer.create(self);
-  Timer.Interval:=250;
-  Timer.OnTimer:=checkDBVMTracerStatus;
-  Timer.Enabled:=true;
-
-  OutputDebugString('TDBVMStatusUpdater.create returned');
-end;
-
-//--------------------------TfrmTracer------------------------
-
 constructor TfrmTracer.createWithBreakpointMethodSet(Owner: TComponent; DataTrace: boolean=false; skipconfig: boolean=false; breakpointmethod: tbreakpointmethod=bpmDebugRegister); overload;
 begin
   inherited create(owner);
@@ -524,10 +367,6 @@ var s,s2: string;
 
     datasize: integer;
     isfloat: boolean;
-
-
-    currentda: TDisassembler;
-    cr3: qword;
 begin
   //the debuggerthread is now paused so get the context and add it to the list
 
@@ -541,44 +380,14 @@ begin
       da:=tdisassembler.Create;
       da.showsymbols:=symhandler.showsymbols;
       da.showmodules:=symhandler.showmodules;
-      da.showsections:=symhandler.showsections;
     end;
+    s:=da.disassemble(a, s2);
 
-    {$ifdef windows}
-    if isdbvminterface and (dacr3=nil) then
-    begin
-      dacr3:=tcr3disassembler.Create;
-      dacr3.showsymbols:=symhandler.showsymbols;
-      dacr3.showmodules:=symhandler.showmodules;
-      dacr3.showsections:=symhandler.showsections;
-    end;
-
-
-
-    {$ifdef cpu64}
-    if isdbvminterface and (debuggerthread.CurrentThread.context.P2Home<>0) then
-    begin
-      cr3:=debuggerthread.CurrentThread.context.P2Home;
-      currentda:=dacr3;
-      dacr3.CR3:=cr3;
-    end
-    else
-    {$endif}
-    {$endif}
-    begin
-      currentda:=da;
-      cr3:=0;
-    end;
-
-    s:=currentda.disassemble(a, s2);
-
-    lastDisassembleData:=currentda.LastDisassembleData;
-
-    datasize:=currentda.LastDisassembleData.datasize;
+    datasize:=da.LastDisassembleData.datasize;
     if datasize=0 then
       datasize:=4;
 
-    isfloat:=currentda.LastDisassembleData.isfloat;
+    isfloat:=da.LastDisassembleData.isfloat;
 
     referencedAddress:=0;
     if dereference then
@@ -598,7 +407,6 @@ begin
 
 
     d:=TTraceDebugInfo.Create;
-    d.cr3:=cr3;
     d.instructionsize:=a-address;
     d.c:=debuggerthread.CurrentThread.context^;
     d.instruction:=s;
@@ -624,10 +432,10 @@ begin
     else
       thisnode:=lvTracer.Items.AddObject(nil,s,d);
 
-    if not stepover and currentda.LastDisassembleData.iscall then
+    if not stepover and da.LastDisassembleData.iscall then
       currentAppendage:=thisnode;
 
-    if (currentda.LastDisassembleData.isret) {or returnfromignore} then
+    if (da.LastDisassembleData.isret) {or returnfromignore} then
     begin
       returnfromignore:=false;
       if currentAppendage<>nil then
@@ -716,25 +524,19 @@ end;
 
 procedure TfrmTracer.FormCreate(Sender: TObject);
 var
-  x: array of integer;
-  reg: TRegistry;
+    x: array of integer;
 begin
   //set a breakpoint and when that breakpoint gets hit trace a number of instructions
-  setlength(x,0);
-  loadedformpos:=loadformposition(self,x);
-
-  if length(x)>1 then
-    panel1.Width:=x[0];
+  if fskipconfig=false then
+  begin
+    miNewTrace.Click;
 
 
-  reg:=Tregistry.Create;
-  try
-    if reg.OpenKey('\Software\'+strCheatEngine+'\TracerTree '+inttostr(screen.PixelsPerInch)+'\Font'+darkmodestring,false) then
-      LoadFontFromRegistry(lvtracer.Font, reg);
-  except
   end;
 
-  reg.free;
+
+  setlength(x,0);
+  loadedformpos:=loadformposition(self,x);
 
 end;
 
@@ -818,27 +620,27 @@ begin
 
 
 
-          z.add(pref+'AX='+inttohex(c.{$ifdef cpu64}Rax{$else}Eax{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'BX='+inttohex(c.{$ifdef cpu64}Rbx{$else}Ebx{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'CX='+inttohex(c.{$ifdef cpu64}Rcx{$else}Ecx{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'DX='+inttohex(c.{$ifdef cpu64}Rdx{$else}Edx{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'SI='+inttohex(c.{$ifdef cpu64}Rsi{$else}Esi{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'DI='+inttohex(c.{$ifdef cpu64}Rdi{$else}Edi{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'BP='+inttohex(c.{$ifdef cpu64}Rbp{$else}Ebp{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'SP='+inttohex(c.{$ifdef cpu64}Rsp{$else}Esp{$endif},processhandler.hexdigitpreference));
-          z.add(pref+'IP='+inttohex(c.{$ifdef cpu64}Rip{$else}Eip{$endif},processhandler.hexdigitpreference));
+          z.add(pref+'AX='+inttohex(c.{$ifdef cpu64}Rax{$else}Eax{$endif},8));
+          z.add(pref+'BX='+inttohex(c.{$ifdef cpu64}Rbx{$else}Ebx{$endif},8));
+          z.add(pref+'CX='+inttohex(c.{$ifdef cpu64}Rcx{$else}Ecx{$endif},8));
+          z.add(pref+'DX='+inttohex(c.{$ifdef cpu64}Rdx{$else}Edx{$endif},8));
+          z.add(pref+'SI='+inttohex(c.{$ifdef cpu64}Rsi{$else}Esi{$endif},8));
+          z.add(pref+'DI='+inttohex(c.{$ifdef cpu64}Rdi{$else}Edi{$endif},8));
+          z.add(pref+'BP='+inttohex(c.{$ifdef cpu64}Rbp{$else}Ebp{$endif},8));
+          z.add(pref+'SP='+inttohex(c.{$ifdef cpu64}Rsp{$else}Esp{$endif},8));
+          z.add(pref+'IP='+inttohex(c.{$ifdef cpu64}Rip{$else}Eip{$endif},8));
 
           {$ifdef cpu64}
           if processhandler.is64bit then
           begin
-            z.add('R8='+inttohex(c.r8,processhandler.hexdigitpreference));
-            z.add('R9='+inttohex(c.r9,processhandler.hexdigitpreference));
-            z.add('R10='+inttohex(c.r10,processhandler.hexdigitpreference));
-            z.add('R11='+inttohex(c.r11,processhandler.hexdigitpreference));
-            z.add('R12='+inttohex(c.r12,processhandler.hexdigitpreference));
-            z.add('R13='+inttohex(c.r13,processhandler.hexdigitpreference));
-            z.add('R14='+inttohex(c.r14,processhandler.hexdigitpreference));
-            z.add('R15='+inttohex(c.r15,processhandler.hexdigitpreference));
+            z.add('R8='+inttohex(c.r8,8));
+            z.add('R9='+inttohex(c.r9,8));
+            z.add('R10='+inttohex(c.r10,8));
+            z.add('R11='+inttohex(c.r11,8));
+            z.add('R12='+inttohex(c.r12,8));
+            z.add('R13='+inttohex(c.r13,8));
+            z.add('R14='+inttohex(c.r14,8));
+            z.add('R15='+inttohex(c.r15,8));
           end;
           {$endif}
 
@@ -1018,247 +820,6 @@ begin
   end;
 end;
 
-procedure TfrmTracer.MenuItem7Click(Sender: TObject);
-var reg: TRegistry;
-begin
-  fontdialog1.Font.assign(lvtracer.font);
-  if fontdialog1.execute then
-  begin
-    lvtracer.font.assign(fontdialog1.font);
-
-    reg:=Tregistry.Create;
-    try
-      if reg.OpenKey('\Software\'+strCheatEngine+'\TracerTree '+inttostr(screen.PixelsPerInch)+'\Font'+darkmodestring,true) then
-        SaveFontToRegistry(lvTracer.Font, reg);
-    except
-    end;
-
-    reg.free;
-  end;
-end;
-
-procedure TfrmTracer.DBVMTraceDone(sender: TObject);
-var
-  desc: PTracerListDescriptor;
-  listsize: integer;
-  r: integer;
-  count,max: dword;
-  startwait: qword;
-
-  list: PPageEventExtendedArray;
-  stacklist: PPageEventExtendedWithStackArray absolute list;
-
-  err: string;
-
-  i: integer;
-  desciterator: integer;
-  s,s2: string;
-
-  basic: PPageEventBasic;
-  fpu: PFXSAVE64;
-  stack: PByteArray;
-
-  a: ptruint;
-  d: TTraceDebugInfo;
-
-  thisnode, thatnode, x: TTreenode;
-
-begin
-  OutputDebugString('DBVMTraceDone');
-  dbvm_cloak_traceonbp_stoptrace;
-  freeandnil(DBVMStatusUpdater);
-
-
-  startwait:=gettickcount64; //in case the user canceled the trace
-  while (dbvm_cloak_traceonbp_getstatus(count,max)<>3) and (gettickcount64<startwait+3000) do
-    sleep(50);
-
-
-  listsize:=0;
-  r:=dbvm_cloak_traceonbp_readlog(nil,listsize);
-  if r=2 then
-  begin
-    getmem(desc, listsize*2);
-    lvTracer.Items.BeginUpdate;
-    try
-      r:=dbvm_cloak_traceonbp_readlog(desc, listsize);
-
-      if r=0 then
-      begin
-        list:=PPageEventExtendedArray(qword(desc)+sizeof(TTracerListDescriptor));
-
-        if da=nil then
-        begin
-          da:=tdisassembler.Create;
-          da.showsymbols:=symhandler.showsymbols;
-          da.showmodules:=symhandler.showmodules;
-          da.showsections:=symhandler.showsections;
-        end;
-
-        for desciterator:=0 to desc.count-1 do
-        begin
-          if desc.datatype=1 then
-          begin
-            //extended
-            basic:=@list[desciterator].basic;
-            fpu:=@list[desciterator].fpudata;
-            stack:=nil;
-          end
-          else
-          begin
-            //list with stack
-            basic:=@stacklist[desciterator].basic;
-            fpu:=@stacklist[desciterator].fpudata;
-            stack:=@stacklist[desciterator].stack;
-          end;
-
-          //same as addrecord, but limited by what dbvm can do
-          a:=basic^.RIP;
-          s:=da.disassemble(a,s2);
-          i:=posex('-',s);
-          i:=posex('-',s,i+1);
-          s:=copy(s,i+2,length(s));
-
-          d:=TTraceDebugInfo.Create;
-          d.instructionsize:=a-basic^.RIP;
-          {$ifdef cpu64}
-          d.c.P1Home:=basic^.FSBASE; //just using these field for storage
-          d.c.p2home:=basic^.GSBASE;
-          d.c.p3home:=basic^.CR3;
-          {$endif}
-          d.c.EFlags:=basic^.FLAGS;
-          d.c.{$ifdef cpu32}Eax{$else}Rax{$endif}:=basic^.RAX;
-          d.c.{$ifdef cpu32}Ebx{$else}Rbx{$endif}:=basic^.RBX;
-          d.c.{$ifdef cpu32}Ecx{$else}Rcx{$endif}:=basic^.RCX;
-          d.c.{$ifdef cpu32}Edx{$else}Rdx{$endif}:=basic^.RDX;
-          d.c.{$ifdef cpu32}Esi{$else}Rsi{$endif}:=basic^.RSI;
-          d.c.{$ifdef cpu32}Edi{$else}Rdi{$endif}:=basic^.RDI;
-          {$ifdef cpu64}
-          d.c.R8:=basic^.R8;
-          d.c.R9:=basic^.R9;
-          d.c.R10:=basic^.R10;
-          d.c.R11:=basic^.R11;
-          d.c.R12:=basic^.R12;
-          d.c.R13:=basic^.R13;
-          d.c.R14:=basic^.R14;
-          d.c.R15:=basic^.R15;
-          {$endif}
-          d.c.{$ifdef cpu32}Ebp{$else}Rbp{$endif}:=basic^.RBP;
-          d.c.{$ifdef cpu32}Esp{$else}Rsp{$endif}:=basic^.RSP;
-          d.c.{$ifdef cpu32}Eip{$else}Rip{$endif}:=basic^.RIP;
-          d.c.SegCs:=basic^.CS;
-          d.c.SegDs:=basic^.DS;
-          d.c.SegEs:=basic^.ES;
-          d.c.SegSs:=basic^.SS;
-          d.c.SegFs:=basic^.FS;
-          d.c.SegGs:=basic^.GS;
-
-          {$ifdef cpu64}
-          copymemory(@d.c.FltSave, fpu,512);
-          {$else}
-          copymemory(@d.c.ext, fpu,512);
-          {$endif}
-
-          d.instruction:=s;
-          d.referencedAddress:=0;
-          d.isfloat:=false;
-          d.bytes:=nil;
-          d.bytesize:=0;
-
-          if stack<>nil then
-          begin
-            getmem(d.stack.stack,4096);
-            copymemory(d.stack.stack,stack,4096);
-            d.stack.savedsize:=4096;
-          end;
-
-          s:=symhandler.getNameFromAddress(basic^.rip)+' - '+s;
-
-          if returnfromignore then
-          begin
-            //00500DD9
-            returnfromignore:=false;
-            if (currentAppendage<>nil) then
-              currentAppendage:=currentAppendage.Parent;
-          end;
-
-          if currentAppendage<>nil then
-            thisnode:=lvTracer.Items.AddChildObject(currentAppendage,s,d)
-          else
-            thisnode:=lvTracer.Items.AddObject(nil,s,d);
-
-          if not stepover and da.LastDisassembleData.iscall then
-             currentAppendage:=thisnode;
-
-          if (da.LastDisassembleData.isret) then
-          begin
-            returnfromignore:=false;
-            if currentAppendage<>nil then
-            begin
-              currentAppendage:=currentAppendage.Parent;
-
-              if currentAppendage<>nil then
-              begin
-                //check if the return is valid, could be it's a parent jump
-                d:=TTraceDebugInfo(currentAppendage.Data);
-                if (d.c.{$ifdef cpu64}Rip{$else}eip{$endif}+d.instructionsize<>a) then
-                begin
-                  //see if a parent can be found that does match
-                  x:=currentappendage.Parent;
-                  while x<>nil do
-                  begin
-                    d:=TTraceDebugInfo(x.Data);
-
-                    if (d.c.{$ifdef cpu64}Rip{$else}eip{$endif}+d.instructionsize=a) then
-                    begin
-                      //match found
-                      currentAppendage:=x;
-                      break;
-                    end;
-
-                    x:=x.parent;
-                  end;
-                end;
-
-              end;
-            end
-            else
-            begin
-              //create a node at the top and append the current top node to it
-              thisnode:=lvTracer.items.AddFirst(nil,'');
-
-              thatnode:=thisnode.GetNextSibling;
-              while thatnode<>nil do
-              begin
-                thatnode.MoveTo(thisnode, naAddChild);
-                thatnode:=thisnode.GetNextSibling;
-              end;
-            end;
-          end;
-
-        end;
-
-      end
-      else
-      begin
-        case r of
-          4: err:='invalid address for buffer';
-          6: err:='offset too high';
-          else err:='unknown error '+inttostr(r);
-        end;
-        MessageDlg('Failure getting DBVM trace. : '+err, mtError,[mbok],0);
-      end;
-    finally
-      freemem(desc);
-      lvTracer.Items.EndUpdate;
-    end;
-  end
-  else
-    MessageDlg('Unexpected result from DBVM. dbvm_cloak_traceonbp_readlog returned '+inttostr(r), mtError,[mbok],0);
-
-  //load the list
-end;
-
 procedure TfrmTracer.miNewTraceClick(Sender: TObject);
 var tcount: integer;
     startcondition,stopcondition: string;
@@ -1268,27 +829,7 @@ var tcount: integer;
     toaddress: ptruint;
 
     bpTrigger: TBreakpointTrigger;
-    b: byte;
-    actual: SIZE_T;
-    oldprotect: dword;
-    v: boolean;
-    r: integer;
-
-    options: dword;
-    count: integer;
-    i: integer;
-
-    oldpages: qword;
-    newpages: qword;
-
-    memneeded: integer;
-    StayInsideModule: boolean;
 begin
-  if (owner is TMemoryBrowser) then
-    fromaddress:=(owner as TMemoryBrowser).disassemblerview.SelectedAddress
-  else
-    fromaddress:=memorybrowser.disassemblerview.SelectedAddress;
-
   if frmTracerConfig=nil then
     frmTracerConfig:=TfrmTracerConfig.create(application);
 
@@ -1296,17 +837,8 @@ begin
   begin
     DataTrace:=fDataTrace;
     breakpointmethod:=defaultBreakpointMethod;
-
-    cbStayInsideInitialModule.enabled:=symhandler.inModule(fromaddress);
-    if cbStayInsideInitialModule.enabled=false then
-      cbStayInsideInitialModule.checked:=false;
-
     if showmodal=mrok then
     begin
-
-      currentAppendage:=nil;
-      stopsearch:=false;
-
       if comparetv<>nil then
       begin
         cleanuptv(comparetv);
@@ -1325,115 +857,10 @@ begin
       startcondition:=edtStartCondition.text;
       stopcondition:=edtStopCondition.text;
       stepover:=cbStepOver.checked;
-      stepoverrep:=cbStepOverRep.checked;
       nosystem:=cbSkipSystemModules.checked;
 
-      StayInsideModule:=cbStayInsideInitialModule.checked;
-
-
-
-      {$ifdef windows}
-      if cbDBVMBreakAndTrace.checked then
-      begin
-        if loaddbvmifneeded(rsDBVMBreakAndTraceNeedsDBVM)=false then exit;
-
-
-        //setup dbvm trace
-
-
-        if cbDBVMTriggerCOW.checked then
-        begin
-          if ReadProcessMemory(processhandle, pointer(fromaddress), @b,1,actual) then
-          begin
-            v:=(SkipVirtualProtectEx=false) and VirtualProtectEx(processhandle, pointer(fromaddress),1, PAGE_EXECUTE_READWRITE, oldprotect);
-            WriteProcessMemory(processhandle,pointer(fromaddress),@b,1,actual);
-            if v then
-              VirtualProtectEx(processhandle,pointer(fromaddress),1,oldprotect,oldprotect);
-          end;
-        end;
-
-        options:=1;
-        if cbSaveStack.checked then options:=3;
-
-        if GetPhysicalAddress(processhandle,pointer(fromaddress), physicaladdress)=false then
-          raise exception.create('Failure getting the physical address of this ');
-
-        outputdebugstring(format('Calling dbvm_cloak_traceonbp(0x%x,%d,0x%x,0x%x)',[physicaladdress, tcount, options, fromaddress]));
-
-
-        r:=dbvm_cloak_traceonbp(physicalAddress, tcount,options,fromaddress);
-        count:=0;
-        while (count<20) and (r<>0) do
-        begin
-          outputdebugstring('r='+inttostr(r)+' count='+inttostr(count));
-          case r of
-            1: raise exception.create('BP Cloak error');
-            2:
-            begin
-              dbvm_cloak_traceonbp_stoptrace;
-
-              if count>15 then  //takes too long, force it
-                dbvm_cloak_traceonbp_remove(0,true);
-            end;
-            3:
-            begin
-              //need to allocate more memory
-              if options=1 then memneeded:=sizeof(TTracerListDescriptor)+sizeof(TPageEventExtended)*tcount
-              else memneeded:=sizeof(TTracerListDescriptor)+sizeof(TPageEventExtendedWithStack)*tcount;
-
-              outputdebugstring('DBVM needs '+inttostr(memneeded)+' bytes free');
-
-              memneeded:=1+(memneeded div 4096);
-              dbvm_getMemory(oldpages);
-              allocateMemoryForDBVM(memneeded);
-              dbvm_getMemory(newpages);
-
-              if newpages<=oldpages then raise exception.create('Failure allocating '+inttostr(memneeded)+' pages of physcal memory to DBVM');
-            end;
-          end;
-
-          sleep(250);
-          r:=dbvm_cloak_traceonbp(physicalAddress, tcount,options,fromaddress);
-          inc(count);
-        end;
-
-        if r<>0 then
-        begin
-          outputdebugstring('r is still not 0. Error out');
-          case r of
-            1: raise exception.create('BP Cloak error');
-            2: raise exception.create('Failure to kill previous trace');
-            3: raise exception.create('Not enough DBVM memory free');
-          end;
-        end;
-
-        //still here, trace activation was succesful
-
-        OutputDebugString('after TDBVMStatusUpdater');
-        DBVMStatusUpdater:=TDBVMStatusUpdater.create(Self);
-        DBVMStatusUpdater.parent:=self;
-        DBVMStatusUpdater.AnchorSideTop.control:=self;
-        DBVMStatusUpdater.AnchorSideTop.side:=asrCenter;
-        DBVMStatusUpdater.AnchorSideLeft.Control:=self;
-        DBVMStatusUpdater.AnchorSideLeft.Side:=asrLeft;
-        DBVMStatusUpdater.AnchorSideRight.Control:=self;
-        DBVMStatusUpdater.AnchorSideRight.Side:=asrRight;
-        DBVMStatusUpdater.anchors:=[aktop, akright, akLeft];
-        DBVMStatusUpdater.OnTraceDone:=DBVMTraceDone;
-
-        OutputDebugString('after config of DBVMStatusUpdater');
-
-        OutputDebugString('calling checkDBVMTracerStatus');
-        DBVMStatusUpdater.checkDBVMTracerStatus(nil);
-        OutputDebugString('after checkDBVMTracerStatus');
-
-      end
-      else
-      {$endif}
       if startdebuggerifneeded then
       begin
-        isdbvminterface:=CurrentDebuggerInterface is TDBVMDebugInterface;
-
         if fDataTrace then
         begin
           //get breakpoint trigger
@@ -1449,20 +876,20 @@ begin
             memorybrowser.hexview.GetSelectionRange(fromaddress,toaddress);
 
           //set the breakpoint
-          debuggerthread.setBreakAndTraceBreakpoint(self, fromaddress, bpTrigger, breakpointmethod, 1+(toaddress-fromaddress), tcount, startcondition, stopcondition, stepover, stepoverrep, nosystem);
+          debuggerthread.setBreakAndTraceBreakpoint(self, fromaddress, bpTrigger, breakpointmethod, 1+(toaddress-fromaddress), tcount, startcondition, stopcondition, stepover, nosystem);
         end
         else
         begin
           if (owner is TMemoryBrowser) then
-            debuggerthread.setBreakAndTraceBreakpoint(self, (owner as TMemoryBrowser).disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, stepoverrep, Nosystem, stayinsidemodule)
+            debuggerthread.setBreakAndTraceBreakpoint(self, (owner as TMemoryBrowser).disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, Nosystem)
           else
-            debuggerthread.setBreakAndTraceBreakpoint(self, memorybrowser.disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, stepoverrep, nosystem, StayInsideModule);
+            debuggerthread.setBreakAndTraceBreakpoint(self, memorybrowser.disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, nosystem);
         end;
       end;
+
+
     end;
   end;
-
-  OutputDebugString('reached end of miNewTraceClick');
 end;
 
 procedure TfrmTracer.cleanuptv(tv: TTreeview);
@@ -1477,11 +904,8 @@ begin
     if tv.Items[i].Data<>nil then
     begin
       d:=TTraceDebugInfo(tv.Items[i].Data);
-      if d<>nil then
-      begin
-        tv.Items[i].Data:=nil;
-        d.Free;
-      end;
+      tv.Items[i].Data:=nil;
+      d.Free;
     end;
   end;
 end;
@@ -1522,13 +946,12 @@ begin
       m.free;
 
       if version<>{$ifdef cpu64}1{$else}0{$endif} then
-        raise exception.create('This trace was made with the '+{$ifdef cpu64}'32'{$else}'64'{$endif}+'-bit version of '+strCheatEngine+'. You need to use that version to see the register values and stacktrace');
+        raise exception.create('This trace was made with the '+{$ifdef cpu64}'32'{$else}'64'{$endif}+'-bit version of cheat engine. You need to use that version to see the register values and stacktrace');
 
       for i:=0 to comparetv.Items.Count-1 do
       begin
         comparetv.Items[i].Data:=TTraceDebugInfo.createFromStream(f);
-        if i<lvtracer.items.Count then
-          TTraceDebugInfo(lvTracer.items[i].data).compareindex:=i;
+        TTraceDebugInfo(lvTracer.items[i].data).compareindex:=i;
       end;
 
       miRealignCompare.enabled:=true;
@@ -1584,7 +1007,7 @@ begin
       m.free;
 
       if version<>{$ifdef cpu64}1{$else}0{$endif} then
-        raise exception.create('This trace was made with the '+{$ifdef cpu64}'32'{$else}'64'{$endif}+'-bit version of '+strCheatEngine+'. You need to use that version to see the register values and stacktrace');
+        raise exception.create('This trace was made with the '+{$ifdef cpu64}'32'{$else}'64'{$endif}+'-bit version of cheat engine. You need to use that version to see the register values and stacktrace');
 
       for i:=0 to lvTracer.Items.Count-1 do
         lvTracer.Items[i].Data:=TTraceDebugInfo.createFromStream(f);
@@ -1798,20 +1221,6 @@ begin
   end;
 end;
 
-function bytesToLuaByteTableString(bytes: PByteArray; size: integer): string;
-var i: integer;
-begin
-  result:='{';
-  for i:=0 to size-1 do
-  begin
-    if i>0 then
-      result:=result+','+inttostr(bytes[i])
-    else
-      result:=result+inttostr(bytes[i]);
-  end;
-
-  result:=result+'}';
-end;
 
 procedure TfrmTracer.MenuItem4Click(Sender: TObject);
 var
@@ -1819,11 +1228,6 @@ var
   c: PContext;
   check: boolean;
   searchstring: string;
-
-  script: tstringlist=nil;
-  usesReferencedAddress: boolean=false;
-  usesReferencedBytes: boolean=false;
-  usesInstruction: boolean=false;
 begin
   if finddialog=nil then
   begin
@@ -1846,17 +1250,6 @@ begin
   if check then
   begin
     searchstring:='return '+lastsearchstring;
-    usesReferencedAddress:=searchstring.Contains('referencedAddress'); //screw the user if he uses comments
-    usesReferencedBytes:=searchstring.Contains('referencedBytes');
-    usesInstruction:=searchstring.Contains('instruction');
-
-    script:=tstringlist.Create;
-    script.Text:=searchstring;
-
-    script.Insert(0,''); //space for referencedAddress
-    script.Insert(1,''); //space for referencedBytes
-    script.Insert(2,''); //space for instruction
-
 
 
     stopsearch:=false;
@@ -1871,23 +1264,12 @@ begin
       else
         i:=lvTracer.Selected.AbsoluteIndex+1;
 
-
-
       while (i<lvTracer.items.count) and (not stopsearch) do
       begin
         c:=@TTraceDebugInfo(lvTracer.Items[i].data).c;
         if c<>nil then
         begin
-          if usesReferencedAddress then
-            script[0]:='local referencedAddress=0x'+inttohex(TTraceDebugInfo(lvTracer.Items[i].data).referencedAddress,8);
-
-          if usesReferencedBytes then
-            script[1]:='local referencedBytes='+bytesToLuaByteTableString(TTraceDebugInfo(lvTracer.Items[i].data).bytes, TTraceDebugInfo(lvTracer.Items[i].data).bytesize);
-
-          if usesInstruction then
-            script[2]:='local instruction=[['+TTraceDebugInfo(lvTracer.Items[i].data).instruction+']]';
-
-          if CheckIfConditionIsMetContext(0, c, script.text) then
+          if CheckIfConditionIsMetContext(0, c, searchstring) then
           begin
             lvTracer.Items[i].Selected:=true;
             lvTracer.MakeSelectionVisible;
@@ -1914,16 +1296,7 @@ begin
         c:=@TTraceDebugInfo(lvTracer.Items[i].data).c;
         if c<>nil then
         begin
-          if usesReferencedAddress then
-            script[0]:='local referencedAddress=0x'+inttohex(TTraceDebugInfo(lvTracer.Items[i].data).referencedAddress,8);
-
-          if usesReferencedBytes then
-            script[1]:='local referencedBytes='+bytesToLuaByteTableString(TTraceDebugInfo(lvTracer.Items[i].data).bytes, TTraceDebugInfo(lvTracer.Items[i].data).bytesize);
-
-          if usesInstruction then
-            script[2]:='local instruction=[['+TTraceDebugInfo(lvTracer.Items[i].data).instruction+']]';
-
-          if CheckIfConditionIsMetContext(0, c, script.text) then
+          if CheckIfConditionIsMetContext(0, c, searchstring) then
           begin
             lvTracer.Items[i].Selected:=true;
             lvTracer.MakeSelectionVisible;
@@ -1941,9 +1314,6 @@ begin
 
     pnlSearch.visible:=false;
   end;
-
-  if script<>nil then
-    freeandnil(script);
 end;
 
 procedure TfrmTracer.Panel1Click(Sender: TObject);
@@ -1969,15 +1339,6 @@ begin
   cleanuptv(lvTracer);
 
   action:=cafree; //if still buggy, change to cahide
-
-  if DBVMStatusUpdater<>nil then
-  begin
-    dbvm_cloak_traceonbp_stoptrace;
-    freeandnil(DBVMStatusUpdater);
-  end;
-
-  if physicaladdress<>0 then
-    dbvm_cloak_traceonbp_remove(physicaladdress);
 end;
 
 procedure TfrmTracer.Button1Click(Sender: TObject);
@@ -1986,21 +1347,11 @@ begin
 end;
 
 procedure TfrmTracer.FormDestroy(Sender: TObject);
-var x: array of integer;
 begin
-
   if da<>nil then
     da.free;
 
-  {$ifdef windows}
-  if dacr3<>nil then
-    dacr3.free;
-  {$endif}
-
-  setlength(x,1);
-  x[0]:=panel1.width;
-
-  saveformposition(self,x);
+  saveformposition(self);
 end;
 
 procedure TfrmTracer.configuredisplay;
@@ -2079,72 +1430,72 @@ begin
       else
         prefix:='E';
 
-      temp:=prefix+'AX '+IntToHex(context.{$ifdef cpu64}rax{$else}Eax{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rax{$else}Eax{$endif}<>t2.c.{$ifdef cpu64}rax{$else}Eax{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rax{$else}Eax{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'AX '+IntToHex(context.{$ifdef cpu64}rax{$else}Eax{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rax{$else}Eax{$endif}<>t2.c.{$ifdef cpu64}rax{$else}Eax{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rax{$else}Eax{$endif},8);
       if temp<>eaxlabel.Caption then
       begin
         eaxlabel.Font.Color:=clred;
         eaxlabel.Caption:=temp;
       end else eaxlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'BX '+IntToHex(context.{$ifdef cpu64}rbx{$else}ebx{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rbx{$else}Ebx{$endif}<>t2.c.{$ifdef cpu64}rbx{$else}Ebx{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rbx{$else}Ebx{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'BX '+IntToHex(context.{$ifdef cpu64}rbx{$else}ebx{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rbx{$else}Ebx{$endif}<>t2.c.{$ifdef cpu64}rbx{$else}Ebx{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rbx{$else}Ebx{$endif},8);
       if temp<>ebxlabel.Caption then
       begin
         ebxlabel.Font.Color:=clred;
         ebxlabel.Caption:=temp;
       end else ebxlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'CX '+IntToHex(context.{$ifdef cpu64}rcx{$else}ecx{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rcx{$else}Ecx{$endif}<>t2.c.{$ifdef cpu64}rcx{$else}Ecx{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rcx{$else}Ecx{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'CX '+IntToHex(context.{$ifdef cpu64}rcx{$else}ecx{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rcx{$else}Ecx{$endif}<>t2.c.{$ifdef cpu64}rax{$else}Eax{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rcx{$else}Ecx{$endif},8);
       if temp<>eCxlabel.Caption then
       begin
         eCXlabel.Font.Color:=clred;
         eCXlabel.Caption:=temp;
       end else eCXlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'DX '+IntToHex(context.{$ifdef cpu64}rdx{$else}edx{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rdx{$else}Edx{$endif}<>t2.c.{$ifdef cpu64}rdx{$else}Edx{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rdx{$else}Edx{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'DX '+IntToHex(context.{$ifdef cpu64}rdx{$else}edx{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rdx{$else}Edx{$endif}<>t2.c.{$ifdef cpu64}rdx{$else}Edx{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rdx{$else}Edx{$endif},8);
       if temp<>eDxlabel.Caption then
       begin
         eDxlabel.Font.Color:=clred;
         eDxlabel.Caption:=temp;
       end else eDxlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'SI '+IntToHex(context.{$ifdef cpu64}rsi{$else}esi{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rsi{$else}esi{$endif}<>t2.c.{$ifdef cpu64}rsi{$else}Esi{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rsi{$else}Esi{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'SI '+IntToHex(context.{$ifdef cpu64}rsi{$else}esi{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rsi{$else}esi{$endif}<>t2.c.{$ifdef cpu64}rsi{$else}Esi{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rsi{$else}Esi{$endif},8);
       if temp<>eSIlabel.Caption then
       begin
         eSIlabel.Font.Color:=clred;
         eSIlabel.Caption:=temp;
       end else eSIlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'DI '+IntToHex(context.{$ifdef cpu64}rdi{$else}edi{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rdi{$else}edi{$endif}<>t2.c.{$ifdef cpu64}rdi{$else}Edi{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rdi{$else}Edi{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'DI '+IntToHex(context.{$ifdef cpu64}rdi{$else}edi{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rdi{$else}edi{$endif}<>t2.c.{$ifdef cpu64}rdi{$else}Edi{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rdi{$else}Edi{$endif},8);
       if temp<>eDIlabel.Caption then
       begin
         eDIlabel.Font.Color:=clred;
         eDIlabel.Caption:=temp;
       end else eDIlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'BP '+IntToHex(context.{$ifdef cpu64}rbp{$else}ebp{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rbp{$else}ebp{$endif}<>t2.c.{$ifdef cpu64}rbp{$else}Ebp{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rbp{$else}Ebp{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'BP '+IntToHex(context.{$ifdef cpu64}rbp{$else}ebp{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rbp{$else}ebp{$endif}<>t2.c.{$ifdef cpu64}rbp{$else}Ebp{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rbp{$else}Ebp{$endif},8);
       if temp<>eBPlabel.Caption then
       begin
         eBPlabel.Font.Color:=clred;
         eBPlabel.Caption:=temp;
       end else eBPlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'SP '+IntToHex(context.{$ifdef cpu64}rsp{$else}esp{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rsp{$else}esp{$endif}<>t2.c.{$ifdef cpu64}rsp{$else}Esp{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rsp{$else}Esp{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'SP '+IntToHex(context.{$ifdef cpu64}rsp{$else}esp{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rsp{$else}esp{$endif}<>t2.c.{$ifdef cpu64}rsp{$else}Esp{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rsp{$else}Esp{$endif},8);
       if temp<>eSPlabel.Caption then
       begin
         eSPlabel.Font.Color:=clred;
         eSPlabel.Caption:=temp;
       end else eSPlabel.Font.Color:=clWindowText;
 
-      temp:=prefix+'IP '+IntToHex(context.{$ifdef cpu64}rip{$else}eip{$endif},processhandler.hexdigitpreference);
-      if (t2<>nil) and (t.c.{$ifdef cpu64}rip{$else}eip{$endif}<>t2.c.{$ifdef cpu64}rip{$else}Eip{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rip{$else}Eip{$endif},processhandler.hexdigitpreference);
+      temp:=prefix+'IP '+IntToHex(context.{$ifdef cpu64}rip{$else}eip{$endif},8);
+      if (t2<>nil) and (t.c.{$ifdef cpu64}rip{$else}eip{$endif}<>t2.c.{$ifdef cpu64}rip{$else}Eip{$endif}) then temp:=temp+' <> '+IntToHex(t2.c.{$ifdef cpu64}rip{$else}Eip{$endif},8);
       if temp<>eIPlabel.Caption then
       begin
         eIPlabel.Font.Color:=clred;
@@ -2156,64 +1507,64 @@ begin
       if length(rxlabels)>0 then
       begin
 
-        temp:='R8  '+IntToHex(context.r8,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r8<>t2.c.r8) then temp:=temp+' <> '+IntToHex(t2.c.r8,processhandler.hexdigitpreference);
+        temp:='R8  '+IntToHex(context.r8,8);
+        if (t2<>nil) and (t.c.r8<>t2.c.r8) then temp:=temp+' <> '+IntToHex(t2.c.r8,8);
         if temp<>RXlabels[0].Caption then
         begin
           RXlabels[0].Font.Color:=clred;
           RXlabels[0].Caption:=temp;
         end else RXlabels[0].Font.Color:=clWindowText;
 
-        temp:='R9  '+IntToHex(context.r9,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r9<>t2.c.r9) then temp:=temp+' <> '+IntToHex(t2.c.r9,processhandler.hexdigitpreference);
+        temp:='R9  '+IntToHex(context.r9,8);
+        if (t2<>nil) and (t.c.r9<>t2.c.r9) then temp:=temp+' <> '+IntToHex(t2.c.r9,8);
         if temp<>RXlabels[1].Caption then
         begin
           RXlabels[1].Font.Color:=clred;
           RXlabels[1].Caption:=temp;
         end else RXlabels[1].Font.Color:=clWindowText;
 
-        temp:='R10 '+IntToHex(context.r10,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r10<>t2.c.r10) then temp:=temp+' <> '+IntToHex(t2.c.r10,processhandler.hexdigitpreference);
+        temp:='R10 '+IntToHex(context.r10,8);
+        if (t2<>nil) and (t.c.r10<>t2.c.r10) then temp:=temp+' <> '+IntToHex(t2.c.r10,8);
         if temp<>RXlabels[2].Caption then
         begin
           RXlabels[2].Font.Color:=clred;
           RXlabels[2].Caption:=temp;
         end else RXlabels[2].Font.Color:=clWindowText;
 
-        temp:='R11 '+IntToHex(context.r11,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r11<>t2.c.r11) then temp:=temp+' <> '+IntToHex(t2.c.r11,processhandler.hexdigitpreference);
+        temp:='R11 '+IntToHex(context.r11,8);
+        if (t2<>nil) and (t.c.r11<>t2.c.r11) then temp:=temp+' <> '+IntToHex(t2.c.r11,8);
         if temp<>RXlabels[3].Caption then
         begin
           RXlabels[3].Font.Color:=clred;
           RXlabels[3].Caption:=temp;
         end else RXlabels[3].Font.Color:=clWindowText;
 
-        temp:='R12 '+IntToHex(context.r12,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r12<>t2.c.r12) then temp:=temp+' <> '+IntToHex(t2.c.r12,processhandler.hexdigitpreference);
+        temp:='R12 '+IntToHex(context.r12,8);
+        if (t2<>nil) and (t.c.r12<>t2.c.r12) then temp:=temp+' <> '+IntToHex(t2.c.r12,8);
         if temp<>RXlabels[4].Caption then
         begin
           RXlabels[4].Font.Color:=clred;
           RXlabels[4].Caption:=temp;
         end else RXlabels[4].Font.Color:=clWindowText;
 
-        temp:='R13 '+IntToHex(context.r13,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r13<>t2.c.r13) then temp:=temp+' <> '+IntToHex(t2.c.r13,processhandler.hexdigitpreference);
+        temp:='R13 '+IntToHex(context.r13,8);
+        if (t2<>nil) and (t.c.r13<>t2.c.r13) then temp:=temp+' <> '+IntToHex(t2.c.r13,8);
         if temp<>RXlabels[5].Caption then
         begin
           RXlabels[5].Font.Color:=clred;
           RXlabels[5].Caption:=temp;
         end else RXlabels[5].Font.Color:=clWindowText;
 
-        temp:='R14 '+IntToHex(context.r14,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r14<>t2.c.r14) then temp:=temp+' <> '+IntToHex(t2.c.r14,processhandler.hexdigitpreference);
+        temp:='R14 '+IntToHex(context.r14,8);
+        if (t2<>nil) and (t.c.r14<>t2.c.r14) then temp:=temp+' <> '+IntToHex(t2.c.r14,8);
         if temp<>RXlabels[6].Caption then
         begin
           RXlabels[6].Font.Color:=clred;
           RXlabels[6].Caption:=temp;
         end else RXlabels[6].Font.Color:=clWindowText;
 
-        temp:='R15 '+IntToHex(context.r15,processhandler.hexdigitpreference);
-        if (t2<>nil) and (t.c.r15<>t2.c.r15) then temp:=temp+' <> '+IntToHex(t2.c.r15,processhandler.hexdigitpreference);
+        temp:='R15 '+IntToHex(context.r15,8);
+        if (t2<>nil) and (t.c.r15<>t2.c.r15) then temp:=temp+' <> '+IntToHex(t2.c.r15,8);
         if temp<>RXlabels[7].Caption then
         begin
           RXlabels[7].Font.Color:=clred;
@@ -2362,10 +1713,8 @@ var
   i: integer;
   e: boolean;
 begin
-
   if (lvTracer.selected<>nil) and (lvTracer.selected.data<>nil) then
   begin
-    syma:=0;
     a:=TTraceDebugInfo(lvTracer.selected.data).c.{$ifdef cpu64}rip{$else}Eip{$endif};
     e:=true;
     i:=RPos(' - ', lvTracer.Selected.Text);
@@ -2407,22 +1756,6 @@ begin
   fpp.show;//pop to foreground
 end;
 
-procedure ApplyFontColor(control: TControl; color: TColor);
-var
-  i: integer;
-  wc: twincontrol;
-begin
-  control.font.color:=color;
-  if control is TWinControl then
-  begin
-    wc:=TWinControl(control);
-    for i:=0 to wc.ControlCount-1 do
-      applyFontcolor(wc.Controls[i],color);
-  end;
-
-
-end;
-
 procedure TfrmTracer.FormShow(Sender: TObject);
 var minwidth: integer;
 begin
@@ -2436,8 +1769,6 @@ begin
   pnlRegisters.font.size:=10;
   pnlFlags.Font.size:=10;
   pnlSegments.font.size:=10;
-
-  ApplyFontColor(Panel1, font.color);
 
   Panel1Resize(panel1);
 

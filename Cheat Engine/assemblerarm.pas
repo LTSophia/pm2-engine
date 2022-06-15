@@ -44,12 +44,11 @@ end;
   function getRegNumber(regstring: string): integer;
 
 
-
   function ArmAssemble(address: int32; instruction: string; var bytes: TAssemblerBytes): boolean;
 
 implementation
 
-uses DisassemblerArm, ProcessHandlerUnit, DisAssemblerARM64;
+uses DisassemblerArm;
 
 resourcestring
   rsTheValue = 'The value ';
@@ -80,9 +79,6 @@ type
   TOpcodeData=record
     opcode: string;
     parser: TParser;
-    //scanner
-    //bitmask
-    //bits
   end;
 
 
@@ -105,6 +101,7 @@ const OpcodeList : array [0..OpcodeCount-1] of TOpcodeData= (
   (opcode: 'DD'; parser:@DefineDwordParser),
 
   (opcode: 'EOR'; parser:@DataProcessingParser),
+
   (opcode: 'LDR'; parser:@SingleDataParser),
   (opcode: 'LDM'; parser:@MultiDataParser),
   (opcode: 'MOV'; parser:@DataProcessingParser),
@@ -114,9 +111,6 @@ const OpcodeList : array [0..OpcodeCount-1] of TOpcodeData= (
   (opcode: 'MLA'; parser:@MULParser),
   (opcode: 'MUL'; parser:@MULParser),
   (opcode: 'ORR'; parser:@DataProcessingParser),
- // (opcode: 'PUSH'; parser:@PushParser),
- // (opcode: 'POP'; parser:@PushParser),
-
   (opcode: 'RSB'; parser:@DataProcessingParser),
   (opcode: 'RSC'; parser:@DataProcessingParser),
   (opcode: 'SUB'; parser:@DataProcessingParser),
@@ -1190,23 +1184,8 @@ var
   b: Tassemblerbytes;
 
   oldlength: integer;
-  d64: TArm64Instructionset;
 begin
   result:=false;
-
-  if processhandler.is64Bit then
-  begin
-    try
-      r:=d64.assemble(address, instruction);
-      setlength(bytes,4);
-      pdword(@bytes[0])^:=r;
-      exit(true);
-    except
-      exit(false);
-    end;
-
-  end;
-
   r:=$ffffffff;
   setlength(bytes,0);
 

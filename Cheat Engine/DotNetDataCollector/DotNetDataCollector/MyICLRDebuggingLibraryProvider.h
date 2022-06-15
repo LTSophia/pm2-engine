@@ -11,14 +11,13 @@ class CMyICLRDebuggingLibraryProvider :
 private:
 	long m_ref;
 	ICLRRuntimeInfo *RuntimeInfo;
-	WCHAR *dotnetcorepath;
 
 public:
-	CMyICLRDebuggingLibraryProvider(ICLRRuntimeInfo *rti, WCHAR *path)
+	CMyICLRDebuggingLibraryProvider(ICLRRuntimeInfo *rti)
 	{
 		m_ref = 1;
-		RuntimeInfo = rti;
-		dotnetcorepath = path;		
+		RuntimeInfo=rti;
+		
 	}
 
 	~CMyICLRDebuggingLibraryProvider()

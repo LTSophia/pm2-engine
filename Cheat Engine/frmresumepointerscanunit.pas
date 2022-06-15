@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   ExtCtrls, ComCtrls, Menus, registry, multilineinputqueryunit, CEFuncProc,
-  math, types, betterControls;
+  math, types;
 
 resourcestring
   rsRPSIpList = 'IP List';
@@ -65,7 +65,7 @@ implementation
 
 { TfrmResumePointerscan }
 
-uses DPIHelper, mainunit2;
+uses DPIHelper;
 
 procedure TfrmResumePointerscan.updateFileList;
 var
@@ -173,7 +173,7 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\'+strCheatEngine,false) then
+    if Reg.OpenKey('\Software\Cheat Engine',false) then
     begin
       if reg.ValueExists('Worker IP List') then
         iplist.Text:=reg.ReadString('Worker IP List');
@@ -216,7 +216,7 @@ begin
     if MultilineInputQuery(rsRPSIpList,rsRPSEnterTheIpAddressesToNotifyExplicitly, iplist) then  //save the new ip list
     begin
       Reg.RootKey := HKEY_CURRENT_USER;
-      if Reg.OpenKey('\Software\'+strCheatEngine,true) then
+      if Reg.OpenKey('\Software\Cheat Engine',true) then
         reg.WriteString('Worker IP List', iplist.text);
     end;
 

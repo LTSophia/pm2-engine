@@ -5,7 +5,7 @@ unit diagramtypes;
 interface
 
 uses
-  Classes, SysUtils, Graphics, Controls{$ifdef windows}, GL{$endif}, betterControls;
+  Classes, SysUtils, Graphics, Controls{$ifdef windows}, GL{$endif};
 
 type
   TDiagramBlockSide=(dbsTop, dbsLeft, dbsRight, dbsBottom, dbsTopLeft, dbsTopRight, dbsBottomLeft, dbsBottomRight);

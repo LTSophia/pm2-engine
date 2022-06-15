@@ -44,7 +44,6 @@ function loadCEShare()
   require("ceshare_permissions")
   require("ceshare_comments")
   require("ceshare_requests")
-  require("ceshare_fulltablelist")
   
   --add "CE Share menu items"
   local miCESHARETopMenuItem=createMenuItem(MainForm)
@@ -70,20 +69,6 @@ function loadCEShare()
   miPublishCheat.Name='miPublishCheat';
   miPublishCheat.Visible=false
   miCESHARETopMenuItem.add(miPublishCheat)
-  
-  local miDivider=createMenuItem(MainForm)
-  miDivider.Caption='-'
-  miDivider.Visible=true
-  miCESHARETopMenuItem.add(miDivider)
-  
-  local miViewAllTables=createMenuItem(MainForm)
-  miViewAllTables.Caption=translate('View all available tables')
-  miViewAllTables.OnClick=ceshare.ViewAllTablesClick
-  miViewAllTables.Name='miViewAllTables';
-  miViewAllTables.Visible=true
-  miCESHARETopMenuItem.add(miViewAllTables)  
-  
-  
 
   --check requestsc
   
@@ -164,57 +149,24 @@ if f then
 else
   --first time setup, ask the user for a ceshare base url
   ceshare.initialSetup=createFormFromFile(ceshare.formpath..'InitialSetup.FRM')
-  
-
-  
   loadCEShareServerListInCombobox(ceshare.initialSetup.cbCEShareURL)
-  ceshare.base=''  
+ 
   
   ceshare.initialSetup.Position='poScreenCenter'
-  
-      
-  ceshare.initialSetup.Constraints.MinWidth=MainForm.Width*1.2
-  ceshare.initialSetup.Constraints.MaxWidth=MainForm.Width*1.8
-  
   ceshare.initialSetup.AutoSize=true
-  
-
-
-  ceshare.initialSetup.formStyle='fsStayOnTop'
-  ceshare.initialSetup.btnOK.OnClick=function()
+  if ceshare.initialSetup.showModal()==mrOK then
     if ceshare.initialSetup.cbCEShareURL.ItemIndex==-1 then
       ceshare.base=ceshare.initialSetup.cbCEShareURL.Text
     else
       ceshare.base=ceshare.ceshareserverlist[ceshare.initialSetup.cbCEShareURL.ItemIndex+1].base
     end   
-  
-    local f=io.open(ceshare.path..[[server.txt]],'wb')
-    if f then
-      f:write(ceshare.base)
-      f:close()  
-    end
-
-    ceshare.initialSetup.close()    
+  else
+    ceshare.base=''  
   end
   
-  ceshare.initialSetup.btnCancel.OnClick=function() ceshare.initialSetup.close() end
-  ceshare.initialSetup.OnClose=function()
-    ceshare.initialSetup=nil
-    return caFree
-  end
-
-  --create an empty file so this will never be shown ever again  
-  local f=io.open(ceshare.path..[[server.txt]],'wb')
-  if f then
-    f:close()  
-  end
-  
-  ceshare.initialSetup.show()  
-  ceshare.initialSetup.AutoSize=false
-  ceshare.initialSetup.Constraints.MinWidth=0
-  ceshare.initialSetup.Constraints.MaxWidth=0
-  
-
+  f=io.open(ceshare.path..[[server.txt]],'wb')
+  f:write(ceshare.base)
+  f:close()  
 end
 
 ceshare.ceversion=getCEVersion()
@@ -247,11 +199,10 @@ local node=sf.SettingsTreeView.Items.insert(insertNode, translate("CEShare"))
 node.data=userDataToInteger(ceshare.settingsTab)
 
 local originalSettingsCloseEvent=sf.OnClose
-sf.OnClose=function(s, closeAction)
-   
-  local r=closeAction
+sf.OnClose=function(s)
+  local r=caHide
   if originalSettingsCloseEvent then
-    r=originalSettingsCloseEvent(s, closeAction)
+    r=originalSettingsCloseEvent(s)
   end
   
   if s.ModalResult==mrOK then

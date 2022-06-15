@@ -7,7 +7,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  CheckLst, maps, ExtCtrls, syncobjs, betterControls;
+  CheckLst, maps, ExtCtrls, syncobjs;
 
 type
 

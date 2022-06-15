@@ -22,16 +22,15 @@ uses
   math, commonTypeDefs;
 {$endif}
 
-type
-  TConversionRoutine=function(data: pointer):integer; stdcall;
-  TReverseConversionRoutine=procedure(i: integer; output: pointer); stdcall;
+type TConversionRoutine=function(data: pointer):integer; stdcall;
+type TReverseConversionRoutine=procedure(i: integer; output: pointer); stdcall;
 
 //I should have used cdecl from the start
-  TConversionRoutine2=function(data: pointer; address: ptruint):integer; cdecl;
-  TReverseConversionRoutine2=procedure(i: integer; address: ptruint; output: pointer); cdecl;
+type TConversionRoutine2=function(data: pointer; address: ptruint):integer; cdecl;
+type TReverseConversionRoutine2=procedure(i: integer; address: ptruint; output: pointer); cdecl;
 
-  TCustomTypeException=class(Exception);
 
+type
   TCustomTypeType=(cttAutoAssembler, cttLuaScript, cttPlugin);
   TCustomType=class
   private
@@ -47,12 +46,16 @@ type
     routine: pointer;
     reverseroutine: pointer;
 
+
+    {$ifndef jni}
+    c: TCEAllocArray;
+    ce: TCEExceptionListArray;
+    {$endif}
     currentscript: tstringlist;
     fCustomTypeType: TCustomTypeType; //plugins set this to cttPlugin
     fScriptUsesFloat: boolean;
     fScriptUsesCDecl: boolean;
 
-    disableinfo: tobject;//Tdisableinfo;
 
 
     procedure unloadscript;
@@ -65,7 +68,9 @@ type
 
     //these 4 functions are just to make it easier
     procedure ConvertToData(f: single; output: pointer; address: ptruint); overload;
+    function ConvertFromData(data: pointer; address: ptruint): single; overload;
     procedure ConvertToData(i: integer; output: pointer; address: ptruint); overload;
+    function ConvertFromData(data: pointer; address: ptruint): integer; overload;
 
     function ConvertDataToInteger(data: pointer; address: ptruint): integer;
     function ConvertDataToIntegerLua(data: pbytearray; address: ptruint): integer;
@@ -97,7 +102,6 @@ type
   PCustomType=^TCustomType;
 
 function GetCustomTypeFromName(name:string):TCustomType; //global function to retrieve a custom type
-
 
 function registerCustomTypeLua(L: PLua_State): integer; cdecl;
 function registerCustomTypeAutoAssembler(L: PLua_State): integer; cdecl;
@@ -151,7 +155,7 @@ begin
     if uppercase(TCustomType(customtypes[i]).name)=uppercase(n) then
     begin
       if TCustomType(customtypes[i])<>self then
-        raise TCustomTypeException.create(Format(rsACustomTypeWithNameAlreadyExists, [n]));
+        raise exception.create(Format(rsACustomTypeWithNameAlreadyExists, [n]));
     end;
 
   fname:=n;
@@ -165,7 +169,7 @@ begin
     if uppercase(TCustomType(customtypes[i]).functiontypename)=uppercase(n) then
     begin
       if TCustomType(customtypes[i])<>self then
-        raise TCustomTypeException.create(Format(rsACustomFunctionTypeWithNameAlreadyExists, [n]));
+        raise exception.create(Format(rsACustomFunctionTypeWithNameAlreadyExists, [n]));
     end;
 
   ffunctiontypename:=n;
@@ -453,15 +457,22 @@ begin
   ConvertFloatToData(f, output, address);
 end;
 
+function TCustomType.ConvertFromData(data: pointer; address: ptruint): single;
+begin
+  result:=ConvertDataToFloat(data, address);
+end;
+
 procedure TCustomType.ConvertToData(i: integer; output: pointer; address: ptruint);
 begin
   ConvertIntegerToData(i, output, address);
 end;
 
-
+function TCustomType.ConvertFromData(data: pointer; address: ptruint): integer;
+begin
+  result:=ConvertDataToInteger(data, address);
+end;
 
 procedure TCustomType.unloadscript;
-var enablepos, disablepos: integer;
 begin
   {$IFNDEF jni}
   if fCustomTypeType=cttAutoAssembler then
@@ -471,10 +482,7 @@ begin
 
     if currentscript<>nil then
     begin
-      getenableanddisablepos(currentscript, enablepos, disablepos);
-      if disablepos>=0 then
-        autoassemble(currentscript,false, false, false, true, tdisableinfo(disableinfo));
-
+      autoassemble(currentscript,false, false, false, true, c, ce); //popupmessages is false so it won't complain if there is no disable section
       freeandnil(currentscript);
     end;
   end;
@@ -504,8 +512,9 @@ var i: integer;
   newreverseroutine, oldreverseroutine: pointer;
   newbytesize, oldbytesize: integer;
 
-  newdisableinfo: TDisableInfo;
-
+{$IFNDEF jni}
+  oldallocarray: TCEAllocArray;
+{$ENDIF}
 begin
 
   {$IFNDEF jni}
@@ -518,47 +527,49 @@ begin
   oldScriptUsesFloat:=fScriptUsesFloat;
   oldScriptUsesCDecl:=fScriptUsesCDecl;
 
+  setlength(oldallocarray, length(c));
+  for i:=0 to length(c)-1 do
+    oldallocarray[i]:=c[i];
+
   try
     //if anything goes wrong the old values get set back
 
     if not luascript then
     begin
+      setlength(c,0);
       s:=tstringlist.create;
       try
         s.text:=script;
 
-
-        newdisableinfo:=tdisableinfo.create;
-
-        if autoassemble(s,false, true, false, true, newdisableinfo) then
+        if autoassemble(s,false, true, false, true, c, ce) then
         begin
           newpreferedalignment:=-1;
           newScriptUsesFloat:=false;
           newScriptUsesCDecl:=false;
 
           //find alloc "ConvertRoutine"
-          for i:=0 to length(newdisableinfo.allocs)-1 do
+          for i:=0 to length(c)-1 do
           begin
-            if uppercase(newdisableinfo.allocs[i].varname)='TYPENAME' then
-              name:=pchar(newdisableinfo.allocs[i].address);
+            if uppercase(c[i].varname)='TYPENAME' then
+              name:=pchar(c[i].address);
 
-            if uppercase(newdisableinfo.allocs[i].varname)='CONVERTROUTINE' then
-              newroutine:=pointer(newdisableinfo.allocs[i].address);
+            if uppercase(c[i].varname)='CONVERTROUTINE' then
+              newroutine:=pointer(c[i].address);
 
-            if uppercase(newdisableinfo.allocs[i].varname)='BYTESIZE' then
-              newbytesize:=pinteger(newdisableinfo.allocs[i].address)^;
+            if uppercase(c[i].varname)='BYTESIZE' then
+              newbytesize:=pinteger(c[i].address)^;
 
-            if uppercase(newdisableinfo.allocs[i].varname)='PREFEREDALIGNMENT' then
-              newpreferedalignment:=pinteger(newdisableinfo.allocs[i].address)^;
+            if uppercase(c[i].varname)='PREFEREDALIGNMENT' then
+              newpreferedalignment:=pinteger(c[i].address)^;
 
-            if uppercase(newdisableinfo.allocs[i].varname)='USESFLOAT' then
-              newScriptUsesFloat:=pbyte(newdisableinfo.allocs[i].address)^<>0;
+            if uppercase(c[i].varname)='USESFLOAT' then
+              newScriptUsesFloat:=pbyte(c[i].address)^<>0;
 
-            if uppercase(newdisableinfo.allocs[i].varname)='CALLMETHOD' then
-               newScriptUsesCDecl:=pbyte(newdisableinfo.allocs[i].address)^<>0;
+            if uppercase(c[i].varname)='CALLMETHOD' then
+               newScriptUsesCDecl:=pbyte(c[i].address)^<>0;
 
-            if uppercase(newdisableinfo.allocs[i].varname)='CONVERTBACKROUTINE' then
-              newreverseroutine:=pointer(newdisableinfo.allocs[i].address);
+            if uppercase(c[i].varname)='CONVERTBACKROUTINE' then
+              newreverseroutine:=pointer(c[i].address);
           end;
 
           if newpreferedalignment=-1 then
@@ -585,10 +596,8 @@ begin
           currentscript:=tstringlist.create;
           currentscript.text:=script;
 
-          if disableinfo<>nil then
-            freeandnil(disableinfo);
 
-          disableinfo:=newdisableinfo;
+
         end;
 
       finally
@@ -604,7 +613,7 @@ begin
         begin
           returncount:=lua_gettop(luavm);
           if returncount<>3 then
-            raise TCustomTypeException.create(rsOnlyReturnTypenameBytecountAndFunctiontypename);
+            raise exception.create(rsOnlyReturnTypenameBytecountAndFunctiontypename);
 
           //-1=functiontypename
           //-2=bytecount
@@ -613,9 +622,9 @@ begin
           bytesize:=lua_tointeger(luavm,-2);
           tn:=lua.lua_tostring(luavm,-3);
 
-          if bytesize=0 then raise TCustomTypeException.create(rsBytesizeIs0);
-          if ftn=nil then raise TCustomTypeException.create(rsInvalidFunctiontypename);
-          if tn=nil then raise TCustomTypeException.create(rsInvalidTypename);
+          if bytesize=0 then raise exception.create(rsBytesizeIs0);
+          if ftn=nil then raise exception.create(rsInvalidFunctiontypename);
+          if tn=nil then raise exception.create(rsInvalidTypename);
 
           name:=tn;
           functiontypename:=ftn;
@@ -627,8 +636,8 @@ begin
           if lua_gettop(luavm)>0 then
           begin
             error:=lua.lua_tostring(luavm,-1);
-            raise TCustomTypeException.create(error);
-          end else raise TCustomTypeException.create(rsUndefinedError);
+            raise exception.create(error);
+          end else raise exception.create(rsUndefinedError);
         end;
 
       finally
@@ -667,9 +676,11 @@ begin
 
       fScriptUsesCDecl:=oldScriptUsesCDecl;
 
+      setlength(c,length(oldallocarray));
+      for i:=0 to length(oldallocarray)-1 do
+        c[i]:=oldallocarray[i];
 
-
-      raise TCustomTypeException.create(e.Message); //and now raise the error
+      raise exception.create(e.Message); //and now raise the error
     end;
   end;
   {$ENDIF}
@@ -738,9 +749,6 @@ end;
 destructor TCustomType.destroy;
 begin
   remove;
-
-  //call destroy watchers
-
   inherited destroy;
 end;
 
@@ -875,17 +883,7 @@ begin
 
   lua_pop(L, parameters);
 
-  try
-    ct:=TCustomType.CreateTypeFromAutoAssemblerScript(script);
-  except
-    on e: exception do
-    begin
-      lua_pushnil(L);
-      lua_pushstring(L,e.message);
-      exit(2);
-    end;
-  end;
-
+  ct:=TCustomType.CreateTypeFromAutoAssemblerScript(script);
   if parameters=3 then //old version support
   begin
     ct.name:=typename;

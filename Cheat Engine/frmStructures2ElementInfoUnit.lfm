@@ -1,7 +1,7 @@
 object frmStructures2ElementInfo: TfrmStructures2ElementInfo
-  Left = 386
+  Left = 442
   Height = 299
-  Top = 296
+  Top = 393
   Width = 314
   AutoSize = True
   BorderStyle = bsSingle
@@ -10,7 +10,7 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
   ClientWidth = 314
   OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '2.2.2.0'
+  LCLVersion = '1.6.0.4'
   object Label1: TLabel
     AnchorSideLeft.Control = Label3
     AnchorSideTop.Control = edtOffset
@@ -170,7 +170,7 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
       'String'
       'Unicode String'
       'Array of Byte'
-      'Pointer/Nested Structure'
+      'Pointer'
     )
     OnChange = cbTypeChange
     Style = csDropDownList
@@ -184,7 +184,7 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
     Left = 20
     Height = 15
     Top = 83
-    Width = 24
+    Width = 26
     BorderSpacing.Top = 3
     Caption = 'Type'
     ParentColor = False
@@ -208,7 +208,7 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
     Left = 20
     Height = 19
     Top = 130
-    Width = 89
+    Width = 88
     BorderSpacing.Top = 8
     Caption = 'Hexadecimal'
     OnChange = cbHexadecimalChange
@@ -218,11 +218,11 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
     AnchorSideLeft.Control = cbHexadecimal
     AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Control = cbHexadecimal
-    Left = 117
+    Left = 124
     Height = 19
     Top = 130
     Width = 56
-    BorderSpacing.Left = 8
+    BorderSpacing.Left = 16
     Caption = 'Signed'
     OnChange = cbSignedChange
     TabOrder = 4
@@ -295,25 +295,12 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
     Left = 20
     Height = 19
     Top = 239
-    Width = 254
+    Width = 253
     BorderSpacing.Top = 4
     BorderSpacing.Right = 20
     Caption = 'Expanding this node will change the address'
     Enabled = False
     TabOrder = 11
-  end
-  object cbNestedStructure: TCheckBox
-    AnchorSideLeft.Control = cbSigned
-    AnchorSideLeft.Side = asrBottom
-    Left = 181
-    Height = 19
-    Top = 130
-    Width = 108
-    BorderSpacing.Left = 8
-    Caption = 'Nested Structure'
-    OnChange = cbNestedStructureChange
-    TabOrder = 12
-    Visible = False
   end
   object ColorDialog1: TColorDialog
     Color = clBlack
@@ -339,7 +326,7 @@ object frmStructures2ElementInfo: TfrmStructures2ElementInfo
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
-    Left = 232
-    Top = 133
+    left = 180
+    top = 133
   end
 end

@@ -319,18 +319,18 @@ BOOLEAN WriteProcessMemory(DWORD PID,PEPROCESS PEProcess,PVOID Address,DWORD Siz
 				}
 
 				
-				if ((!loadedbydbvm) && ((KernelWritesIgnoreWP) || ((UINT_PTR)target >= 0x8000000000000000ULL)))
+				if ((loadedbydbvm) || ((UINT_PTR)target < 0x8000000000000000ULL))
+				{
+					RtlCopyMemory(target, source, Size);
+					ntStatus = STATUS_SUCCESS;
+				}
+				else
 				{
 					i = NoExceptions_CopyMemory(target, source, Size);
 					if (i != (int)Size)
 						ntStatus = STATUS_UNSUCCESSFUL;
 					else
-						ntStatus = STATUS_SUCCESS;					
-				}
-				else
-				{
-					RtlCopyMemory(target, source, Size);
-					ntStatus = STATUS_SUCCESS;
+						ntStatus = STATUS_SUCCESS;
 				}
 				   
 				if ((loadedbydbvm) || (disabledWP))
@@ -717,14 +717,6 @@ BOOL walkPagingLayout(PEPROCESS PEProcess, UINT_PTR MaxAddress, PRESENTPAGECALLB
 				{		
 					currentAddress &= 0xffffffffc0000000ULL;
 					currentAddress += 0x40000000;						
-					continue;
-				}
-
-				if (PPDPE->PS) //some systems have 1GB page support. But not sure windows uses these
-				{
-					DbgPrint("----->%llx is a 1GB range", currentAddress);
-					OnPresentPage(currentAddress, currentAddress + 0x40000000 - 1, PPDPE);
-					currentAddress += 0x40000000;
 					continue;
 				}
 

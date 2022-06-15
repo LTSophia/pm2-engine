@@ -6,7 +6,7 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, LResources, ExtCtrls{$ifdef darwin},macport{$endif}, betterControls;
+  Dialogs, StdCtrls, LResources, ExtCtrls;
 
 type
 
@@ -20,7 +20,6 @@ type
     Panel1: TPanel;
     Timer1: TTimer;
     procedure FormShow(Sender: TObject);
-    procedure Label1Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
@@ -38,11 +37,7 @@ function InputBoxTop(const ACaption, APrompt, ADefault: string; Aselecttext: boo
 implementation
 
 
-{$ifndef tester}
 uses MemoryBrowserFormUnit;
-{$else}
-uses unit1;
-{$endif}
 
 
   
@@ -143,8 +138,6 @@ begin
 end;
 
 procedure TInputboxTop.FormShow(Sender: TObject);
-var t: string;
-    i: integer;
 begin
   if combobox<>nil then
     combobox.SetFocus
@@ -163,25 +156,18 @@ begin
   end else
   begin
     edit1.SelLength:=0;
-    t:=edit1.text;
-    edit1.SelStart:=length(t);
+    edit1.SelStart:=length(edit1.Text);
 
     if combobox<>nil then
     begin
       combobox.SelLength:=0;
-      t:=edit1.text;
-      combobox.SelStart:=length(t);
-      combobox.SelLength:=length(combobox.Text)-1;
+      combobox.SelStart:=length(combobox.Text);
+
     end;
   end;
 
   Constraints.MinWidth:=panel1.Width+8;
 
-end;
-
-procedure TInputboxTop.Label1Click(Sender: TObject);
-begin
-  combobox.SelectAll;
 end;
 
 procedure TInputboxTop.Timer1Timer(Sender: TObject);

@@ -54,13 +54,6 @@ type TModuleInfo=record
   symbolsLoaded: boolean; //true if the api symbols have been handled
   hasStructInfo: boolean;
   databaseModuleID: dword;
-  elfpart: integer; //for network module list.  if elfpart is not 0, it's not the base so no need for symbols
-  sections: array of record
-    name: string;
-    size: dword;
-    address: ptruint;
-    fileaddress: ptruint;
-  end;
 end;
 
 

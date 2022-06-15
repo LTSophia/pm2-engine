@@ -33,13 +33,11 @@ Modified for Cheat Engine use because filenames differ between 32 and 64-bit (al
 
 }
 
-
 {$mode objfpc}{$H+}
 
 interface
 
 uses
-  {$ifdef darwin}macport,{$endif}
   Classes, SysUtils, LResources, GetText, Controls, typinfo, FileUtil, LCLProc,
   Translations, IniFiles, Dialogs, LazUTF8, LazFileUtils;
 
@@ -72,9 +70,6 @@ var
   currentTranslation: string;
 
 procedure doTranslation;
-{$ifdef altname}
-function altnamer(s: string): string;
-{$endif}
 
 implementation
 
@@ -88,24 +83,20 @@ function FindLocaleFileName(LCExt: string): string;
 var
   Lang, T: string;
   i: integer;
-  languageIniFile: string;
   lini: TIniFile;
 
   function GetLocaleFileName(const LangID, LCExt: string): string;
   begin
-    {$ifdef Darwin}
-    OutputDebugString('GetLocaleFileName("'+LangID+'","'+LCExt+'")');
-    {$endif}
     if LangID <> '' then
     begin
       //ParamStrUTF8(0) is said not to work properly in linux, but I've tested it
-      Result := cheatenginedir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine'+LCEXT;
+      Result := cheatenginedir + 'languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine'+LCEXT;
       if FileExists(Result) then exit;
 
-      Result := cheatenginedir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-x86_64'+LCEXT;
+      Result := cheatenginedir + 'languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-x86_64'+LCEXT;
       if FileExists(Result) then exit;
 
-      Result := cheatenginedir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-i386'+LCEXT;
+      Result := cheatenginedir + 'languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-i386'+LCEXT;
       if FileExists(Result) then exit;
 
     end;
@@ -127,27 +118,13 @@ begin
   if Lang = '' then
     Lang := GetEnvironmentVariableUTF8('LANG');
 
-
-  languageIniFile:=cheatenginedir+ {$ifdef darwin}'../'+{$endif}'Languages' + DirectorySeparator+'language.ini';
-  {$ifdef darwin}
-  OutputDebugString('languageIniFile='+languageIniFile);
-  {$endif}
-
-
-  if (lang = '') and (FileExists(languageIniFile)) then
+  if (lang = '') and (FileExists(cheatenginedir+ 'languages' + DirectorySeparator+'language.ini')) then
   begin
     try
-      lini:=TIniFile.Create(languageIniFile);
+      lini:=TIniFile.Create(cheatenginedir+'languages' + DirectorySeparator+'language.ini');
       try
         lang:=lini.ReadString('Language','PreferedLanguage','');
-        if lang='*' then
-        begin
-          {$ifdef darwin}
-          outputdebugstring('ini lang=*.  Ask later');
-          {$endif}
-          exit('');
-
-        end;
+        if lang='*' then exit('');
       finally
         lini.Free;
       end;
@@ -282,63 +259,28 @@ end;
 var LocalTranslator: TAbstractTranslator;
 
 
-{$ifdef altname}
-type
-  TAltnameTranslator=class(TAbstractTranslator)
-  public
-    procedure TranslateStringProperty(Sender:TObject; const Instance: TPersistent; PropInfo: PPropInfo; var Content:string); override;
-  end;
-
-
-Function altnamerri(Name,Value : AnsiString; Hash : Longint; arg:pointer) : AnsiString;
-begin
-  result:=altnamer(value);
-end;
-
-
-procedure TAltnameTranslator.TranslateStringProperty(Sender:TObject; const Instance: TPersistent; PropInfo: PPropInfo; var Content:string);
-begin
-  Content:=altnamer(content);
-end;
-
-{$endif}
-
 procedure doTranslation;
 var
   Dot1: integer;
   LCLPath: string;
+
 begin
   //It is safe to place code here as no form is initialized before unit
   //initialization made
 //  if specificlocale then
-  {$ifdef darwin}
-  OutputDebugString('macOS: doTranslation is executed');
-  {$endif}
+
 
   LocalTranslator := nil;
   // search first po translation resources
   try
      lcfn := FindLocaleFileName('.po');
 
-     {$ifdef darwin}
-     OutputDebugString('locale filename = '+lcfn);
-     {$endif}
-
-     {$ifdef altname}
-     SetResourceStrings(@altnamerri,nil);
-     LRSTranslator:= TAltnameTranslator.create;
-     LocalTranslator:=LRSTranslator;
-//     SetUnitResourceStrings(
-     {$endif}
      if lcfn='' then exit;
-
 
      translationfilepath:=ExtractFilePath(lcfn);
      currentTranslation:=ExtractFileName(ExtractFileDir(translationfilepath));
 
      lcfn:=SysToUTF8(lcfn);
-
-
 
      if lcfn <> '' then
      begin
@@ -394,26 +336,6 @@ begin
       freeandnil(LRSTranslator);
   end;
 end;
-
-
-{$ifdef altname}
-function altnamer(s: string): string;
-begin
-  s:=StringReplace(s, 'Cheat Engine','Runtime Modifier',[rfReplaceAll, rfIgnoreCase]);
-  s:=StringReplace(s, 'cheating in','modding',[rfReplaceAll]);
-  s:=StringReplace(s, 'cheating','modding',[rfReplaceAll]);
-  s:=StringReplace(s, 'cheatengine','runtimemodifier',[rfReplaceAll]);
-  s:=StringReplace(s, 'runtimemodifier.org','cheatengine.org',[rfReplaceAll]);
-  s:=StringReplace(s, 'cheat','modification',[rfReplaceAll]);
-  s:=StringReplace(s, 'Tutorial-','rtm-Tutorial-',[rfReplaceAll, rfIgnoreCase]);
-  s:=StringReplace(s, 'Cheat Table','Code Table',[rfReplaceAll]);
-  s:=StringReplace(s, 'CheatTable','Codetable',[rfReplaceAll]);
-
-  s:=StringReplace(s, ' trainer',' mod-tool ',[rfReplaceAll]);
-  s:=StringReplace(s, ' Trainer',' Mod-Tool ',[rfReplaceAll]);
-  exit(s);
-end;
-{$endif}
 
 
 finalization

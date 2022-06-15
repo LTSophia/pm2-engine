@@ -11,7 +11,7 @@ uses
   {$ifdef windows}
   windows,
   {$endif}
-  Classes, SysUtils, graphics, DiagramTypes, Diagramblock{$ifdef windows}, gl, glu, GLext{$endif}, betterControls;
+  Classes, SysUtils, graphics, DiagramTypes, Diagramblock{$ifdef windows}, gl, glu, GLext{$endif};
 
 type
 
@@ -924,7 +924,7 @@ begin
   if useCustomArrowSize then f.WriteDWord(fCustomArrowSize);
 
   f.writebyte(ifthen(useCustomArrowStyles,1,0));
-  if useCustomArrowStyles then f.Write(fCustomArrowStyles, sizeof(fCustomArrowSize));
+  if useCustomArrowStyles then f.WriteByte(byte(fCustomArrowStyles));
 
 end;
 
@@ -984,7 +984,9 @@ begin
   if useCustomArrowSize then fCustomArrowSize:=f.ReadDWord;
 
   useCustomArrowStyles:=f.readbyte=1;
-  if useCustomArrowStyles then f.read(fCustomArrowStyles, sizeof(fCustomArrowStyles));
+  if useCustomArrowStyles then fCustomArrowStyles:=TArrowStyles(f.ReadByte);
+
+
 end;
 
 constructor TDiagramLink.create(diagramconfig: TDiagramConfig; _origin,_destination: TDiagramBlockSideDescriptor);

@@ -30,23 +30,18 @@ type
     function readInteger(registryValueName:string; def: integer=0): integer;
     procedure writeString(registryValueName: string; value: string);
     function readString(registryValueName:string; def: string=''): string;
-    procedure writeStrings(registryValueName: string; sl: TStrings);
-    procedure readStrings(registryValueName: string; sl: TStrings);
-
   end;
 
 var cereg: TCEReg;
 
 implementation
 
-uses mainunit2;
-
 function TCEReg.getRegistry(force: boolean):boolean;
 begin
   {$ifdef darwin}
   //all registry objects access the same object. and that object has the current key set...
   if reg<>nil then
-    reg.OpenKey('\Software\'+strCheatEngine+'\', false);
+    reg.OpenKey('\Software\Cheat Engine\', false);
 
 
   {$endif}
@@ -59,7 +54,7 @@ begin
     if reg=nil then
       reg:=tregistry.create;
 
-    openedregistry:=reg.OpenKey('\Software\'+strCheatEngine+'\', force);
+    openedregistry:=reg.OpenKey('\Software\Cheat Engine\', force);
 
     if (not openedregistry) then
     begin
@@ -79,30 +74,6 @@ begin
 
 
   result:=openedregistry;
-end;
-
-procedure TCEReg.writeStrings(registryValueName: string; sl: TStrings);
-begin
-  if getregistry(true) then
-  begin
-    try
-      reg.WriteStringList(registryValueName, sl);
-    except
-    end;
-  end;
-end;
-
-procedure TCEReg.readStrings(registryValueName: string; sl: TStrings);
-begin
-  sl.Clear;
-
-  if getregistry(false) and (reg.ValueExists(registryValueName)) then
-  begin
-    try
-      reg.ReadStringList(registryValueName, sl);
-    except
-    end;
-  end;
 end;
 
 function TCEReg.readBool(registryValueName: string; def: boolean=false): boolean;

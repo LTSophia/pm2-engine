@@ -6,8 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ComCtrls, ExtCtrls, Menus,newkernelhandler,cefuncproc, commonTypeDefs,
-  betterControls, DBK32functions;
+  StdCtrls, ComCtrls, ExtCtrls, Menus,newkernelhandler,cefuncproc, commonTypeDefs;
 
 type TPageData=record
   level: integer;
@@ -129,7 +128,7 @@ var cr3: QWORD;
   cr4: DWORD;
 begin
   {$ifdef windows}
-  if DBK32functions.getcr3(processhandle, cr3) then
+  if getcr3(processhandle, cr3) then
     edtcr3.text:=inttohex(cr3,8);
 
   {$ifdef cpu64}
@@ -401,11 +400,14 @@ begin
   finally
     freememandnil(buf);
   end;
+
+  if pd<>nil then
+    freememandnil(pd);
   {$endif}
 end;
 
 procedure TfrmPaging.FillNodeLevel3(node: TTreenode);
-var
+var pd: PPageData=nil;
   buf: pointer;
   q: Puint64Array absolute buf;
   max: integer;
@@ -417,7 +419,6 @@ var
 
   virtualbase: qword;
   physicalbase: qword;
-  pd: PPageData=nil;
 begin
   //fill in the pagedir pointer table
   {$ifdef windows}
@@ -454,8 +455,10 @@ begin
         a:=virtualbase+qword(i*qword($40000000));
         b:=a+qword($3fffffff);
 
-        getmem(pd,sizeof(TPageData));
-        FillByte(pd^,sizeof(TPageData),0);
+
+
+
+        pd:=getmem(sizeof(TPageData));
         pd^.va:=a;
         pd^.pa:=q[i] and qword(MAXPHYADDRMASKPB);
         pd^.flags:=q[i] and (not qword(MAXPHYADDRMASKPB));
@@ -468,6 +471,7 @@ begin
           tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')');
 
         tn.data:=pd;
+
         tn.HasChildren:=true;
       end;
     end;
@@ -477,6 +481,9 @@ begin
   finally
     freememandnil(buf);
   end;
+
+  if pd<>nil then
+    freememandnil(pd);
 
   {$endif}
 

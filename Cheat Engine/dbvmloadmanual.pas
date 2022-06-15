@@ -7,7 +7,7 @@ interface
 
 uses
   windows, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, betterControls;
+  StdCtrls, ExtCtrls;
 
 type
 

@@ -13,7 +13,7 @@ uses
   {$endif}
   cefuncproc, newkernelhandler, Classes, SysUtils, FileUtil, LResources,
   Forms, Controls, Graphics, Dialogs, StdCtrls, Menus, stacktrace2, Clipbrd, ComCtrls,
-  strutils, frmSelectionlistunit, maps, betterControls;
+  strutils, frmSelectionlistunit, maps;
 
 type
 
@@ -304,9 +304,7 @@ begin
 end;
 
 procedure TfrmStackView.FormShow(Sender: TObject);
-var
-  x: array of integer;
-  w: integer;
+var x: array of integer;
 begin
   setlength(x,3);
   if LoadFormPosition(self, x) then
@@ -324,18 +322,13 @@ begin
     lvStack.Column[0].Width:=lvStack.Canvas.TextWidth('DDDDDDDD');
     lvStack.Column[1].Width:=lvStack.Canvas.TextWidth('DDDDDDDD');
     {$else}
-    lvStack.Column[0].Width:=lvStack.Canvas.TextWidth('DDDDDDDDDDDDDD');
-    lvStack.Column[1].Width:=lvStack.Canvas.TextWidth('DDDDDDDDDDDDDD');
+    lvStack.Column[0].Width:=lvStack.Canvas.TextWidth('DDDDDDDDDDDDD');
+    lvStack.Column[1].Width:=lvStack.Canvas.TextWidth('DDDDDDDDDDDDD');
 
-    w:=lvStack.Column[0].Width+lvStack.Column[1].Width;
-    if (lvStack.ColumnCount>2) and (lvStack.Column[2].Visible) then
-    begin
-      lvStack.Column[2].Width:=lvStack.Canvas.TextWidth('DDDDDDDDDDDDDD');
-      w:=w+lvStack.Column[2].Width;
-    end;
-
-    clientwidth:=w;
+    if clientwidth<lvStack.Column[0].Width+lvStack.Column[1].Width+20 then
+      lvStack.Column[0].Width:=lvStack.Column[0].Width+lvStack.Column[1].Width+20;
     {$endif}
+
 
   end;
 end;

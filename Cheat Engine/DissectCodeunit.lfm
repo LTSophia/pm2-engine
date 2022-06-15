@@ -1,23 +1,23 @@
 object frmDissectCode: TfrmDissectCode
-  Left = 803
-  Height = 439
-  Top = 245
-  Width = 348
+  Left = 431
+  Height = 350
+  Top = 256
+  Width = 327
   AutoSize = True
   Caption = 'Dissect Code'
-  ClientHeight = 419
-  ClientWidth = 348
+  ClientHeight = 330
+  ClientWidth = 327
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '2.0.8.0'
   object ProgressBar1: TProgressBar
     Left = 0
     Height = 21
-    Top = 398
-    Width = 348
+    Top = 309
+    Width = 327
     Align = alBottom
     ParentShowHint = False
     ShowHint = True
@@ -25,39 +25,35 @@ object frmDissectCode: TfrmDissectCode
   end
   object Panel1: TPanel
     Left = 0
-    Height = 398
+    Height = 309
     Top = 0
-    Width = 214
+    Width = 193
     Align = alClient
+    AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 398
-    ClientWidth = 214
+    ClientHeight = 309
+    ClientWidth = 193
     TabOrder = 0
     object lbModuleList: TListBox
-      AnchorSideTop.Control = Panel2
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = Panel1
-      AnchorSideRight.Side = asrBottom
       Left = 0
       Height = 260
       Top = 49
-      Width = 214
-      Anchors = [akTop, akLeft, akRight]
+      Width = 193
+      Align = alClient
       ItemHeight = 0
       MultiSelect = True
       TabOrder = 0
     end
     object Panel2: TPanel
-      AnchorSideLeft.Control = Panel1
-      AnchorSideTop.Control = Panel1
       Left = 0
       Height = 49
       Top = 0
-      Width = 199
+      Width = 193
+      Align = alTop
       AutoSize = True
       BevelOuter = bvNone
       ClientHeight = 49
-      ClientWidth = 199
+      ClientWidth = 193
       TabOrder = 1
       object Label2: TLabel
         AnchorSideLeft.Control = Panel2
@@ -76,8 +72,8 @@ object frmDissectCode: TfrmDissectCode
         Left = 0
         Height = 15
         Top = 15
-        Width = 199
-        Caption = 'Hold CTRL to select multiple modules'
+        Width = 150
+        Caption = 'Hold CTRL to select multiple'
         ParentColor = False
       end
       object cbIncludesystemModules: TCheckBox
@@ -93,62 +89,16 @@ object frmDissectCode: TfrmDissectCode
         TabOrder = 0
       end
     end
-    object Label8: TLabel
-      AnchorSideTop.Control = lbModuleList
-      AnchorSideTop.Side = asrBottom
-      Left = 0
-      Height = 15
-      Top = 311
-      Width = 101
-      BorderSpacing.Top = 2
-      Caption = 'Custom range start'
-      ParentColor = False
-    end
-    object edtCustomRangeStart: TEdit
-      AnchorSideTop.Control = Label8
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = Panel1
-      AnchorSideRight.Side = asrBottom
-      Left = 0
-      Height = 23
-      Top = 326
-      Width = 214
-      Anchors = [akTop, akLeft, akRight]
-      TabOrder = 2
-    end
-    object Label10: TLabel
-      AnchorSideTop.Control = edtCustomRangeStart
-      AnchorSideTop.Side = asrBottom
-      Left = 0
-      Height = 15
-      Top = 351
-      Width = 101
-      BorderSpacing.Top = 2
-      Caption = 'Custom range stop'
-      ParentColor = False
-    end
-    object edtCustomRangeStop: TEdit
-      AnchorSideTop.Control = Label10
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = Panel1
-      AnchorSideRight.Side = asrBottom
-      Left = 0
-      Height = 23
-      Top = 366
-      Width = 214
-      Anchors = [akTop, akLeft, akRight]
-      TabOrder = 3
-    end
   end
   object Panel3: TPanel
-    Left = 214
-    Height = 398
+    Left = 193
+    Height = 309
     Top = 0
     Width = 134
     Align = alRight
     AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 398
+    ClientHeight = 309
     ClientWidth = 134
     TabOrder = 2
     object Label6: TLabel
@@ -316,12 +266,12 @@ object frmDissectCode: TfrmDissectCode
     Enabled = False
     Interval = 500
     OnTimer = Timer1Timer
-    Top = 80
+    top = 80
   end
   object MainMenu1: TMainMenu
     Images = MainForm.mfImageList
-    Left = 213
-    Top = 283
+    left = 213
+    top = 283
     object MenuItem1: TMenuItem
       Caption = 'File'
       object MenuItem2: TMenuItem
@@ -342,12 +292,12 @@ object frmDissectCode: TfrmDissectCode
     DefaultExt = '.CDC'
     Filter = 'Dissect Code Files (*.CDC)|*.CDC'
     Options = [ofFileMustExist, ofEnableSizing, ofViewDetail]
-    Left = 78
-    Top = 88
+    left = 78
+    top = 88
   end
   object SaveDialog1: TSaveDialog
     Filter = 'Dissect Code Files (*.CDC)|*.CDC'
-    Left = 81
-    Top = 157
+    left = 81
+    top = 157
   end
 end

@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, Menus, betterControls;
+  ExtCtrls, Menus;
 
 type
 
@@ -30,7 +30,6 @@ type
     procedure PopupMenu1Popup(Sender: TObject);
   private
     { private declarations }
-    loadedPosition: boolean;
   public
     { public declarations }
     procedure updateList;
@@ -43,13 +42,13 @@ implementation
 
 {$R *.lfm}
 
-uses UnexpectedExceptionsHelper, CEFuncProc, math;
+uses UnexpectedExceptionsHelper, CEFuncProc;
 
 { TfrmExceptionIgnoreList }
 
 procedure TfrmExceptionIgnoreList.FormCreate(Sender: TObject);
 begin
-  loadedPosition:=LoadFormPosition(self);
+  LoadFormPosition(self);
 end;
 
 procedure TfrmExceptionIgnoreList.btnAddClick(Sender: TObject);
@@ -73,13 +72,6 @@ begin
   updateList;
 
   edtExceptionCode.Width:=btnAdd.Width+2;
-
-  if not loadedPosition then
-  begin
-    clientwidth:=max(clientwidth, canvas.TextWidth(label1.Caption)*2);
-    clientheight:=max(clientheight, canvas.TextHeight('jf')*20);
-
-  end;
 end;
 
 procedure TfrmExceptionIgnoreList.lbExceptionCodeListDblClick(Sender: TObject);

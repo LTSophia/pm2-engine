@@ -18,18 +18,9 @@ extern QWORD FirstFreeAddress;
 extern QWORD extramemory;
 extern QWORD extramemorysize;
 
-extern QWORD contiguousmemoryPA;
-extern QWORD contiguousmemorysize;
-
 extern unsigned char MAXPHYADDR;
 extern QWORD MAXPHYADDRMASK;
 extern QWORD MAXPHYADDRMASKPB;
-
-
-extern PPDPTE_PAE pml4table;
-
-
-
 
 
 void InitializeMM(UINT64 FirstFreeVirtualAddress);
@@ -56,17 +47,12 @@ void unmapPhysicalMemoryGlobal(void *virtualaddress, int size);
 
 void VirtualAddressToIndexes(QWORD address, int *pml4index, int *pagedirptrindex, int *pagedirindex, int *pagetableindex);
 
-#define IndexesToVirtualAddress(pml4index, pagedirptrindex, pagedirindex, pagetableindex) (QWORD)(((QWORD)pml4index<<39) | ((QWORD)pagedirptrindex << 30) | ((QWORD)pagedirindex << 21) | ((QWORD)pagetableindex << 12))
-
-
 void *malloc(size_t size);
 void *malloc2(unsigned int size);
 void free(void* pointer);
 void free2(void* pointer, unsigned int size);
 void *realloc(void *old, size_t size);
 void *realloc2(void *oldaddress, unsigned int oldsize, unsigned int newsize);
-
-void *allocateContiguousMemory(int pagecount);
 
 unsigned int maxAllocatableMemory(void);
 void printMMregions();
@@ -81,14 +67,9 @@ void markPageAsWritable(void *address);
 
 void VirtualAddressToPageEntries(QWORD address, PPDPTE_PAE *pml4entry, PPDPTE_PAE *pagedirpointerentry, PPDE_PAE *pagedirentry, PPTE_PAE *pagetableentry);
 
-void mmAddPhysicalPageListToDBVM(QWORD *pagelist, int count, int inuse);
+void mmAddPhysicalPageListToDBVM(QWORD *pagelist, int count);
 void mmtest();
 
-typedef void(*MMENUMPAGESCALLBACK)(QWORD VirtualAddress, QWORD PhysicalAddress, int size, PPTE_PAE entry, void *context);
-
-int mmIsFreePage(void* address);
-
-void mmEnumAllPageEntries(MMENUMPAGESCALLBACK callbackfunction, int skipmapped, void *context);
 //void wtftest(void); //test routine to figure out why some memory gets paged out
 
 #endif //MM_H_

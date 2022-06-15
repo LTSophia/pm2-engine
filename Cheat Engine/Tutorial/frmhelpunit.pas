@@ -5,7 +5,7 @@ unit frmHelpUnit;
 interface
 
 uses
-  {$ifdef windows}windows, {$endif}LCLIntf, LCLType, Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs, ExtCtrls;
+  windows, Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs, ExtCtrls;
 
 type
 
@@ -62,7 +62,6 @@ var
   key: dword;
 begin
   //only works on forms in windows 7 and earlier, but also works on child components in windows 8 and later
-  {$ifdef windows}
   if SetWindowLong(handle, GWL_EXSTYLE, GetWindowLong(handle, GWL_EXSTYLE) or WS_EX_LAYERED)=0 then
     exit; //not supported, go look at the green background
 
@@ -71,7 +70,6 @@ begin
 
 
   fixsize;
-  {$endif}
   //ShowInTaskBar:=stNever;
 end;
 
@@ -83,11 +81,7 @@ end;
 
 procedure TfrmHelp.Image1Click(Sender: TObject);
 begin
-  {$ifdef windows}
   ShellExecute(0, PChar('open'), PChar('https://cheatengine.org/tutorial.php?tutorial='+ftutorialtag),PChar(''), PChar(''), SW_SHOW);
-  {$else}
-  OpenURL('https://cheatengine.org/tutorial.php?tutorial='+ftutorialtag);
-  {$endif}
 end;
 
 initialization

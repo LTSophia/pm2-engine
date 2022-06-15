@@ -34,23 +34,12 @@ var IsWow64Process        :TIsWow64Process;
 
     param: string;
     i: integer;
-
-    cpuid7ebx: dword;
-    basename: widestring;
-    exename: widestring;
-
-    s: string;
 begin
   {$ifdef cpu64}
   MessageBox(0,'A fucking retard thought that removing an earlier $ERROR line would be enough to run this','',0);
   exit;
   {$endif}
 
-  {$ifndef altname}
-  basename:='cheatengine';
-  {$else}
-  basename:='rt-mod';
-  {$endif}
 
   WindowsKernel:=LoadLibrary('Kernel32.dll'); //there is no kernel33.dll
   IsWow64Process:=   GetProcAddress(WindowsKernel, 'IsWow64Process');
@@ -63,7 +52,7 @@ begin
       launch32bit:=not isWow;
   end;
 
-  self:=GetModuleHandle(nil);
+  self:=GetModuleHandle(0);
 
   getmem(selfname,512);
   if GetModuleFileNameW(self, selfname, 512)>0 then
@@ -78,33 +67,19 @@ begin
   //MessageBox(0, pchar(param),'bla',0);
 
   if launch32bit then
-    exename:=basename+'-i386.exe'
-  else
   begin
-    asm
-      push ecx
-      mov ecx,0
-      mov eax,7
-      cpuid
-      mov cpuid7ebx,ebx
-      pop ecx
-    end;
-
-    if (cpuid7ebx and (1 shl 5))>0 then
-      exename:=basename+'-x86_64-SSE4-AVX2.exe'
+    if fileexists(selfpath+'cheatengine-i386.exe') then
+      ShellExecuteW(0, 'open', pwidechar(selfpath+'cheatengine-i386.exe'), pwidechar(widestring(param)), pwidechar(selfpath), sw_show)
     else
-      exename:=basename+'-x86_64.exe';
-  end;
-
-  
-  if FileExists(selfpath+exename) then
-    ShellExecuteW(0, 'open', pwidechar(selfpath+exename), pwidechar(widestring(param)), pwidechar(selfpath), sw_show)
+      MessageBox(0, 'cheatengine-i386.exe could not be found. Please disable/uninstall your anti virus and reinstall Cheat Engine to fix this','Cheat Engine launch error',MB_OK or MB_ICONERROR);
+  end
   else
   begin
-    s:=exename;
-    MessageBoxW(0, pwidechar(exename+' could not be found. Please disable/uninstall your anti virus and reinstall Cheat Engine to fix this'),'Cheat Engine launch error',MB_OK or MB_ICONERROR);
+    if FileExists(selfpath+'cheatengine-x86_64.exe') then
+      ShellExecuteW(0, 'open', pwidechar(selfpath+'cheatengine-x86_64.exe'), pwidechar(widestring(param)), pwidechar(selfpath), sw_show)
+    else
+      MessageBox(0, 'cheatengine-x86_64.exe could not be found. Please disable/uninstall your anti virus and reinstall Cheat Engine to fix this','Cheat Engine launch error',MB_OK or MB_ICONERROR);
   end;
-
 
 end.
 

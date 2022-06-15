@@ -1,7 +1,7 @@
 object frmFloatingPointPanel: TfrmFloatingPointPanel
-  Left = 704
+  Left = 703
   Height = 322
-  Top = 177
+  Top = 176
   Width = 353
   BorderStyle = bsSizeToolWin
   Caption = 'FPU'
@@ -10,7 +10,7 @@ object frmFloatingPointPanel: TfrmFloatingPointPanel
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '1.6.4.0'
   object PageControl1: TPageControl
     Left = 0
     Height = 322
@@ -101,6 +101,10 @@ object frmFloatingPointPanel: TfrmFloatingPointPanel
         Top = 55
         Width = 345
         Align = alClient
+        Font.CharSet = ANSI_CHARSET
+        Font.Height = -13
+        Font.Name = 'Courier New'
+        ParentFont = False
         ReadOnly = True
         ScrollBars = ssBoth
         TabOrder = 1

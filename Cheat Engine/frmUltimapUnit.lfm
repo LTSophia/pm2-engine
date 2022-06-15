@@ -12,7 +12,7 @@ object frmUltimap: TfrmUltimap
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '2.0.0.4'
   object Panel1: TPanel
     Left = 0
     Height = 516
@@ -536,13 +536,13 @@ object frmUltimap: TfrmUltimap
   object Timer1: TTimer
     Interval = 250
     OnTimer = Timer1Timer
-    Left = 85
-    Top = 320
+    left = 85
+    top = 320
   end
   object PopupMenu1: TPopupMenu
     Images = umImageList
-    Left = 85
-    Top = 258
+    left = 85
+    top = 258
     object MenuItem2: TMenuItem
       Caption = 'Flush buffers'
       ImageIndex = 0
@@ -557,8 +557,8 @@ object frmUltimap: TfrmUltimap
   object pmSetHotkey: TPopupMenu
     Images = umImageList
     OnPopup = pmSetHotkeyPopup
-    Left = 296
-    Top = 56
+    left = 296
+    top = 56
     object miSetHotkey: TMenuItem
       Caption = 'Set hotkey'
       ImageIndex = 1
@@ -573,12 +573,12 @@ object frmUltimap: TfrmUltimap
   object Flusher: TTimer
     Interval = 100
     OnTimer = FlusherTimer
-    Left = 224
-    Top = 64
+    left = 224
+    top = 64
   end
   object umImageList: TImageList
-    Left = 323
-    Top = 326
+    left = 323
+    top = 326
     Bitmap = {
       4C69030000001000000010000000FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
       FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF

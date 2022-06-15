@@ -12,7 +12,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '2.0.0.4'
   object cbValueType: TComboBox
     AnchorSideLeft.Control = cbAddress
     AnchorSideLeft.Side = asrBottom
@@ -126,9 +126,9 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
     AnchorSideLeft.Control = cbCompareToOtherPointermaps
     AnchorSideTop.Control = cbCompareToOtherPointermaps
     AnchorSideTop.Side = asrBottom
-    Left = 8
+    Left = 316
     Height = 19
-    Top = 88
+    Top = 65
     Width = 146
     BorderSpacing.Top = 4
     Caption = 'Show advanced options'
@@ -141,7 +141,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
     AnchorSideTop.Side = asrBottom
     Left = 8
     Height = 202
-    Top = 108
+    Top = 85
     Width = 672
     AutoSize = True
     BorderSpacing.Top = 1
@@ -346,10 +346,10 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
           AnchorSideTop.Control = edtReverseStop
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = edtReverseStop
-          Left = 15
+          Left = 14
           Height = 15
           Top = 28
-          Width = 15
+          Width = 16
           Anchors = [akTop, akRight]
           Caption = 'To:'
           ParentColor = False
@@ -462,7 +462,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = edtThreadStacks
         AnchorSideTop.Side = asrBottom
-        Left = 253
+        Left = 252
         Height = 23
         Top = 99
         Width = 80
@@ -476,7 +476,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         Left = 16
         Height = 15
         Top = 103
-        Width = 237
+        Width = 236
         Caption = 'Max stackoffset to be deemed static enough:'
         ParentColor = False
       end
@@ -486,7 +486,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         AnchorSideTop.Side = asrBottom
         Left = 16
         Height = 19
-        Hint = 'Enable this if you wish to only find pointer paths with a stack address.'#13#10'Combine this with "Only find paths with a static address" (default on) else this option will have no effect'#13#10#13#10'pro: You''ll only get paths from the stack'#13#10'con: You don''t get paths from random dll''s or the .exe '
+        Hint = 'Enable this if you wish to only find pointer paths with a stack address.'#13#10'Combine this with "Only find paths with a static address" (default on) else this option will have no effect'#13#10#13#10'pro: You''ll only get paths from the stack'#13#10'con: You don''t get get paths from random dll''s or the .exe '
         Top = 122
         Width = 224
         Caption = 'Stack addresses as ONLY static address'
@@ -564,7 +564,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
     AnchorSideTop.Side = asrBottom
     Left = 174
     Height = 86
-    Top = 429
+    Top = 406
     Width = 335
     AutoSize = True
     BorderSpacing.Top = 8
@@ -573,6 +573,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
     ClientHeight = 86
     ClientWidth = 335
     Constraints.MinWidth = 330
+    ParentColor = False
     TabOrder = 7
     OnClick = Panel1Click
     object Panel8: TPanel
@@ -629,10 +630,10 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         AnchorSideTop.Control = editStructsize
         AnchorSideTop.Side = asrCenter
         AnchorSideRight.Control = editStructsize
-        Left = 1
+        Left = 2
         Height = 15
         Top = 37
-        Width = 122
+        Width = 121
         Anchors = [akTop, akRight]
         Caption = 'Maximum offset value:'
         ParentColor = False
@@ -679,7 +680,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         Left = 0
         Height = 15
         Top = 37
-        Width = 50
+        Width = 49
         Caption = 'Max level'
         ParentColor = False
       end
@@ -713,10 +714,10 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = ComboBox1
         AnchorSideRight.Side = asrBottom
-        Left = 54
+        Left = 53
         Height = 23
         Top = 33
-        Width = 86
+        Width = 87
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Left = 4
         BorderSpacing.Top = 10
@@ -749,7 +750,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
     AnchorSideTop.Side = asrBottom
     Left = 8
     Height = 111
-    Top = 310
+    Top = 287
     Width = 597
     AutoSize = True
     BevelOuter = bvNone
@@ -801,7 +802,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         Height = 19
         Hint = 'When the pointerscan looks through the list of pointers with a specific value, it goes through every single pointer that has that value. Every time increasing the offset slightly.'#13#10'With this feature enabled the pointerscan will only check the first few pointers with that value.'#13#10#13#10'pro: Extremely fast, and the results have the lowest pointer paths possible.'#13#10'con: You''ll miss a lot of pointers that might be valid too '
         Top = 4
-        Width = 182
+        Width = 181
         Caption = 'Max different offsets per node:'
         Checked = True
         OnChange = cbMaxOffsetsPerNodeChange
@@ -814,7 +815,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
         AnchorSideLeft.Control = cbMaxOffsetsPerNode
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = Panel10
-        Left = 182
+        Left = 181
         Height = 23
         Top = 2
         Width = 40
@@ -856,10 +857,10 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
           AnchorSideTop.Control = edtBaseTo
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = edtBaseTo
-          Left = 16
+          Left = 15
           Height = 15
           Top = 29
-          Width = 12
+          Width = 13
           Anchors = [akTop, akRight]
           Caption = 'To'
           ParentColor = False
@@ -998,12 +999,12 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
     DefaultExt = '.scandata'
     Filter = 'All files (*.*)|*.*|scandata files (*.scandata)|*.scandata'
     FilterIndex = 2
-    Left = 744
-    Top = 160
+    left = 744
+    top = 160
   end
   object il: TImageList
-    Left = 720
-    Top = 232
+    left = 720
+    top = 232
     Bitmap = {
       4C69020000001000000010000000FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
       FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF006360
@@ -1075,7 +1076,7 @@ object frmPointerScannerSettings: TfrmPointerScannerSettings
   object odLoadRegionFile: TOpenDialog
     DefaultExt = '.mregion'
     Filter = 'Memory region files (*.mregion)|*.mregion|All files (*.*)|*.*'
-    Left = 744
-    Top = 368
+    left = 744
+    top = 368
   end
 end

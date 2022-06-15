@@ -7,8 +7,10 @@ interface
 uses
   LCLIntf, Messages, LMessages, LCLType, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   StdCtrls, CEDebugger, KernelDebugger, ExtCtrls, LResources, ComCtrls, Menus,
-  debuggertypedefinitions, BreakpointTypeDef, betterControls;
+  debuggertypedefinitions, BreakpointTypeDef;
 
+const
+  WM_BPUPDATE=WM_USER+1;
 
 type
   { TfrmBreakpointlist }
@@ -37,6 +39,8 @@ type
     procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
+    procedure update(var m: tmessage); message WM_BPUPDATE; overload;
+
   public
     { Public declarations }
     procedure updatebplist;
@@ -82,6 +86,11 @@ begin
   except
     result.PhysicalAddress:=0
   end;
+end;
+
+procedure TFrmBreakpointlist.update(var m: tmessage);
+begin
+  updatebplist;
 end;
 
 procedure TFrmBreakpointlist.updatebplist;

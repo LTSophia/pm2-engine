@@ -87,7 +87,6 @@ begin
   result:=nil;
   ms:=tmemscan.create(nil);
   ms.parseProtectionflags(protectionflags);
-  ms.isUnique:=isunique;
   ms.onlyone:=true;
 
   if modulename='' then
@@ -121,7 +120,7 @@ begin
   result:=ms;
 end;
 
-function FinishAOBScan(ms: TMemscan): ptruint;
+function FinishAOBScan(ms: TMemscan): integer;
 {scans the game's memory for aobstring and returns the pointer if found. returns 0 if not found}
 var x: ptruint;
 begin

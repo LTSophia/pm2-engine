@@ -8,51 +8,48 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, LResources, MemoryRecordUnit, CEFuncProc, CustomTypeHandler, commonTypeDefs, betterControls;
+  StdCtrls, ExtCtrls, LResources, MemoryRecordUnit, CEFuncProc, CustomTypeHandler, commonTypeDefs;
 
 type
 
   { TTypeForm }
 
   TTypeForm = class(TForm)
-    bitPanel: TPanel;
-    ButtonOK: TButton;
-    ButtonCancel: TButton;
-    cbHex: TCheckBox;
-    cbSigned: TCheckBox;
-    cbUnicode: TCheckBox;
+    BitPanel: TPanel;
+    Button1: TButton;
+    Button2: TButton;
+    cbunicode: TCheckBox;
     cbCodePage: TCheckBox;
-    lengthEdit: TEdit;
-    bitLengthEdit: TEdit;
+    Edit1: TEdit;
+    Edit2: TEdit;
     Label1: TLabel;
-    labelBit6: TLabel;
-    labelBit7: TLabel;
-    labelBitLength: TLabel;
-    labelBit0: TLabel;
-    labelBit1: TLabel;
-    labelBit2: TLabel;
-    labelBit3: TLabel;
-    labelBit4: TLabel;
-    labelBit5: TLabel;
-    labelLength: TLabel;
-    lengthPanel: TPanel;
-    HexAndSignedPanel: TPanel;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label2: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
+    lengthlabel: TLabel;
+    LengthPanel: TPanel;
     Panel1: TPanel;
     Panel2: TPanel;
     Panel3: TPanel;
-    bitRadioButton0: TRadioButton;
-    bitRadioButton1: TRadioButton;
-    bitRadioButton2: TRadioButton;
-    bitRadioButton3: TRadioButton;
-    bitRadioButton4: TRadioButton;
-    bitRadioButton5: TRadioButton;
-    bitRadioButton6: TRadioButton;
-    bitRadioButton7: TRadioButton;
+    RadioButton1: TRadioButton;
+    RadioButton2: TRadioButton;
+    RadioButton3: TRadioButton;
+    RadioButton4: TRadioButton;
+    RadioButton5: TRadioButton;
+    RadioButton6: TRadioButton;
+    RadioButton7: TRadioButton;
+    RadioButton8: TRadioButton;
     VarType: TComboBox;
-    procedure ButtonCancelClick(Sender: TObject);
-    procedure ButtonOKClick(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
     procedure cbCodePageChange(Sender: TObject);
-    procedure cbUnicodeChange(Sender: TObject);
+    procedure cbunicodeChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure VarTypeChange(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -64,7 +61,6 @@ type
     nrofrecord: Integer;
     MemoryRecord: TMemoryRecord;
     procedure RefreshCustomTypes;
-    procedure RefreshFieldsByMemoryRecord(memrec: TMemoryRecord);
   end;
 
 var
@@ -120,121 +116,42 @@ begin
 end;
 
 
-procedure TTypeForm.RefreshFieldsByMemoryRecord(memrec: TMemoryRecord);
-begin
-
-  case memrec.vartype of
-    vtCustom:  VarType.itemindex:=VarType.Items.IndexOf(memrec.CustomTypeName);
-
-    vtBinary:
-    begin
-      TypeForm.VarType.itemindex:=0;
-      TypeForm.bitLengthEdit.text:=IntToStr(memrec.extra.bitData.bitlength);
-
-      case memrec.extra.bitData.Bit of
-        0     :       bitRadioButton0.checked:=true;
-        1     :       bitRadioButton1.checked:=true;
-        2     :       bitRadioButton2.checked:=true;
-        3     :       bitRadioButton3.checked:=true;
-        4     :       bitRadioButton4.checked:=true;
-        5     :       bitRadioButton5.checked:=true;
-        6     :       bitRadioButton6.checked:=true;
-        7     :       bitRadioButton7.checked:=true;
-      end;
-    end;
-
-    vtByte:   VarType.itemindex:=1;
-    vtWord:   VarType.itemindex:=2;
-    vtDword:  VarType.itemindex:=3;
-    vtQword:  VarType.itemindex:=4;
-    vtSingle: VarType.itemindex:=5;
-    vtDouble: VarType.itemindex:=6;
-
-    vtString:
-    begin
-      VarType.itemindex:=7;
-      lengthEdit.text:=inttostr(memrec.Extra.stringData.length);
-      cbUnicode.checked:=memrec.Extra.stringData.unicode;
-      cbCodePage.checked:=memrec.Extra.stringData.codepage;
-    end;
-
-    vtByteArray:
-    begin
-      lengthEdit.text:=inttostr(memrec.Extra.byteData.bytelength);
-      VarType.itemindex:=8;
-      cbUnicode.visible:=false;
-      cbCodePage.visible:=false;
-    end;
-  end;
-
-  if (memrec.vartype = vtByte)
-     or (memrec.vartype = vtWord)
-     or (memrec.vartype = vtDword)
-     or (memrec.vartype = vtQword)
-     or (memrec.vartype = vtSingle)
-     or (memrec.vartype = vtDouble)
-     or (memrec.vartype = vtByteArray)
-     then
-  begin
-    cbHex.checked:=memrec.ShowAsHex;
-    cbSigned.checked:=memrec.ShowAsSigned;
-  end
-  else
-  begin
-    cbHex.checked:=false;
-    cbSigned.checked:=false;
-  end;
-
-end;
-
 Procedure TTypeForm.UpdateTypeForm;
 begin
-
-  cbHex.Enabled:=false;
-  cbSigned.Enabled:=false;
-
-  // Binary
   if Vartype.itemindex=0 then
   begin
-    bitPanel.visible:=true;
-    lengthPanel.visible:=false;
-    labelLength.visible:=false;
-    labelBitLength.Visible:=true;
-    bitLengthEdit.Visible:=true;
-    clientwidth:=bitPanel.left+bitPanel.Width+vartype.left;
+    bitpanel.visible:=true;
+    lengthpanel.visible:=false;
+    lengthlabel.visible:=false;
+    label2.Visible:=true;
+    edit2.Visible:=true;
+    clientwidth:=bitpanel.left+bitpanel.Width+vartype.left;
   end
-  // String ByteArray
-  else if vartype.itemindex in [7,8] then
-  begin
-    bitPanel.visible:=false;
-    lengthPanel.visible:=true;
-    labelLength.visible:=true;
-    clientwidth:=lengthPanel.left+lengthPanel.Width;
-    cbUnicode.visible:=vartype.itemindex=7;
-    cbCodePage.visible:=cbUnicode.Visible;
-    cbHex.enabled:=vartype.itemindex=8;
-  end
-  // Other Types
   else
+  if vartype.itemindex in [7,8] then
   begin
-    bitPanel.visible:=false;
-    lengthPanel.visible:=false;
-    labelLength.visible:=false;
+    bitpanel.visible:=false;
+    lengthpanel.visible:=true;
+    lengthlabel.visible:=true;
+    clientwidth:=lengthpanel.left+lengthpanel.Width;
+    cbunicode.visible:=vartype.itemindex=7;
+    cbCodePage.visible:=cbunicode.Visible;
+  end else
+  begin
+    bitpanel.visible:=false;
+    lengthpanel.visible:=false;
+    lengthlabel.visible:=false;
 
     TypeForm.width:=vartype.Left+vartype.Width+vartype.left;
-
-    cbHex.Enabled:=true;
-    cbSigned.Enabled:=true;
-
   end;
 end;
 
-procedure TTypeForm.ButtonCancelClick(Sender: TObject);
+procedure TTypeForm.Button2Click(Sender: TObject);
 begin
   modalresult:=mrno;
 end;
 
-procedure TTypeForm.ButtonOKClick(Sender: TObject);
+procedure TTypeForm.Button1Click(Sender: TObject);
 var bit,bitl: Byte;
     err: integer;
     ct: TCustomType;
@@ -274,36 +191,25 @@ begin
   err:=0;
   if Vartype.ItemIndex<7 then
   begin
-    if bitRadioButton0.checked then bit:=0 else
-    if bitRadioButton1.checked then bit:=1 else
-    if bitRadioButton2.checked then Bit:=2 else
-    if bitRadioButton3.checked then Bit:=3 else
-    if bitRadioButton4.checked then Bit:=4 else
-    if bitRadioButton5.checked then Bit:=5 else
-    if bitRadioButton6.checked then Bit:=6 else
+    if RadioButton1.checked then bit:=0 else
+    if RadioButton2.checked then bit:=1 else
+    if RadioButton3.checked then Bit:=2 else
+    if RadioButton4.checked then Bit:=3 else
+    if RadioButton5.checked then Bit:=4 else
+    if RadioButton6.checked then Bit:=5 else
+    if RadioButton7.checked then Bit:=6 else
                                  Bit:=7;
   end
   else
-    val(lengthEdit.Text,bit,err);
+    val(edit1.Text,bit,err);
 
   if vartype.ItemIndex=0 then
-    val(bitLengthEdit.Text,bitl,err);
+    val(edit2.Text,bitl,err);
 
   if err>0 then
     raise exception.create(rsInvalidLength);
 
-  if (memoryrecord.vartype<>vtString)
-     and (memoryrecord.vartype<>vtBinary)
-     then
-  begin
-    MemoryRecord.ShowAsHex:=cbHex.Checked;
-    MemoryRecord.ShowAsSigned:=cbSigned.Checked;
-  end
-  else
-  begin
-    MemoryRecord.ShowAsHex:=false;
-    MemoryRecord.ShowAsSigned:=false;
-  end;
+
 
   if memoryrecord.vartype=vtBinary then
   begin
@@ -313,15 +219,15 @@ begin
 
   if memoryrecord.vartype=vtString then
   begin
-    val(lengthEdit.Text,MemoryRecord.Extra.stringData.length,err);
+    val(edit1.Text,MemoryRecord.Extra.stringData.length,err);
 
-    MemoryRecord.Extra.stringData.unicode:=cbUnicode.checked;
+    MemoryRecord.Extra.stringData.unicode:=cbunicode.checked;
     MemoryRecord.Extra.stringData.codepage:=cbCodePage.checked;
   end;
 
   if memoryrecord.vartype=vtByteArray then
   begin
-    val(lengthEdit.Text,MemoryRecord.Extra.byteData.bytelength,err);
+    val(edit1.Text,MemoryRecord.Extra.byteData.bytelength,err);
 
     if wasNotAOB then //it wasn't an aob before, set the hexadecimal value
       MemoryRecord.showAsHex:=true;
@@ -332,12 +238,12 @@ end;
 
 procedure TTypeForm.cbCodePageChange(Sender: TObject);
 begin
-  if cbCodePage.checked then cbUnicode.checked:=false;
+  if cbCodePage.checked then cbunicode.checked:=false;
 end;
 
-procedure TTypeForm.cbUnicodeChange(Sender: TObject);
+procedure TTypeForm.cbunicodeChange(Sender: TObject);
 begin
-  if cbUnicode.checked then cbCodePage.checked:=false;
+  if cbunicode.checked then cbCodePage.checked:=false;
 end;
 
 procedure TTypeForm.FormCreate(Sender: TObject);
@@ -361,8 +267,6 @@ end;
 
 procedure TTypeForm.FormShow(Sender: TObject);
 begin
-  lengthEdit.Constraints.MinWidth:=labellength.Width;
-  bitLengthEdit.Width:=lengthEdit.Width;
   UpdateTypeform;
 end;
 

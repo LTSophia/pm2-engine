@@ -1,7 +1,7 @@
 object frmHighlighterEditor: TfrmHighlighterEditor
-  Left = 396
+  Left = 395
   Height = 227
-  Top = 113
+  Top = 112
   Width = 286
   AutoSize = True
   BorderStyle = bsSingle
@@ -12,7 +12,7 @@ object frmHighlighterEditor: TfrmHighlighterEditor
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.6.0'
+  LCLVersion = '2.0.0.4'
   object pnlAttribs: TPanel
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = Owner

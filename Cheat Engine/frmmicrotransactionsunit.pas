@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, Buttons, LuaInternet, lua, luahandler, lualib, lauxlib, betterControls;
+  ExtCtrls, Buttons, LuaInternet, lua, luahandler, lualib, lauxlib;
 
 type
 
@@ -46,7 +46,7 @@ var
 
 implementation
 
-uses MainUnit, cheatecoins{$IFDEF windows} , windows {$ENDIF}, mainunit2;
+uses MainUnit, cheatecoins{$IFDEF windows} , windows {$ENDIF};
 
 { TfrmMicroTransactions }
 
@@ -70,7 +70,7 @@ var ss: TStringstream;
 begin
   {$IFDEF windows}
   if internet=nil then
-    internet:=TWinInternet.Create({$ifdef altname}'Cheat Engine'{$else}strCheatEngine{$endif}+' microtransaction system');
+    internet:=TWinInternet.Create('Cheat Engine microtransaction system');
 
   ss:=tstringstream.create({$if FPC_FULLVERSION<030200}''{$endif});
   try
@@ -84,7 +84,7 @@ begin
         MessageDlg('There is an issue with the webserver. Please try again later',mtInformation, [mbok],0);
       end;
     except
-      MessageDlg('Sorry, but the '+strCheatEngine+' server is currently overloaded or you have no internet. Please try again later',mtInformation, [mbok],0);
+      MessageDlg('Sorry, but the Cheat Engine server is currently overloaded or you have no internet. Please try again later',mtInformation, [mbok],0);
     end;
   finally
     ss.free;

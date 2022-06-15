@@ -9,7 +9,7 @@ interface
 uses {$ifdef darwin}macport,{$endif}
      {$ifdef windows}windows,{$endif}
      CEFuncProc,dialogs,classes,comctrls,LCLIntf,sysutils,formsettingsunit,
-     NewKernelHandler, commonTypeDefs, MemFuncs, betterControls;
+     NewKernelHandler, commonTypeDefs, MemFuncs;
 
 type Tunrandomize=class(tthread)
 private

@@ -48,7 +48,6 @@ type
     mainformhotkey2command: integer;
 
     procedure memrechotkey;
-    procedure memrechotkeydisable;
     procedure handleGenericHotkey;
     procedure mainformhotkey2;
   public
@@ -618,15 +617,6 @@ begin
   TMemoryRecordHotkey(memrechk).DoHotkey;
 end;
 
-procedure Thotkeythread.memrechotkeydisable;
-begin
-//  sendmessage(mainform.handle,integer(cefuncproc.WM_HOTKEY2),0,ptrUint(memrechk));
-
-  //not 100% sure why sendmessage works here but not from within the thread...
-  //but since we're here anyhow:
-  TMemoryRecordHotkey(memrechk).DoHotkeyDisable;
-end;
-
 procedure Thotkeythread.handleGenericHotkey;
 begin
   if assigned(generichk.onNotify) then
@@ -703,15 +693,6 @@ begin
 
             activeHotkeyList.Add(temphotkey);
 
-          end
-          else
-          begin
-            hotkeylist[i].lastactivate:=0; //not currently down.  The user released the key so repeat can be skipped
-            if (hotkeylist[i].memrechotkey<>nil) and TMemoryrecordHotkey(hotkeylist[i].memrechotkey).OnlyWhileDown and TMemoryrecordHotkey(hotkeylist[i].memrechotkey).down then
-            begin
-              memrechk:=hotkeylist[i].memrechotkey;
-              synchronize(memrechotkeydisable);
-            end;
           end;
 
         end;
@@ -720,40 +701,40 @@ begin
         i:=0;
         while i<activeHotkeyList.count do
         begin
-          //OutputDebugString('Handling hotkey');
+          OutputDebugString('Handling hotkey');
           temphotkey:=PActiveHotkeyData(activeHotkeyList[i]);
           if temphotkey.keycount=maxActiveKeyCount then //it belongs to the max complex hotkey count
           begin
-            //OutputDebugString('1');
+            OutputDebugString('1');
             if ((tempHotkey.hotkeylistItem.lastactivate+ifthen(tempHotkey.hotkeylistItem.delaybetweenActivate>0, tempHotkey.hotkeylistItem.delaybetweenActivate, hotkeyIdletime))<GetTickCount) then //check if it can be activated
             begin
               a:=tempHotkey.hotkeylistItem.windowtonotify;
               b:=tempHotkey.hotkeylistItem.id;
               c:=(tempHotkey.hotkeylistItem.uVirtKey shl 16)+tempHotkey.hotkeylistItem.fuModifiers;
-             // OutputDebugString('2');
+              OutputDebugString('2');
 
               tempHotkey.hotkeylistItem.lastactivate:=gettickcount;
               if tempHotkey.hotkeylistItem.handler2 then
               begin
-                //OutputDebugString('3');
+                OutputDebugString('3');
                 if tempHotkey.hotkeylistItem.memrechotkey<>nil then
                 begin
-                  //OutputDebugString('4');
+                  OutputDebugString('4');
                   memrechk:=tempHotkey.hotkeylistItem.memrechotkey;
 
                   CSKeys.leave;
-                  //OutputDebugString('5');
+                  OutputDebugString('5');
                   Synchronize(memrechotkey);
-                  //OutputDebugString('6');
+                  OutputDebugString('6');
                   cskeys.enter;
-                  //OutputDebugString('7');
+                  OutputDebugString('7');
                 end
                 else
                 begin
-                  //OutputDebugString('8');
+                  OutputDebugString('8');
                   if tempHotkey.hotkeylistItem.generichotkey<>nil then
                   begin
-                    //OutputDebugString('9');
+                    OutputDebugString('9');
                     generichk:=tempHotkey.hotkeylistItem.genericHotkey;
                     synchronize(handlegenerichotkey);
 
@@ -762,7 +743,7 @@ begin
                   else
                   begin
 
-                   // OutputDebugString('10');
+                    OutputDebugString('10');
 
                     mainformhotkey2command:=b;
                     synchronize(mainformhotkey2);

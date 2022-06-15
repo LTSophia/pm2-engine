@@ -16,10 +16,10 @@ function ConvertCheatTableToXML(filename: string): TXMLDocument;
 
 implementation
 
-uses opensave, mainunit2;
+uses opensave;
 
 resourcestring
-  rsTooOldTable = 'This table is too old to be used. Get '+strCheatEngine+' 5.6 and '
+  rsTooOldTable = 'This table is too old to be used. Get Cheat engine 5.6 and '
     +'open/resave this table';
 
 function ConvertCheatTableToXML(filename: string): TXMLDocument;

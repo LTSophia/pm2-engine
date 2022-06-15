@@ -12,7 +12,7 @@ uses
   win32proc, windows,
   {$endif}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  LCLType, math, betterControls;
+  LCLType, math;
 
 { TfrmMultilineInputQuery }
 
@@ -77,9 +77,6 @@ procedure TfrmMultilineInputQuery.Memo1KeyDown(Sender: TObject; var Key: Word;
 begin
   if key=VK_ESCAPE then
     modalresult:=mrcancel;
-
-  if (key=VK_RETURN) and (ssCtrl in shift) then
-    modalresult:=mrok;
 end;
 
 procedure TfrmMultilineInputQuery.FormShow(Sender: TObject);

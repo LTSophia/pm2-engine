@@ -4,7 +4,7 @@ interface
 
 {$mode DELPHI}
 
-uses controls,StdCtrls,classes,Graphics,ExtCtrls, sysutils, betterControls;
+uses controls,StdCtrls,classes,Graphics,ExtCtrls, sysutils;
 
 type TLabel2 = class (TLabel)
   public

@@ -12,7 +12,7 @@ uses
   macport, math
   {$endif}
   {$ifdef windows}
-  windows, betterControls
+  windows
   {$endif};
 
 type
@@ -44,31 +44,19 @@ type
     GroupBox4: TGroupBox;
     GroupBox5: TGroupBox;
     GroupBox6: TGroupBox;
-    GroupBox7: TGroupBox;
     Label1: TLabel;
-    lblHexFadecolor: TLabel;
-    lblRegHighLightAccess: TLabel;
-    lblRegHighLightChange: TLabel;
-    lblHexCursor: TLabel;
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
     Label7: TLabel;
-    lblHexBreakpoint: TLabel;
-    lblHexDifferent: TLabel;
-    lblHexEditing: TLabel;
-    lblHexHighlighted: TLabel;
-    lblHexNormal: TLabel;
-    lblHexSecondaryEditing: TLabel;
-    lblHexTopLine: TLabel;
-    lblHexSeperator: TLabel;
     lblConditionalJump: TLabel;
-    lblHexStatic: TLabel;
+    lblRegisterExample: TLabel;
     lblUnconditionalJump: TLabel;
     lblCall: TLabel;
     lblHex: TLabel;
+    lblHexExample: TLabel;
     lblNormal: TLabel;
     lblRegister: TLabel;
     lblSymbol: TLabel;
@@ -87,38 +75,18 @@ type
     procedure cbFontQualitySelect(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure gbHexBackgroundMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure GroupBox1Click(Sender: TObject);
     procedure GroupBox1MouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure GroupBox3Click(Sender: TObject);
     procedure GroupBox5Click(Sender: TObject);
-    procedure lblHexFadecolorMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure lblCallClick(Sender: TObject);
     procedure lblConditionalJumpClick(Sender: TObject);
     procedure lblHexClick(Sender: TObject);
-    procedure lblHexDefaultColorMouseDown(Sender: TObject;
-      Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure lblHexHighlightColorMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure lblHexMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure lblHexGraphicalColor(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure lblNormalClick(Sender: TObject);
-    procedure lblRegHighLightMouseDown(Sender: TObject;
-      Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure lblRegisterClick(Sender: TObject);
-    procedure lblHexSeperatorColorMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure lblHexStaticColorMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure lblSymbolClick(Sender: TObject);
     procedure lblUnconditionalJumpClick(Sender: TObject);
     procedure miRestoreToDefaultsClick(Sender: TObject);
-    procedure Shape1ChangeBounds(Sender: TObject);
   private
     { private declarations }
     oldstate: TDisassemblerViewColorsState;
@@ -170,7 +138,6 @@ resourcestring
   rsDCUltimap2='Ultimap2';
   rsDCHighlightedUltimap2='Highlighted Ultimap2';
   rsDCHighlightedUltimap2Secondary='Highlighted Ultimap2 secondary';
-  rsHexedit='Hexedit';
 
 procedure TfrmMemviewPreferences.setHexSpaceBetweenLines(s: integer);
 begin
@@ -203,7 +170,6 @@ begin
 end;
 
 procedure TfrmMemviewPreferences.applyfont;
-var oldcolor: TColor;
 begin
   cbColorGroupChange(cbColorGroup); //save the current colors
 
@@ -212,38 +178,8 @@ begin
   lblSymbol.font:=fontdialog1.Font;
   lblHex.font:=FontDialog1.font;
 
-
-  oldcolor:=lblHexnormal.Font.color;
-  lblHexNormal.Font.assign(fontdialog2.font);
-  lblHexNormal.Font.color:=oldcolor;
-
-  oldcolor:=lblHexStatic.Font.color;
-  lblHexStatic.Font.assign(fontdialog2.font);
-  lblHexStatic.Font.color:=oldcolor;
-
-  oldcolor:=lblHexHighlighted.Font.color;
-  lblHexHighlighted.Font.assign(fontdialog2.font);
-  lblHexHighlighted.Font.color:=oldcolor;
-
-  oldcolor:=lblHexEditing.Font.color;
-  lblHexEditing.Font.assign(fontdialog2.font);
-  lblHexEditing.Font.color:=oldcolor;
-
-  oldcolor:=lblHexSecondaryEditing.Font.color;
-  lblHexSecondaryEditing.Font.assign(fontdialog2.font);
-  lblHexSecondaryEditing.Font.color:=oldcolor;
-
-  oldcolor:=lblHexBreakpoint.Font.color;
-  lblHexBreakpoint.Font.assign(fontdialog2.font);
-  lblHexBreakpoint.Font.color:=oldcolor;
-
-  oldcolor:=lblHexDifferent.Font.color;
-  lblHexDifferent.Font.assign(fontdialog2.font);
-  lblHexDifferent.Font.color:=oldcolor;
-
-
-  lblRegHighLightAccess.Font:=FontDialog3.font;
-  lblRegHighLightChange.font:=FontDialog3.font;
+  lblHexExample.Font:=fontdialog2.font;
+  lblRegisterExample.Font:=FontDialog3.font;
 
   oldstate:=csUndefined;
   cbColorGroupChange(cbColorGroup); //restore the colors
@@ -282,7 +218,6 @@ begin
   applyfont;
 
   oldstate:=csUndefined;
-  cbColorGroup.itemindex:=0;
   cbColorGroupChange(cbColorGroup);
 
   //
@@ -309,12 +244,6 @@ begin
   btnHexFont.Constraints.MinWidth:=i;
 end;
 
-procedure TfrmMemviewPreferences.gbHexBackgroundMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-begin
-
-end;
-
 procedure TfrmMemviewPreferences.GroupBox1Click(Sender: TObject);
 begin
   colordialog1.Color:=groupbox1.color;
@@ -329,25 +258,9 @@ begin
   groupbox1.OnClick(sender);
 end;
 
-procedure TfrmMemviewPreferences.GroupBox3Click(Sender: TObject);
-begin
-
-end;
-
 procedure TfrmMemviewPreferences.GroupBox5Click(Sender: TObject);
 begin
 
-end;
-
-procedure TfrmMemviewPreferences.lblHexFadecolorMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var l: TLabel;
-begin
-  l:=tlabel(sender);
-  colordialog1.Title:=rsHexedit+' '+l.caption;
-  colordialog1.color:=l.color;
-  if colordialog1.execute then
-    l.color:=colordialog1.color;
 end;
 
 procedure TfrmMemviewPreferences.lblCallClick(Sender: TObject);
@@ -375,51 +288,6 @@ begin
     lblHex.font.color:=colordialog1.Color;
 end;
 
-procedure TfrmMemviewPreferences.lblHexDefaultColorMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-begin
-
-end;
-
-procedure TfrmMemviewPreferences.lblHexHighlightColorMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-begin
-
-end;
-
-procedure TfrmMemviewPreferences.lblHexMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var l: TLabel;
-begin
-  l:=tlabel(sender);
-  colordialog1.Title:=rsHexedit+' '+l.caption;
-
-  if button=mbLeft then //font
-    colordialog1.Color:=l.font.color
-  else //background
-    colordialog1.Color:=l.color;
-
-  if colordialog1.execute then
-  begin
-    if button=mbLeft then
-      l.font.color:=colordialog1.color
-    else
-      l.color:=colordialog1.color;
-  end;
-
-end;
-
-procedure TfrmMemviewPreferences.lblHexGraphicalColor(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var l: TLabel;
-begin
-  l:=tlabel(sender);
-  colordialog1.Title:=rsHexedit+' '+l.caption;
-  colordialog1.color:=l.font.color;
-  if colordialog1.execute then
-    l.font.color:=colordialog1.color;
-end;
-
 procedure TfrmMemviewPreferences.lblNormalClick(Sender: TObject);
 begin
   colordialog1.Color:=lblNormal.font.color;
@@ -428,35 +296,12 @@ begin
     lblNormal.font.color:=colordialog1.Color;
 end;
 
-procedure TfrmMemviewPreferences.lblRegHighLightMouseDown(
-  Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var l: TLabel;
-begin
-  l:=tlabel(sender);
-  colordialog1.Title:=rsHexedit+' '+l.caption;
-  colordialog1.color:=l.color;
-  if colordialog1.execute then
-    l.color:=colordialog1.color;
-end;
-
 procedure TfrmMemviewPreferences.lblRegisterClick(Sender: TObject);
 begin
   colordialog1.Color:=lblRegister.font.color;
   colordialog1.Title:=rsRegisterColor;
   if colordialog1.execute then
     lblRegister.font.color:=colordialog1.Color;
-end;
-
-procedure TfrmMemviewPreferences.lblHexSeperatorColorMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-begin
-
-end;
-
-procedure TfrmMemviewPreferences.lblHexStaticColorMouseDown(Sender: TObject;
-  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-begin
-
 end;
 
 procedure TfrmMemviewPreferences.lblSymbolClick(Sender: TObject);
@@ -510,11 +355,6 @@ begin
   applyfont;
   oldstate:=csUndefined;
   cbColorGroupChange(cbColorGroup);
-end;
-
-procedure TfrmMemviewPreferences.Shape1ChangeBounds(Sender: TObject);
-begin
-
 end;
 
 procedure TfrmMemviewPreferences.btnFontClick(Sender: TObject);

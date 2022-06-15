@@ -34,7 +34,7 @@ type
   TContinueOption = (co_run=0, co_stepinto=1, co_stepover=2, co_runtill=3);
 
 type
-  TBreakpointMethod = (bpmInt3=0, bpmDebugRegister=1, bpmException=2, bpmDBVM=3, bpmDBVMNative=4);
+  TBreakpointMethod = (bpmInt3=0, bpmDebugRegister=1, bpmException=2, bpmDBVM=3);
 
 type
   TBreakOption = (bo_Break = 0, bo_ChangeRegister = 1, bo_FindCode = 2, bo_FindWhatCodeAccesses = 3, bo_BreakAndTrace=4, bo_OnBreakpoint=5);
@@ -257,11 +257,10 @@ resourcestring
   rsOnExecute = 'On Execute';
   rsOnWrite = 'On Write';
   rsOnReadWrite = 'On Read/Write';
-  rsSoftwareBreakpoint =   'Software Breakpoint';
-  rsHardwareBreakpoint =   'Hardware Breakpoint';
-  rsExceptionBreakpoint =  'Exception Breakpoint';
-  rsDBVMBreakpoint =       'DBVM Breakpoint';
-  rsDBVMNativeBreakpoint = 'DBVM-Level Breakpoint';
+  rsSoftwareBreakpoint = 'Software Breakpoint';
+  rsHardwareBreakpoint = 'Hardware Breakpoint';
+  rsExceptionBreakpoint = 'Exception Breakpoint';
+  rsDBVMBreakpoint = 'DBVM Breakpoint';
   rsBreak = 'Break';
   rsChangeReg = 'Change reg';
   rsFindCode = 'Find code';
@@ -315,7 +314,6 @@ begin
     bpmDebugRegister:  result:=rsHardwareBreakpoint;
     bpmException:      result:=rsExceptionBreakpoint;
     bpmDBVM:           result:=rsDBVMBreakpoint;
-    bpmDBVMNative:     result:=rsDBVMNativeBreakpoint;
     else
        result:='Error';
   end;

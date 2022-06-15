@@ -6,8 +6,7 @@ interface
 
 uses
   LCLType, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, MemoryRecordUnit, CEFuncProc, SynEdit, Menus, betterControls, addresslist,
-  synedittypes;
+  ExtCtrls, MemoryRecordUnit, CEFuncProc, SynEdit, Menus;
 
 resourcestring
 rsDDDropdownOtionsFor = 'Dropdown options for ';
@@ -50,7 +49,6 @@ type
     procedure Paste1Click(Sender: TObject);
   private
     { private declarations }
-    addressList: TAddresslist;
     memrec: TMemoryrecord;
     synEditDropdownItems: TSynEdit;
     linkedToMemrec: boolean;
@@ -58,7 +56,7 @@ type
 
   public
     { public declarations }
-    constructor create(memrec: TMemoryrecord; addresslist: TAddresslist);  overload;
+    constructor create(memrec: TMemoryrecord);  overload;
   end;
 
 implementation
@@ -149,7 +147,6 @@ end;
 
 procedure TFrmMemoryRecordDropdownSettings.btnOkClick(Sender: TObject);
 var i: integer;
-  m: TMemoryRecord;
 begin
   if linkedtomemrec then
   begin
@@ -170,28 +167,6 @@ begin
     memrec.DisplayAsDropDownListItem:=cbDisplayAsDropdownItem.checked;
   end;
 
-  if addresslist<>nil then //link the other entries to this one
-  begin
-    for i:=0 to addresslist.Count-1 do
-    begin
-      m:=addresslist[i];
-      if (m.isSelected) and (m<>memrec) then
-      begin
-        m.DropDownLinked:=true;
-
-        if linkedToMemrec then
-          m.DropDownLinkedMemrec:=linkedMemrec
-        else
-          m.DropDownLinkedMemrec:=memrec.Description;
-
-        m.DropDownReadOnly:=memrec.DropDownReadOnly;
-        m.DropDownDescriptionOnly:=memrec.DropDownDescriptionOnly;
-        m.DisplayAsDropDownListItem:=memrec.DisplayAsDropDownListItem;
-
-      end;
-    end;
-  end;
-
 
   modalresult:=mrok;
 end;
@@ -203,7 +178,7 @@ begin
 
 end;
 
-constructor TFrmMemoryRecordDropdownSettings.create(memrec: TMemoryrecord; addresslist: TAddresslist);
+constructor TFrmMemoryRecordDropdownSettings.create(memrec: TMemoryrecord);
 var
   multicaret: TSynPluginMultiCaret;
   fs: integer;
@@ -213,7 +188,6 @@ begin
 
   fs:=font.size;
   self.memrec:=memrec;
-  self.addressList:=addresslist;;
 
   synEditDropdownItems:=TSynEdit.Create(Self);
   with synEditDropdownItems do begin
@@ -231,13 +205,6 @@ begin
     Gutter.CodeFoldPart.Visible:=false;
     Gutter.MarksPart.Visible:=false;
     Gutter.SeparatorPart.Visible:=false;
-
-    Color:=colorset.TextBackground;
-    Font.color:=colorset.FontColor;
-    Gutter.Color:=clBtnFace;
-    Gutter.LineNumberPart.MarkupInfo.Background:=clBtnFace;
-    Gutter.SeparatorPart.MarkupInfo.Background:=clBtnFace;
-
 
     font.size:=13;
   end;

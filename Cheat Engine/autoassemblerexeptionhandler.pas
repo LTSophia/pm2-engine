@@ -11,7 +11,7 @@ uses
   {$ifdef windows}
   windows,
   {$endif}
-  Classes, SysUtils, NewKernelHandler, Clipbrd, betterControls;
+  Classes, SysUtils, NewKernelHandler, Clipbrd;
 
 type
   TAAExceptionInfo=record
@@ -188,7 +188,8 @@ var
   x: ptruint;
 
   ehallocated: boolean;
-  disableinfo: tdisableinfo;
+  allocs: TCEAllocArray;
+  exceptions: TCEExceptionListArray; //will hopefully be 0 long
   i: integer;
 
 begin
@@ -442,29 +443,22 @@ begin
     init.add('createthreadandwait(registereh)');
 
     //Clipboard.AsText:=init.text;
-    disableinfo:=TDisableInfo.create;
 
-    try
-      if autoassemble(init, false, true,false,false,disableinfo)=false then
-        raise exception.create('Failure to assemble exception handler');
+    if autoassemble(init, false, true,false,false,allocs, exceptions)=false then
+      raise exception.create('Failure to assemble exception handler');
 
-      for i:=0 to length(disableinfo.allocs)-1 do
-      begin
-        if lowercase(disableinfo.allocs[i].varname)='signature' then
-          signatureaddress:=disableinfo.allocs[i].address
-        else
-        if lowercase(disableinfo.allocs[i].varname)='list' then
-          listaddress:=disableinfo.allocs[i].address
-        else
-        if lowercase(disableinfo.allocs[i].varname)='setlist' then
-          setlistaddress:=disableinfo.allocs[i].address;
-      end;
+    for i:=0 to length(allocs)-1 do
+      if lowercase(allocs[i].varname)='signature' then
+        signatureaddress:=allocs[i].address
+      else
+      if lowercase(allocs[i].varname)='list' then
+        listaddress:=allocs[i].address
+      else
+      if lowercase(allocs[i].varname)='setlist' then
+        setlistaddress:=allocs[i].address;
 
 
-    finally
-      init.free;
-      disableinfo.free;
-    end;
+    init.free;
 
     pid:=processid;
   end;

@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -20,10 +19,6 @@
 
 #include <unistd.h>
 #include <errno.h>
-#include <dlfcn.h>
-
-
-
 
 #include "ceserver.h"
 #include "porthelp.h"
@@ -40,8 +35,7 @@ int PORT;
 __thread int isDebuggerThread;
 __thread int debugfd;
 
-#define CESERVERVERSION 3
-char versionstring[]="CHEATENGINE Network 2.2";
+char versionstring[]="CHEATENGINE Network 2.0";
 
 ssize_t recvall (int s, void *buf, size_t size, int flags)
 {
@@ -58,7 +52,7 @@ ssize_t recvall (int s, void *buf, size_t size, int flags)
 
     if (i==0)
     {
-      debug_log("Error: recv returned 0\n");
+      debug_log("recv returned 0\n");
       return i;
     }
 
@@ -132,7 +126,7 @@ int DispatchCommand(int currentsocket, unsigned char command)
       int versionsize=strlen(versionstring);
       v=(PCeVersion)malloc(sizeof(CeVersion)+versionsize);
       v->stringsize=versionsize;
-      v->version=CESERVERVERSION;
+      v->version=1;
 
       memcpy((char *)v+sizeof(CeVersion), versionstring, versionsize);
 
@@ -144,40 +138,24 @@ int DispatchCommand(int currentsocket, unsigned char command)
       break;
     }
 
-    case CMD_GETABI:
-    {
-#ifdef WINDOWS
-      unsigned char abi=0;
-#else
-      unsigned char abi=1;
-#endif
-      sendall(currentsocket, &abi, sizeof(abi), 0);
-      break;
-    }
-
     case CMD_GETARCHITECTURE:
     {
-      unsigned char arch;
-      HANDLE h;
-      //ce 7.4.1+ : Added the processhandle
-
-      debug_log("CMD_GETARCHITECTURE");
-
-      if (recvall(currentsocket, &h, sizeof(h), MSG_WAITALL)>0)
-      {
-        //intel i386=0
-        //intel x86_64=1
-        //arm 32 = 2
-        //arm 64 = 3
-        debug_log("(%d)",h);
-        arch=getArchitecture(h);
-      }
-
+#ifdef __i386__
+      unsigned char arch=0;
+#endif
+#ifdef __x86_64__
+      unsigned char arch=1;
+#endif
+#ifdef __arm__
+      unsigned char arch=2;
+#endif
+#ifdef __aarch64__
+      unsigned char arch=3;
+#endif
       if(SPECIFIED_ARCH != 9)
       {
         arch = SPECIFIED_ARCH;
       }
-      debug_log("=%d\n", arch);
       sendall(currentsocket, &arch, sizeof(arch), 0);
       break;
     }
@@ -430,13 +408,13 @@ case CMD_SETTHREADCONTEXT:
       CeCreateToolhelp32Snapshot params;
       HANDLE result;
 
-      //debug_log("CMD_CREATETOOLHELP32SNAPSHOT\n");
+      debug_log("CMD_CREATETOOLHELP32SNAPSHOT\n");
 
       if (recvall(currentsocket, &params, sizeof(CeCreateToolhelp32Snapshot), MSG_WAITALL) > 0)
       {
-        //debug_log("Calling CreateToolhelp32Snapshot\n");
+        debug_log("Calling CreateToolhelp32Snapshot\n");
         result=CreateToolhelp32Snapshot(params.dwFlags, params.th32ProcessID);
-       // debug_log("result of CreateToolhelp32Snapshot=%d\n", result);
+        debug_log("result of CreateToolhelp32Snapshot=%d\n", result);
 
         fflush(stdout);
 
@@ -477,8 +455,6 @@ case CMD_SETTHREADCONTEXT:
           r->modulebase=me.baseAddress;
           r->modulesize=me.moduleSize;
           r->modulenamesize=strlen(me.moduleName);
-          r->modulepart=me.part;
-
 
           // Sending %s size %x\n, me.moduleName, r->modulesize
           memcpy((char *)r+sizeof(CeModuleEntry), me.moduleName, r->modulenamesize);
@@ -490,18 +466,9 @@ case CMD_SETTHREADCONTEXT:
           r->modulebase=0;
           r->modulesize=0;
           r->modulenamesize=0;
-          r->modulepart=0;
         }
 
         r->result=result;
-/*
-        if (result)
-        {
-          debug_log("CMD_MODULE32 returning %s : base=%x size=%x part=%d (me.part=%d)\n", me.moduleName, r->modulebase, r->modulesize, r->modulepart, me.part);
-
-        }
-        else
-          debug_log("CMD_MODULE32 returning <nomodule> : base=%x size=%x part=%d\n", r->modulebase, r->modulesize, r->modulepart);*/
 
         sendall(currentsocket, r, size, 0);
 
@@ -571,7 +538,7 @@ case CMD_SETTHREADCONTEXT:
           //compress the output
 #define COMPRESS_BLOCKSIZE (64*1024)
           int i;
-          unsigned char *uncompressed=(unsigned char *)&o[1];
+          unsigned char *uncompressed=&o[1];
           uint32_t uncompressedSize=o->read;
           uint32_t compressedSize=0;
           int maxBlocks=1+(c.size / COMPRESS_BLOCKSIZE);
@@ -833,7 +800,7 @@ case CMD_SETTHREADCONTEXT:
       //zip it first
       uint32_t symbolpathsize;
 
-      //debug_log("CMD_GETSYMBOLLISTFROMFILE\n");
+      debug_log("CMD_GETSYMBOLLISTFROMFILE\n");
 
       if (recvall(currentsocket, &symbolpathsize, sizeof(symbolpathsize), MSG_WAITALL)>0)
       {
@@ -844,31 +811,31 @@ case CMD_SETTHREADCONTEXT:
         {
           unsigned char *output=NULL;
 
-          //debug_log("symbolpath=%s\n", symbolpath);
+          debug_log("symbolpath=%s\n", symbolpath);
 
           if (memcmp("/dev/", symbolpath, 5)!=0) //don't even bother if it's a /dev/ file
             GetSymbolListFromFile(symbolpath, &output);
 
           if (output)
           {
-            //debug_log("output is not NULL (%p)\n", output);
+            debug_log("output is not NULL (%p)\n", output);
 
             fflush(stdout);
 
-            //debug_log("Sending %d bytes\n", *(uint32_t *)&output[4]);
+            debug_log("Sending %d bytes\n", *(uint32_t *)&output[4]);
             sendall(currentsocket, output, *(uint32_t *)&output[4], 0); //the output buffer contains the size itself
             free(output);
           }
           else
           {
-           // debug_log("Sending 8 bytes (fail)\n");
+            debug_log("Sending 8 bytes (fail)\n");
             uint64_t fail=0;
             sendall(currentsocket, &fail, sizeof(fail), 0); //just write 0
           }
         }
         else
         {
-          //debug_log("Failure getting symbol path\n");
+          debug_log("Failure getting symbol path\n");
           close(currentsocket);
         }
         free(symbolpath);
@@ -1207,21 +1174,6 @@ void *IdentifierThread(void *arg)
   return 0;
 }
 
-#ifdef traptest
-//test succes. This can be used as a vehdebug interface if ceserver is functioning as a injected .so
-struct sigaction traphandler, oldtraphandler;
-
-
-void mytraphandler(int signr, siginfo_t *info, struct ucontext_t *uap)
-{
-  //uap->uc_mcontext.gregs[REG_RIP]=0;
-  printf("hello\n");
-
- // uap->uc_mcontext.gregs[16]=0;
-
-}
-#endif
-
 #ifdef SHARED_LIBRARY
 int ceserver()
 #else
@@ -1239,9 +1191,6 @@ int main(int argc, char *argv[])
   struct sockaddr_in addr, addr_client;
 
   PORT=52736;
-
-//        process_vm_readv(p->pid, NULL, 0,NULL,0,0);
-  //(pid_t __pid, const struct iovec* __local_iov, unsigned long __local_iov_count, const struct iovec* __remote_iov, unsigned long __remote_iov_count, unsigned long __flags)
 
   #ifndef SHARED_LIBRARY
   int TEST_MODE = 0;
@@ -1290,8 +1239,6 @@ int main(int argc, char *argv[])
           if(errno != ERANGE && errno != EINVAL)
             TEST_PID = argv_pid;
           break;
-
-
       default:
           debug_log("Usage: %s [-a <attach_pid>] [-m <search_option>] [-p <port>] [-t <pid>] arg1 ...\n", argv[0]);
           break;
@@ -1311,11 +1258,6 @@ int main(int argc, char *argv[])
   #endif
   debug_log("sizeof(off_t)=%d\n",sizeof(off_t));
   debug_log("sizeof(off64_t)=%d\n",sizeof(off64_t));
-  debug_log("sizeof(uintptr_t)=%d\n",sizeof(uintptr_t));
-  debug_log("sizeof(long)=%d\n",sizeof(long));
-
-  debug_log("ATTACH_TO_ACCESS_MEMORY=%d\n", ATTACH_TO_ACCESS_MEMORY);
-  debug_log("MEMORY_SEARCH_OPTION=%d\n", MEMORY_SEARCH_OPTION);
 
   debug_log("CEServer. Waiting for client connection\n");
 
@@ -1334,19 +1276,13 @@ int main(int argc, char *argv[])
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof (optval));
 
   b=bind(s, (struct sockaddr *)&addr, sizeof(addr));
-  if (b==0)
-    debug_log("successfully bound socket\n");
-  else
-    debug_log("bind=%d (error)\n", b);
+  debug_log("bind=%d\n", b);
 
   if (b!=-1)
   {
     l=listen(s, 32);
 
-    if (l==0)
-      debug_log("Listening success\n");
-    else
-      debug_log("listen=%d (error)\n", l);
+    debug_log("listen=%d\n", l);
 
     clisize=sizeof(addr_client);
     memset(&addr_client, 0, sizeof(addr_client));
@@ -1357,30 +1293,6 @@ int main(int argc, char *argv[])
       debug_log("TESTMODE\n");
       pthread_create(&pth, NULL, (void *)CESERVERTEST, TEST_PID);     
     }
-#ifdef traptest
-
-    {
-      //struct sigcontext x;
-      void **p;
-      p=&traphandler.__sigaction_handler;
-
-      *p=mytraphandler;
-
-      //traphandler.__sigaction_handler=(void *
-      traphandler.sa_flags=SA_SIGINFO;
-      sigemptyset(&traphandler.sa_mask);
-
-      sigaction(SIGTRAP, &traphandler, &oldtraphandler);
-
-
-
-
-      asm __volatile__ (".byte 0xcc");
-
-      printf("after the trap");
-      return 1000;
-    }
-#endif
     #endif
 
     fflush(stdout);

@@ -64,8 +64,6 @@ type
 
 procedure doTranslation;
 
-function altnamer(s: string): string;
-
 implementation
 
 uses
@@ -73,22 +71,6 @@ uses
 
 type
   TPersistentAccess = class(TPersistent);
-
-function altnamer(s: string): string;
-begin
-  {$ifdef altname}
-  s:=StringReplace(s, 'Cheat Engine','Runtime Modifier',[rfReplaceAll, rfIgnoreCase]);
-  s:=StringReplace(s, 'cheating in','modding',[rfReplaceAll]);
-  s:=StringReplace(s, 'cheating','modding',[rfReplaceAll]);
-  s:=StringReplace(s, 'cheatengine','runtimemodifier',[rfReplaceAll]);
-  s:=StringReplace(s, 'runtimemodifier.org','cheatengine.org',[rfReplaceAll]);
-  s:=StringReplace(s, 'cheat','modification',[rfReplaceAll]);
-  s:=StringReplace(s, 'Tutorial-','rtm-Tutorial-',[rfReplaceAll, rfIgnoreCase]);
-  s:=StringReplace(s, ' CE',' RT-MOD',[rfReplaceAll]);
-
-  {$endif}
-  exit(s);
-end;
 
 function FindLocaleFileName(LCExt: string): string;
 var

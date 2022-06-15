@@ -1,0 +1,22 @@
+{"version":1,"strings":[
+{"hash":248794133,"name":"tfrmdissectcode.caption","sourcebytes":[68,105,115,115,101,99,116,32,67,111,100,101],"value":"Dissect Code"},
+{"hash":90554404,"name":"tfrmdissectcode.label2.caption","sourcebytes":[83,101,108,101,99,116,32,116,104,101,32,109,111,100,117,108,101,40,115,41,32,116,111,32,100,105,115,115,101,99,116],"value":"Select the module(s) to dissect"},
+{"hash":159287269,"name":"tfrmdissectcode.label3.caption","sourcebytes":[72,111,108,100,32,67,84,82,76,32,116,111,32,115,101,108,101,99,116,32,109,117,108,116,105,112,108,101],"value":"Hold CTRL to select multiple"},
+{"hash":21925443,"name":"tfrmdissectcode.cbincludesystemmodules.caption","sourcebytes":[73,110,99,108,117,100,101,32,115,121,115,116,101,109,32,109,111,100,117,108,101,115],"value":"Include system modules"},
+{"hash":113584426,"name":"tfrmdissectcode.label6.caption","sourcebytes":[69,115,116,105,109,97,116,101,100,32,116,105,109,101,32,108,101,102,116,58],"value":"Estimated time left:"},
+{"hash":64175616,"name":"tfrmdissectcode.label7.caption","sourcebytes":[48,48,58,48,48,58,48,48],"value":"00:00:00"},
+{"hash":46208170,"name":"tfrmdissectcode.label4.caption","sourcebytes":[83,116,114,105,110,103,32,114,101,102,101,114,101,110,99,101,115,32,102,111,117,110,100,58],"value":"String references found:"},
+{"hash":48,"name":"tfrmdissectcode.lblstringref.caption","sourcebytes":[48],"value":"0"},
+{"hash":192957322,"name":"tfrmdissectcode.label5.caption","sourcebytes":[67,111,110,100,105,116,105,111,110,97,108,32,74,117,109,112,115,58],"value":"Conditional Jumps:"},
+{"hash":48,"name":"tfrmdissectcode.lblconditionaljumps.caption","sourcebytes":[48],"value":"0"},
+{"hash":192958538,"name":"tfrmdissectcode.label9.caption","sourcebytes":[85,110,99,111,110,100,105,116,105,111,110,97,108,32,74,117,109,112,115,58],"value":"Unconditional Jumps:"},
+{"hash":48,"name":"tfrmdissectcode.lblunconditionaljumps.caption","sourcebytes":[48],"value":"0"},
+{"hash":77083498,"name":"tfrmdissectcode.label11.caption","sourcebytes":[67,97,108,108,115,58],"value":"Calls:"},
+{"hash":48,"name":"tfrmdissectcode.lblcalls.caption","sourcebytes":[48],"value":"0"},
+{"hash":180973706,"name":"tfrmdissectcode.label1.caption","sourcebytes":[77,97,120,105,109,117,109,32,111,102,102,115,101,116,58],"value":"Maximum offset:"},
+{"hash":48,"name":"tfrmdissectcode.lblmaxoffset.caption","sourcebytes":[48],"value":"0"},
+{"hash":5941396,"name":"tfrmdissectcode.btnstart.caption","sourcebytes":[83,116,97,114,116],"value":"Start"},
+{"hash":315429,"name":"tfrmdissectcode.menuitem1.caption","sourcebytes":[70,105,108,101],"value":"File"},
+{"hash":353982,"name":"tfrmdissectcode.menuitem2.caption","sourcebytes":[79,112,101,110],"value":"Open"},
+{"hash":366789,"name":"tfrmdissectcode.menuitem3.caption","sourcebytes":[83,97,118,101],"value":"Save"}
+]}

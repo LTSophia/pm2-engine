@@ -1,80 +1,40 @@
 object frmChangedAddresses: TfrmChangedAddresses
-  Left = 1296
-  Height = 319
-  Top = 437
-  Width = 389
+  Left = 636
+  Height = 285
+  Top = 86
+  Width = 411
   Caption = 'Changed Addresses'
-  ClientHeight = 319
-  ClientWidth = 389
+  ClientHeight = 285
+  ClientWidth = 411
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.6.0'
-  object PanelAddressInfo: TPanel
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = Owner
-    AnchorSideRight.Control = Owner
+  LCLVersion = '2.0.0.4'
+  object lblInfo: TLabel
     Left = 0
-    Height = 25
+    Height = 15
     Top = 0
-    Width = 389
+    Width = 411
     Align = alTop
-    AutoSize = True
-    ClientHeight = 25
-    ClientWidth = 389
-    ParentBidiMode = False
-    TabOrder = 0
-    object labelCodeAddress: TLabel
-      AnchorSideLeft.Control = PanelAddressInfo
-      AnchorSideTop.Control = PanelAddressInfo
-      AnchorSideBottom.Control = PanelAddressInfo
-      AnchorSideBottom.Side = asrBottom
-      Left = 6
-      Height = 23
-      Top = 1
-      Width = 73
-      Anchors = [akTop, akLeft, akBottom]
-      BorderSpacing.Left = 5
-      BorderSpacing.Right = 5
-      Caption = 'Code Address'
-      Layout = tlCenter
-      ParentColor = False
-    end
-    object editCodeAddress: TEdit
-      AnchorSideLeft.Control = labelCodeAddress
-      AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = PanelAddressInfo
-      AnchorSideRight.Control = PanelAddressInfo
-      AnchorSideRight.Side = asrBottom
-      AnchorSideBottom.Control = PanelAddressInfo
-      AnchorSideBottom.Side = asrBottom
-      Left = 84
-      Height = 23
-      Top = 1
-      Width = 304
-      Alignment = taCenter
-      Anchors = [akTop, akLeft, akRight, akBottom]
-      AutoSelect = False
-      PopupMenu = pmCodeAddress
-      ReadOnly = True
-      TabOrder = 0
-      Text = '01234567890ABCDEF'
-    end
+    Caption = 'The following addresses have been accessed by the code you selected'
+    ParentColor = False
+    ParentFont = False
+    WordWrap = True
   end
   object Panel1: TPanel
     Left = 0
     Height = 33
-    Top = 286
-    Width = 389
+    Top = 252
+    Width = 411
     Align = alBottom
     Anchors = [akRight, akBottom]
     AutoSize = True
     ClientHeight = 33
-    ClientWidth = 389
+    ClientWidth = 411
     ParentFont = False
-    TabOrder = 1
+    TabOrder = 0
     object OKButton: TButton
       AnchorSideLeft.Control = Panel1
       AnchorSideTop.Control = Panel1
@@ -97,7 +57,7 @@ object frmChangedAddresses: TfrmChangedAddresses
       AnchorSideTop.Control = OKButton
       AnchorSideRight.Control = Panel1
       AnchorSideRight.Side = asrBottom
-      Left = 206
+      Left = 228
       Height = 23
       Top = 4
       Width = 179
@@ -109,10 +69,8 @@ object frmChangedAddresses: TfrmChangedAddresses
         'Byte'
         '2 Bytes'
         '4 Bytes'
-        '8 Bytes'
         'Float'
         'Double'
-        'Pointer'
       )
       ParentFont = False
       Style = csDropDownList
@@ -120,85 +78,58 @@ object frmChangedAddresses: TfrmChangedAddresses
       Text = '4 Bytes'
     end
   end
-  object PanelContent: TPanel
+  object Changedlist: TListView
     Left = 0
-    Height = 261
-    Top = 25
-    Width = 389
+    Height = 237
+    Top = 15
+    Width = 411
     Align = alClient
-    Caption = 'PanelContent'
-    ClientHeight = 261
-    ClientWidth = 389
-    TabOrder = 2
-    object lblInfo: TLabel
-      AnchorSideLeft.Control = Owner
-      AnchorSideTop.Control = PanelAddressInfo
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = Owner
-      AnchorSideRight.Side = asrBottom
-      Left = 1
-      Height = 15
-      Top = 1
-      Width = 387
-      Align = alTop
-      Caption = 'The following addresses have been accessed by the code you selected'
-      ParentBidiMode = False
-      ParentColor = False
-      WordWrap = True
-    end
-    object Changedlist: TListView
-      Left = 1
-      Height = 244
-      Top = 16
-      Width = 387
-      Align = alClient
-      Columns = <      
-        item
-          Caption = 'Address'
-          Width = 123
-        end      
-        item
-          Caption = 'Value'
-          Width = 200
-        end      
-        item
-          Caption = 'Count'
-        end>
-      HideSelection = False
-      MultiSelect = True
-      ParentFont = False
-      PopupMenu = PopupMenu1
-      ReadOnly = True
-      RowSelect = True
-      TabOrder = 0
-      ViewStyle = vsReport
-      OnColumnClick = ChangedlistColumnClick
-      OnCompare = ChangedlistCompare
-      OnCustomDrawItem = ChangedlistCustomDrawItem
-      OnDblClick = ChangedlistDblClick
-    end
+    Columns = <    
+      item
+        Caption = 'Address'
+        Width = 123
+      end    
+      item
+        Caption = 'Value'
+        Width = 200
+      end    
+      item
+        Caption = 'Count'
+      end>
+    HideSelection = False
+    MultiSelect = True
+    ParentFont = False
+    PopupMenu = PopupMenu1
+    ReadOnly = True
+    RowSelect = True
+    TabOrder = 1
+    ViewStyle = vsReport
+    OnColumnClick = ChangedlistColumnClick
+    OnCompare = ChangedlistCompare
+    OnCustomDrawItem = ChangedlistCustomDrawItem
+    OnDblClick = ChangedlistDblClick
   end
   object Timer1: TTimer
     Interval = 500
     OnTimer = Timer1Timer
-    Left = 56
-    Top = 64
+    left = 56
+    top = 64
   end
   object PopupMenu1: TPopupMenu
     Images = caImageList
     OnPopup = PopupMenu1Popup
-    Left = 136
-    Top = 72
+    left = 40
+    top = 104
     object Showregisterstates1: TMenuItem
       Caption = 'Show register states'
       ShortCut = 16466
       OnClick = Showregisterstates1Click
     end
-    object miChangeValue: TMenuItem
+    object MenuItem3: TMenuItem
       Caption = 'Change value'
       ImageIndex = 0
       ShortCut = 13
-      OnClick = miChangeValueClick
+      OnClick = MenuItem3Click
     end
     object Browsethismemoryregion1: TMenuItem
       Caption = 'Browse this memory region'
@@ -252,26 +183,14 @@ object frmChangedAddresses: TfrmChangedAddresses
       ShortCut = 16456
       OnClick = micbShowAsHexadecimalClick
     end
-    object micbShowAsSigned: TMenuItem
-      AutoCheck = True
-      Caption = 'Show as signed'
-      ShortCut = 16469
-      OnClick = micbShowAsHexadecimalClick
-    end
-    object miCopyAddressToClipboard: TMenuItem
+    object MenuItem1: TMenuItem
       Caption = 'Copy address to clipboard'
       ImageIndex = 2
       ShortCut = 16451
-      OnClick = miCopyAddressToClipboardClick
-    end
-    object miCopyValueToClipboard: TMenuItem
-      Caption = 'Copy value to clipboard'
-      ImageIndex = 2
-      OnClick = miCopyValueToClipboardClick
+      OnClick = MenuItem1Click
     end
     object miCopyToAddresslist: TMenuItem
       Caption = 'Copy selected addresses to addresslist'
-      Default = True
       ImageIndex = 2
       ShortCut = 49219
       OnClick = ChangedlistDblClick
@@ -298,33 +217,11 @@ object frmChangedAddresses: TfrmChangedAddresses
       OnClick = miSetFilterClick
     end
   end
-  object pmCodeAddress: TPopupMenu
-    Images = caImageList
-    Left = 40
-    Top = 200
-    object miCodeAddressCopy: TMenuItem
-      Caption = 'Copy Code Address to Clipboard'
-      ImageIndex = 0
-      OnClick = miCodeAddressCopyClick
-    end
-    object miCodeAddressBrowseMemoryRegion: TMenuItem
-      AutoCheck = True
-      Caption = 'Browse Memory Region'
-      ImageIndex = 3
-      OnClick = miCodeAddressBrowseMemoryRegionClick
-    end
-    object miCodeAddressDisassembleMemoryRegion: TMenuItem
-      AutoCheck = True
-      Caption = 'Disassemble Memory Region'
-      ImageIndex = 6
-      OnClick = miCodeAddressDisassembleMemoryRegionClick
-    end
-  end
   object caImageList: TImageList
-    Left = 220
-    Top = 96
+    left = 220
+    top = 96
     Bitmap = {
-      4C69070000001000000010000000FFFFFF00A0A0A060808080C0808080C08080
+      4C69060000001000000010000000FFFFFF00A0A0A060808080C0808080C08080
       80C0808080C0808080C0808080C0808080C0808080C0808080C0747474BFBCBC
       BC35FFFFFF00FFFFFF00FFFFFF00FFFFFF0080808080FFFFFFFFFFFFFFFFFFFF
       FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF6767
@@ -516,39 +413,7 @@ object frmChangedAddresses: TfrmChangedAddresses
       FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00CAA03EE0E2AB29FFE2AB29FFE2AB
       29FFE2AB29FFE2AB29FFD5C08F80FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
       FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00BEAC817EC3AB7190C3AB7190C3AB
-      7190C3AB7190C3AB7190D5CCB648FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00E4E4E4139D7955ADCAC8C52FFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00D4D4D421C47A31EFC07830ECCAC8C52FFFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00B4A79A57A77E54A8A77E54A8A77E54A8A77E
-      54A8A77E54A88C5F32D1F29130FFC07830ECCFCECC27FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00A9927B7EA76421E8A76421E8A76421E8A764
-      21E8A76421E8A76421F0F29130FFDD852CFDB8B3AE41FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00ECECEC0FAA7642D0DD852CFDADA1955EFFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00CCCCCC249B5F22ECADA1955EFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF0094949487ABABAB90ABAB
-      AB90ABABAB90ABABAB90ABABAB90ABABAB90ABABAB90ABABAB90ABABAB90ABAB
-      AB9094949487FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0EFEFEFFFEAEA
-      EAFFEAEAEAFFEAEAEAFFEAEAEAFFEAEAEAFFEAEAEAFFEAEAEAFFEAEAEAFFF0F0
-      F0FFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0E8E8E8FFD8D8
-      D8FFD8D8D8FFD8D8D8FFD8D8D8FFD8D8D8FFD8D8D8FFD8D8D8FFD8D8D8FFEBEB
-      EBFFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0E5E5E5FFD2D2
-      D2FFD2D2D2FFD2D2D2FFD2D2D2FFD2D2D2FFD2D2D2FFD2D2D2FFD2D2D2FFE9E9
-      E9FFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0F1F1F1FFEFEF
-      EFFFEFEFEFFFEFEFEFFFEFEFEFFFEFEFEFFFEFEFEFFFEFEFEFFFEFEFEFFFF2F2
-      F2FFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0E4E4E4FFCFCF
-      CFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFE8E8
-      E8FFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0F2F2F2FFF2F2
-      F2FFF2F2F2FFF2F2F2FFF2F2F2FFF2F2F2FFF2F2F2FFF2F2F2FFF2F2F2FFF2F2
-      F2FFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00A7A7A7F0E4E4E4FFCFCF
-      CFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFCFCFCFFFE9E9
-      E9FFA7A7A7F0FFFFFF00FFFFFF00FFFFFF00FFFFFF00727272E1A7A7A7F0A7A7
-      A7F0A7A7A7F0A7A7A7F0A7A7A7F0A7A7A7F0A7A7A7F0A7A7A7F0A7A7A7F0A7A7
-      A7F0727272E1FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-      FF00FFFFFF00FFFFFF00FFFFFF00
+      7190C3AB7190C3AB7190D5CCB648
     }
   end
 end

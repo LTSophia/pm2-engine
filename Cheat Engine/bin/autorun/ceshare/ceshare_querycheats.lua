@@ -12,7 +12,9 @@ end
 function ceshare.QueryProcessCheats(processname, headermd5, updatableOnly)
   local modulelist=ceshare.enumModules2()
   local result=nil
+  --local url=ceshare.base..'QueryProcessCheats.php'
   local parameters='processname='..ceshare.url_encode(processname)
+  --print(url..'?'..parameters)
   
   if isKeyPressed(VK_CONTROL)==false then  --control lets you get a new script if needed
     local secondaryIdentifierCode=ceshare.secondaryIdentifierCode.Value[processname:lower()]
@@ -114,7 +116,7 @@ function ceshare.QueryProcessCheats(processname, headermd5, updatableOnly)
                 end
                 
                 if entry.SecondaryModuleName and entry.SecondaryModuleName~='' then
-                  local me=modulelist[entry.SecondaryModuleName:lower()]
+                  local me=modulelist[SecondaryModuleName:lower()]
                   if me then
                     if not me.md5 then
                       me.md5=md5file(me.PathToFile)
@@ -186,13 +188,12 @@ function ceshare.QueryCurrentProcess(updatableOnly)
   end
 end
 
-function ceshare.CheckForCheatsClick(s, overrideProcess)
+function ceshare.CheckForCheatsClick(s)
   --spawn the cheatbrowser
   
   if ceshare.CheatBrowserFrm==nil then
     local f=createFormFromFile(ceshare.formpath..'BrowseCheats.FRM')
     f.lblProcessName.Caption=process
-    f.Name='ceshare_CheatBrowserFrm'
 
     ceshare.CheatBrowserFrm=f
 
@@ -201,18 +202,30 @@ function ceshare.CheckForCheatsClick(s, overrideProcess)
     f.pnlDescription.Constraints.MinHeight=h
     
     --configure base state and add events
-    
-    ceshare.CheatBrowserFrm.OnDestroy=function(f)
-      f.saveFormPosition({ceshare.CheatBrowserFrm.CEPanel1.Height})
-    end
 
-    ceshare.CheatBrowserFrm.lvCheats.Font.Size=12
     ceshare.CheatBrowserFrm.lvCheats.OnSelectItem=function(sender, listitem, selected)
       if selected and listitem.index then
         local desc=ceshare.CurrentQuery[listitem.index+1].Description
         
-        ceshare.CheatBrowserFrm.mDescription.Lines.Text=desc
+        ceshare.CheatBrowserFrm.imgDescription.Width=ceshare.CheatBrowserFrm.ScrollBox1.ClientWidth
+        ceshare.CheatBrowserFrm.imgDescription.Height=ceshare.CheatBrowserFrm.ScrollBox1.ClientHeight
         
+        ceshare.CheatBrowserFrm.imgDescription.Picture.Bitmap.Canvas.Brush.Color=0xffffff
+        ceshare.CheatBrowserFrm.imgDescription.Picture.Bitmap.Width=ceshare.CheatBrowserFrm.ScrollBox1.Width
+        ceshare.CheatBrowserFrm.imgDescription.Picture.Bitmap.Height=ceshare.CheatBrowserFrm.ScrollBox1.Height
+
+        ceshare.CheatBrowserFrm.imgDescription.Picture.Bitmap.Canvas.fillRect(0,0,ceshare.CheatBrowserFrm.ScrollBox1.Width,ceshare.CheatBrowserFrm.ScrollBox1.Height)
+
+        local imgrect={Left=0,Top=0,Right=ceshare.CheatBrowserFrm.imgDescription.Width, Bottom=ceshare.CheatBrowserFrm.imgDescription.Height}
+
+        
+
+        local r=ceshare.CheatBrowserFrm.imgDescription.Picture.Bitmap.Canvas.textRect(imgrect,0,0,desc);
+        if r then --ce 7.1+ gets the actually needed rect
+
+        else
+
+        end
         
         --[[local rating=ceshare.CurrentQuery[listitem.index+1].YourRating    
         if rating then
@@ -221,7 +234,7 @@ function ceshare.CheckForCheatsClick(s, overrideProcess)
         end--]]
         
         ceshare.CheatBrowserFrm.lblContact.Visible=true
-        ceshare.CheatBrowserFrm.lblContact.Font.Size=7
+        ceshare.CheatBrowserFrm.lblContact.Font.Size=6
       end
       
       ceshare.RateStars[1].img.OnMouseLeave(ceshare.RateStars[1]) 
@@ -291,34 +304,6 @@ function ceshare.CheckForCheatsClick(s, overrideProcess)
           while AddressList.Count>0 do
             AddressList[0].destroy()
           end
-        end
-        
-        if not ceshare.decodeFunctionHooked then
-          local originalDecode=decodeFunction
-          local noToAll=false
-          local yesToAll=false
-          decodeFunction=function(data)
-            local decodeIt=yesToAll
-
-            if (noToAll or yesToAll) == false then 
-              local r=messageDialog(translate('The current table is trying to load obfuscated code. This often means mallicious intent as tables are supposed to be public. Do you wish to execute this lua code anyhow?'), mtWarning, mbYes,  mbNo, mbYesToAll, mbNoToAll)
-              if r==mrYes then
-                decodeIt=true
-              elseif r==mrYesToAll then
-                decodeIt=true
-                yesToAll=true
-              elseif r==mrNoToAll then
-                decodeIt=false
-                noToAll=true
-              end              
-            end
-            if decodeIt==false then 
-              return function() return nil end --dummy function
-            else 
-              return originalDecode(data)
-            end            
-          end
-          ceshare.decodeFunctionHooked=true
         end
         
         loadTable(cheattabless)        
@@ -580,28 +565,11 @@ function ceshare.CheckForCheatsClick(s, overrideProcess)
     ceshare.linkButton=createPNG()
     ceshare.linkButton.LoadFromFile(ceshare.imagepath..'link.png')
     
-    local formdata
-    ceshare.CheatBrowserFrm.loadedFormPosition, formdata=ceshare.CheatBrowserFrm.loadFormPosition()
-    if ceshare.CheatBrowserFrm.loadedFormPosition then
-      if #formdata>=1 then    
-        ceshare.CheatBrowserFrm.CEPanel1.Height=formdata[1]   
-      end
-    else    
-      ceshare.CheatBrowserFrm.Position='poScreenCenter'
-      ceshare.CheatBrowserFrm.CEPanel1.Height=(getScreenDPI()/96)*100
-    end
-  
   end
 
   --get the table list
   ceshare.CheatBrowserFrm.lvCheats.clear()
-  
-  if overrideProcess==nil then
-    ceshare.CurrentQuery=ceshare.QueryCurrentProcess()
-  else  
-    local headermd5=ceshare.getCurrentProcessHeaderMD5() or '00000000000000000000000000000000'         
-    ceshare.CurrentQuery=ceshare.QueryProcessCheats(overrideProcess, headermd5)
-  end
+  ceshare.CurrentQuery=ceshare.QueryCurrentProcess()
 
   if ceshare.CurrentQuery==nil or #ceshare.CurrentQuery==0 then
     messageDialog(translate('Sorry, but there are currently no tables for this target. Perhaps you can be the first'),mtError,mbOK)
@@ -683,23 +651,17 @@ function ceshare.CheckForCheatsClick(s, overrideProcess)
       
       if w<neededw then
         ceshare.CheatBrowserFrm.lvCheats.Columns[i].Autosize=false
-        ceshare.CheatBrowserFrm.lvCheats.Columns[i].Width=neededw        
+        ceshare.CheatBrowserFrm.lvCheats.Columns[i].Width=neededw
         w=neededw
       end
         
       headerwidth=headerwidth+w    
     end
     
-    
-    
-    if not ceshare.CheatBrowserFrm.loadedFormPosition then
-      ceshare.CheatBrowserFrm.ClientWidth=headerwidth+10      
-    end
-    
-    
+    ceshare.CheatBrowserFrm.ClientWidth=headerwidth+10
     ceshare.CheatBrowserFrmShownBefore=true
   end
 
-
+  ceshare.CheatBrowserFrm.Position='poScreenCenter'
 end
 

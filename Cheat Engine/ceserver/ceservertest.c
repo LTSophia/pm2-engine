@@ -24,7 +24,7 @@ int cenet_connect(void)
 {
   int fd;
   int i;
-
+  int PORT=52736;
 
   struct sockaddr_in addr;
 
@@ -36,7 +36,7 @@ int cenet_connect(void)
   addr.sin_port=htons(PORT);
   addr.sin_addr.s_addr=htonl(INADDR_LOOPBACK); //0x1600a8c0; //INADDR_LOOPBACK;
 
-  debug_log("calling connect... (port=%d)\n", PORT);
+  debug_log("calling connect...\n");
   i=connect(fd, (struct sockaddr *)&addr, sizeof(addr));
 
   debug_log("after connect. %d\n", i);
@@ -70,26 +70,6 @@ int cenet_OpenProcess(int fd, int pid)
   recv(fd, &pHandle, sizeof(pHandle),MSG_WAITALL);
 
   return pHandle;
-}
-
-unsigned char cenet_getArchitecture(int fd, int pHandle)
-{
-#pragma pack(1)
-  struct
-  {
-    char command;
-    HANDLE pHandle;
-  } sd;
-#pragma pack()
-  unsigned char result;
-
-  sd.command=CMD_GETARCHITECTURE;
-  sd.pHandle=pHandle;
-
-  sendall(fd, &sd, sizeof(sd), 0);
-  recv(fd, &result, sizeof(result), MSG_WAITALL);
-
-  return result;
 }
 
 int cenet_startDebugger(int fd, int pHandle)
@@ -304,8 +284,6 @@ void *CESERVERTEST_DEBUGGERTHREAD(void *arg)
 
 
 
-
-
   if (cenet_startDebugger(fd, pHandle))
   {
     int i;
@@ -399,7 +377,6 @@ int hp;
 void *CESERVERTEST(int pid )
 {
   int fd;
-  int arch;
 
   pthread_t pth;
   debug_log("CESERVERTEST: running\n");
@@ -414,13 +391,6 @@ void *CESERVERTEST(int pid )
   pHandle=cenet_OpenProcess(fd, pid);
 
   debug_log("pHandle=%d\n", pHandle);
-
-  arch=cenet_getArchitecture(fd, pHandle);
-
-  printf("arch=%d\n", arch);
-
-  return NULL;
-
 
   //cenet_VirtualQueryExFull(fd, pHandle,  VQE_DIRTYONLY | VQE_PAGEDONLY);
 

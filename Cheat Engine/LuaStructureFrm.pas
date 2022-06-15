@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, lua, lualib, lauxlib, LuaHandler, LuaCaller, symbolhandler,
   cefuncproc, newkernelhandler, Dialogs, LuaClass, LuaClassArray, commonTypeDefs,
-  Forms, StructuresFrm2, LuaStructure, betterControls;
+  Forms, StructuresFrm2, LuaStructure;
   
   
 
@@ -18,7 +18,7 @@ procedure structColumn_addMetaData(L: PLua_state; metatable: integer; userdata: 
 
 implementation
 
-uses LuaForm, LuaObject, DotNetPipe, ComCtrls;
+uses LuaForm, LuaObject, DotNetPipe;
 
 resourcestring
   rsGroup1 = 'Group 1';
@@ -139,56 +139,7 @@ begin
   result:=1;
 end;
 
-function structureForm_getSelectedStructElement(L: PLua_State): integer; cdecl;
-var
-  frm: TFrmStructures2;
-  struct: TDissectedStruct;
-  element: TStructelement;
-  structlist: tlist;
-  node: TTreenode;
-begin
-  frm:=luaclass_getClassObject(L);
-  result:=0;
-  node:=frm.tvStructureView.Selected;
-  if node<>nil then
-  begin
-    struct:=TDissectedStruct(node.parent.Data);
-    if struct<>nil then
-    begin
-      if node.Index<struct.count then
-      begin
-        element:=struct.element[node.Index];
-        luaclass_newClass(L, element);
 
-        lua_newtable(L);
-        //build a parent structure list
-        node:=node.parent;
-        while node.parent<>nil do
-        begin
-          struct:=TDissectedStruct(node.parent.data);
-          if node.Index>=struct.count then exit(0); //corrupt
-
-          element:=struct.element[node.Index];
-          lua_pushinteger(L, node.Level);
-          lua_newtable(L);
-
-          lua_pushstring(L,'struct');
-          luaclass_newClass(L, struct);
-          lua_settable(L,-3);
-
-          lua_pushstring(L,'element');
-          luaclass_newClass(L, element);
-          lua_settable(L,-3);
-
-          lua_settable(L,-3);
-          node:=node.parent;
-        end;
-
-        exit(2);
-      end;
-    end;
-  end;
-end;
 
 function structureForm_structChange(L: PLua_State): integer; cdecl;
 var
@@ -303,8 +254,6 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'addGroup', structureForm_addGroup);
 
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'structChange', structureForm_structChange);
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getSelectedStructElement', structureForm_getSelectedStructElement);
-
 
   luaclass_addArrayPropertyToTable(L, metatable, userdata, 'Column', structureForm_getColumn, nil);
   luaclass_addArrayPropertyToTable(L, metatable, userdata, 'Group', structureForm_getGroup, nil);

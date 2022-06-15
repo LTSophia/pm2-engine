@@ -1,5 +1,3 @@
-//Copyright Cheat Engine
-
 unit dotnethost;
 
 {$mode objfpc}{$H+}
@@ -136,7 +134,7 @@ begin
       raise EDotNetException.create('DotNet '+versionstring+' does not seem to be loadable');
 
     if rti.GetInterface(CLSID_CLRRuntimeHost, IID_ICLRRuntimeHost, hostu)<>S_OK then
-      raise EDotNetException.create('Failure getting the RuntimeHost interface for dotnet version '+versionstring);
+      raise EDotNetException.create('Failure getting the RuntimeHost interface for dotner version '+versionstring);
 
     host:=ICLRRuntimeHost(hostu);
 

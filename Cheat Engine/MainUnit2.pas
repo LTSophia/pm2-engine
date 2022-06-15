@@ -1,7 +1,6 @@
 unit MainUnit2;
 
 {$MODE Delphi}
-{$MACRO ON}
 
 //this unit is used by both the network client and the main program (USERINTERFACE)
 
@@ -17,37 +16,19 @@ uses
      dialogs,forms,classes,LCLIntf, LCLProc, sysutils,registry,ComCtrls, menus,
      formsettingsunit, cefuncproc,AdvancedOptionsUnit, MemoryBrowserFormUnit,
      memscan,plugin, hotkeyhandler,frmProcessWatcherUnit, newkernelhandler,
-     debuggertypedefinitions, commonTypeDefs, betterControls;
+     debuggertypedefinitions, commonTypeDefs;
 
-const ceversion=7.41;
-{$ifdef altname}  //i'd use $MACRO ON but fpc bugs out
-  strCheatEngine='Runtime Modifier'; //if you change this, also change it in first.pas
-  strCheatTable='Code Table';   //because it contains code.... duh.....
-  strCheatTableLower='code table';
-  strCheat='Modification';
-  strTrainer='Modifier';
-  strTrainerLower='modifier';
-  strMyCheatTables='My Mod Tables';
-  strSpeedHack='Speedmodifier';
-{$else}
-  strCheatEngine='Cheat Engine';
-  strCheatTable='Cheat Table';
-  strCheatTableLower='cheat table';
-  strCheat='Cheat';
-  strTrainer='Trainer';
-  strTrainerLower='trainer';
-  strMyCheatTables='My Cheat Tables';
-  strSpeedHack='Speedhack';
-{$endif}
+const ceversion=7.1;
 
 resourcestring
-  cename = strCheatEngine+' 7.4.1';
-  rsCheatEngine = strCheatEngine;
+  cename = 'Cheat Engine 7.1';
   rsPleaseWait = 'Please Wait!';
 
 procedure UpdateToolsMenu;
 procedure LoadSettingsFromRegistry(skipPlugins: boolean=false);
 procedure initcetitle;
+
+
 
 
 const beta=''; //empty this for a release
@@ -164,15 +145,12 @@ begin
     reg:=Tregistry.Create;
     try
       Reg.RootKey := HKEY_CURRENT_USER;
-      if Reg.OpenKey('\Software\'+strCheatEngine,false) then
+      if Reg.OpenKey('\Software\Cheat Engine',false) then
       begin
 
         with formsettings do
         begin
           LoadingSettingsFromRegistry:=true;
-
-          if reg.ValueExists('Disable DarkMode Support') then
-            cbDisableDarkModeSupport.checked:=reg.ReadBool('Disable DarkMode Support');
 
           if reg.ValueExists('Saved Stacksize') then
             savedStackSize:=reg.ReadInteger('Saved Stacksize');
@@ -199,22 +177,22 @@ begin
             miLuaExecSignedOnly.checked:=true;
 
 
-          if reg.ValueExists('AllByte') then cbAllByte.checked:=reg.readBool('AllByte') else cbAllByte.checked:=false;
-          if reg.ValueExists('AllWord') then cbAllWord.checked:=reg.readBool('AllWord') else cbAllWord.checked:=false;
-          if reg.ValueExists('AllDWord') then cbAllDword.checked:=reg.readBool('AllDWord') else cbAllDWord.checked:=true;
-          if reg.ValueExists('AllQWord') then cbAllQword.checked:=reg.readBool('AllQWord') else cbAllQWord.checked:=false;
-          if reg.ValueExists('AllFloat') then cbAllSingle.checked:=reg.readBool('AllFloat') else cbAllSingle.checked:=true;
-          if reg.ValueExists('AllDouble') then cbAllDouble.checked:=reg.readBool('AllDouble') else cbAllDouble.checked:=true;
-          if reg.ValueExists('AllCustom') then cbAllCustom.checked:=reg.readBool('AllCustom') else cbAllDouble.checked:=false;
+          if reg.ValueExists('AllByte') then cgAllTypes.checked[0]:=reg.readBool('AllByte');
+          if reg.ValueExists('AllWord') then cgAllTypes.checked[1]:=reg.readBool('AllWord');
+          if reg.ValueExists('AllDWord') then cgAllTypes.checked[2]:=reg.readBool('AllDWord');
+          if reg.ValueExists('AllQWord') then cgAllTypes.checked[3]:=reg.readBool('AllQWord');
+          if reg.ValueExists('AllFloat') then cgAllTypes.checked[4]:=reg.readBool('AllFloat');
+          if reg.ValueExists('AllDouble') then cgAllTypes.checked[5]:=reg.readBool('AllDouble');
+          if reg.ValueExists('AllCustom') then cgAllTypes.checked[6]:=reg.readBool('AllCustom');
 
           ScanAllTypes:=[];
-          if cbAllByte.checked then ScanAllTypes:=ScanAllTypes+[vtByte];
-          if cbAllWord.checked then ScanAllTypes:=ScanAllTypes+[vtWord];
-          if cbAllDword.checked then ScanAllTypes:=ScanAllTypes+[vtDword];
-          if cbAllQword.checked then ScanAllTypes:=ScanAllTypes+[vtQword];
-          if cbAllSingle.checked then ScanAllTypes:=ScanAllTypes+[vtSingle];
-          if cbAllDouble.checked then ScanAllTypes:=ScanAllTypes+[vtDouble];
-          if cbAllCustom.checked then ScanAllTypes:=ScanAllTypes+[vtCustom];
+          if cgAllTypes.checked[0] then ScanAllTypes:=ScanAllTypes+[vtByte];
+          if cgAllTypes.checked[1] then ScanAllTypes:=ScanAllTypes+[vtWord];
+          if cgAllTypes.checked[2] then ScanAllTypes:=ScanAllTypes+[vtDword];
+          if cgAllTypes.checked[3] then ScanAllTypes:=ScanAllTypes+[vtQword];
+          if cgAllTypes.checked[4] then ScanAllTypes:=ScanAllTypes+[vtSingle];
+          if cgAllTypes.checked[5] then ScanAllTypes:=ScanAllTypes+[vtDouble];
+          if cgAllTypes.checked[6] then ScanAllTypes:=ScanAllTypes+[vtCustom];
 
 
           if reg.ValueExists('Show all windows on taskbar') then
@@ -260,7 +238,7 @@ begin
           if reg.ValueExists('Time between hotkeypress') then
             hotkeyIdletime:=reg.ReadInteger('Time between hotkeypress')
           else
-            hotkeyIdletime:=350;
+            hotkeyIdletime:=100;
 
           frameHotkeyConfig.edtKeypollInterval.text:=inttostr(hotkeyPollInterval);
           frameHotkeyConfig.edtHotkeyDelay.text:=inttostr(hotkeyIdletime);
@@ -338,11 +316,11 @@ begin
             {$endif}
 
 
-          if reg.ValueExists('Show '+strCheatEngine+' Hotkey') then
+          if reg.ValueExists('Show Cheat Engine Hotkey') then
             {$ifdef windows}
-            reg.ReadBinaryData('Show '+strCheatEngine+' Hotkey',temphotkeylist[1][0],10);
+            reg.ReadBinaryData('Show Cheat Engine Hotkey',temphotkeylist[1][0],10);
             {$else}
-            HexToBin(pchar(reg.ReadString('Show '+strCheatEngine+' Hotkey')),pchar(@temphotkeylist[1][0]),10);
+            HexToBin(pchar(reg.ReadString('Show Cheat Engine Hotkey')),pchar(@temphotkeylist[1][0]),10);
             {$endif}
 
           if reg.ValueExists('Pause process Hotkey') then
@@ -838,29 +816,6 @@ begin
 
           if reg.ValueExists('Use Kernel Debugger') then
             cbKdebug.checked:=reg.ReadBool('Use Kernel Debugger');
-
-          if reg.ValueExists('Use DBVM Debugger') then
-            cbUseDBVMDebugger.checked:=reg.ReadBool('Use DBVM Debugger');
-
-          if reg.ValueExists('DBVMBP Trigger COW') then
-            dbvmbp_options.TriggerCOW:=reg.ReadBool('DBVMBP Trigger COW')
-          else
-            dbvmbp_options.TriggerCOW:=true;
-
-          if reg.ValueExists('DBVMBP This Process Only') then
-            dbvmbp_options.TargetedProcessOnly:=reg.ReadBool('DBVMBP This Process Only');
-
-          if reg.ValueExists('DBVMBP Kernelmode') then
-            dbvmbp_options.KernelmodeBreaks:=reg.readBool('DBVMBP Kernelmode')
-          else
-            dbvmbp_options.KernelmodeBreaks:=true;
-
-
-
-          cbDBVMDebugTriggerCOW.checked:=dbvmbp_options.TriggerCOW;
-          cbDBVMDebugTargetedProcessOnly.checked:=dbvmbp_options.TargetedProcessOnly;
-          cbDBVMDebugKernelmodeBreaks.checked:=dbvmbp_options.KernelmodeBreaks;
-
           {$endif}
 
           if reg.ValueExists('Wait After Gui Update') then
@@ -1024,7 +979,7 @@ begin
 
       {$ifndef net}
       formsettings.lvtools.Clear;
-      if Reg.OpenKey('\Software\'+strCheatEngine+'\Tools',false) then
+      if Reg.OpenKey('\Software\Cheat Engine\Tools',false) then
       begin
         names:=TStringList.create;
         try
@@ -1062,7 +1017,7 @@ begin
 
 
 
-      if (not skipPlugins) and (Reg.OpenKey('\Software\'+strCheatEngine+'\Plugins'{$ifdef cpu64}+'64'{$else}+'32'{$endif},false)) then
+      if (not skipPlugins) and (Reg.OpenKey('\Software\Cheat Engine\Plugins'{$ifdef cpu64}+'64'{$else}+'32'{$endif},false)) then
       begin
         names:=TStringList.create;
         try
@@ -1114,8 +1069,7 @@ begin
   {$ifdef net}
   MemoryBrowser.Kerneltools1.visible:=false;
   {$else}
-  MemoryBrowser.Kerneltools1.Enabled:={$ifdef windows}DBKLoaded or isRunningDBVM{$else}false{$endif};
-  MemoryBrowser.miCR3Switcher.visible:=MemoryBrowser.Kerneltools1.Enabled;
+  MemoryBrowser.Kerneltools1.Enabled:={$ifdef windows}DBKLoaded{$else}false{$endif};
   {$endif}
 
 
@@ -1152,12 +1106,6 @@ begin
   CESearch:=CERegion;
   CERegionSearch:= CERegion;
   CEWait:= ceregion;
-  {$ifdef darwin}
-  {$ifdef CPUX86_64}
-  if MacIsArm64 then
-    CENorm:=CENorm+' on Rosetta';
-  {$endif}
-  {$endif}
   mainform.Caption:=CENorm;
 end;
 

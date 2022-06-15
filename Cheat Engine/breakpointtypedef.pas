@@ -50,17 +50,12 @@ type
 
 
     FoundcodeDialog: TFoundcodedialog;
-
     frmchangedaddresses: Tfrmchangedaddresses;
     frmTracer: TfrmTracer;
     tracecount: integer;
     traceendcondition: pchar;
     tracestepOver: boolean; //when set the tracer will step over instead of single step
-    traceStepOverRep: boolean; //when set the tracer will step over rep instructions
     traceNoSystem: boolean; //when set the tracer will step over system module addresses
-    traceStayInsideModule: boolean; //when set the tracer will step over any address not inside the startmodule
-    traceStartmodulebase: ptruint;
-    traceStartmodulesize: dword;
 
     isTracerStepOver: boolean; //
 

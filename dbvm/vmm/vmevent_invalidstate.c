@@ -57,9 +57,6 @@ VMSTATUS handleInvalidEntryState(pcpuinfo currentcpuinfo,VMRegisters *vmregister
 
   outportb(0x80,0xc0);
   enableserial();
-
-  nosendchar[getAPICID()]=0;
-
  // outportb(0x80,0xc1);
 
   sendstring("Handling invalid entry state\n\r");
@@ -69,7 +66,7 @@ VMSTATUS handleInvalidEntryState(pcpuinfo currentcpuinfo,VMRegisters *vmregister
 
  // outportb(0x80,0xc2);
 
- // while (1) outportb(0x80,0xd4); //todo: remove on release
+  while (1) outportb(0x80,0xd4); //todo: remove on release
 
 
   if (((guestrflags.TF) || (vmread(vm_guest_IA32_DEBUGCTL) & (1<<1))) && ((vmread(vm_pending_debug_exceptions) & (1<<14))==0))
@@ -92,15 +89,6 @@ VMSTATUS handleInvalidEntryState(pcpuinfo currentcpuinfo,VMRegisters *vmregister
 
 
     return VM_OK;
-  }
-
-  if (!IS64BITCODE(currentcpuinfo))
-  {
-    if (vmread(vm_guest_rip)>0xffffffff)
-    {
-      vmwrite(vm_guest_rip,vmread(vm_guest_rip)&0xffffffff);
-      return VM_OK;
-    }
   }
 
 
@@ -144,23 +132,9 @@ VMSTATUS handleInvalidEntryState(pcpuinfo currentcpuinfo,VMRegisters *vmregister
 
 
         QWORD cr0=vmread(vm_guest_cr0);
-        if (cr0 & CR0_PG)
-        {
-          sendstringf("paging on in realmode\n");
-          while (1) outportb(0x80,0xe0); //paging on in realmode
-        }
-
-        if (cr0 & CR0_PE)
-        {
-          sendstringf("protected mode in realmode\n");
-          while (1) outportb(0x80,0xe0); //protected mode in realmode
-        }
-
-        if (vmread(vm_entry_controls) & VMENTRYC_IA32E_MODE_GUEST)
-        {
-          sendstringf("ia32e mode entry in realmode\n");
-          while (1) outportb(0x80,0xe1); //ia32e mode entry in realmode
-        }
+        if (cr0 & CR0_PG) while (1) outportb(0x80,0xe0); //paging on in realmode
+        if (cr0 & CR0_PE) while (1) outportb(0x80,0xe0); //protected mode in realmode
+        if (vmread(vm_entry_controls) & VMENTRYC_IA32E_MODE_GUEST) while (1) outportb(0x80,0xe1); //ia32e mode entry in realmode
 
         RFLAGS rflags;
         rflags.value=(QWORD)vmread(vm_guest_rflags);

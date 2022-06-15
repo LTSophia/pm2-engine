@@ -13,25 +13,24 @@ uses
   {$endif}
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Buttons, registry, CEFuncProc, ExtCtrls, LResources,
-  comCtrls, menus, hotkeyhandler, MemoryRecordUnit, commonTypeDefs, strutils, betterControls, LMessages;
+  comCtrls, menus, hotkeyhandler, MemoryRecordUnit, commonTypeDefs, strutils;
 
 type
 
   { THotKeyForm }
 
   THotKeyForm = class(TForm)
+    BitBtn1: TBitBtn;
     btnApply: TButton;
     btnCreateHotkey: TButton;
     btnEditHotkey: TButton;
     btnCancel: TButton;
-    btnOK: TButton;
     Button2: TButton;
     cbActivateSound: TComboBox;
     cbDeactivateSound: TComboBox;
     cbFreezedirection: TComboBox;
     cbForceEnglishActivate: TCheckBox;
     cbForceEnglishDeactivate: TCheckBox;
-    cbOnlyWhileDown: TCheckBox;
     edtActivateText: TEdit;
     edtDeactivateText: TEdit;
     edtDescription: TEdit;
@@ -57,11 +56,11 @@ type
     sbPlayDeactivate: TSpeedButton;
     TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
+    procedure BitBtn1Click(Sender: TObject);
     procedure btnCreateHotkeyClick(Sender: TObject);
     procedure btnEditHotkeyClick(Sender: TObject);
     procedure btnApplyClick(Sender: TObject);
     procedure btnCancelClick(Sender: TObject);
-    procedure btnOKClick(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure cbActivateSoundChange(Sender: TObject);
     procedure cbDeactivateSoundChange(Sender: TObject);
@@ -74,7 +73,6 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
-    procedure FormShortCut(var Msg: TLMKey; var Handled: Boolean);
     procedure FormShow(Sender: TObject);
     procedure ListView1DblClick(Sender: TObject);
     procedure ListView1SelectItem(Sender: TObject; Item: TListItem;
@@ -94,12 +92,10 @@ type
     procedure SetMemrec(x: TMemoryRecord);
     function HotkeyActionToText(a: TMemrecHotkeyAction): string;
     function getHotkeyAction: TMemrecHotkeyAction;
-    function getBtnOKCustomButton: TCustomButton;
   public
     { Public declarations }
-  published
+
     property memrec: TMemoryRecord read fmemrec write SetMemrec;
-    property BitBtn1: TCustomButton read getBtnOKCustomButton; //compatibility with older versions
   end;
 
 
@@ -125,14 +121,9 @@ resourcestring
   rsTextToSpeechHint = 'The text to speak'#13#10'{Description} = The description of the hotkey'#13#10'{MRDescription} = The description field of the memory record'#13#10'{MRValue} = The value of the memory record';
   rsDefaultActivated = '%s Activated';
   rsDefaultDeactivated = '%s Deactivated';
-  rsDeactivateOnRelease = 'Deactivate on release';
-  rsRestoreToOriginalOnRelease = 'Restore to original on release';
 
 
-function THotkeyform.getBtnOKCustomButton: TCustomButton;
-begin
-  result:=btnOK as TCustomButton;
-end;
+
 
 function THotkeyform.getHotkeyAction: TMemrecHotkeyAction;
 begin
@@ -217,7 +208,7 @@ begin
     listview1.clear;
     fmemrec:=x;
 
-    caption:=caption+' : '+memrec.Description;
+
 
     for i:=0 to memrec.HotkeyCount-1 do
     begin
@@ -276,6 +267,13 @@ begin
   cbDeactivateSoundChange(cbDeactivateSound);
 end;
 
+procedure THotKeyForm.BitBtn1Click(Sender: TObject);
+begin
+  if edithotkey then
+    btnApply.click;
+
+  close;
+end;
 
 procedure THotKeyForm.btnEditHotkeyClick(Sender: TObject);
 var
@@ -335,8 +333,6 @@ begin
   cbDeactivateSoundChange(cbDeactivateSound);
 
   cbFreezedirection.OnSelect(cbFreezedirection);
-
-  cbOnlyWhileDown.checked:=hk.OnlyWhileDown;
 end;
 
 procedure THotKeyForm.btnApplyClick(Sender: TObject);
@@ -349,11 +345,10 @@ begin
     hk.action:=getHotkeyAction;
     hk.value:=edtFreezeValue.text;
     hk.fdescription:=edtDescription.text;
-    hk.fOnlyWhileDown:=cbOnlyWhileDown.checked;
     hk.registerkeys;
   end
   else
-    hk:=memrec.Addhotkey(keys, getHotkeyAction, edtFreezeValue.text, edtDescription.text, cbOnlyWhileDown.checked );
+    hk:=memrec.Addhotkey(keys, getHotkeyAction, edtFreezeValue.text, edtDescription.text );
 
 
 
@@ -393,6 +388,7 @@ begin
   listview1.selected.subitems[2]:=edtDescription.text;
   listview1.Selected.data:=hk;
 
+
   pagecontrol1.ActivePage:=tabsheet1;
   listview1.Enabled:=true;
 
@@ -407,14 +403,6 @@ begin
 
   pagecontrol1.ActivePage:=tabsheet1;
   listview1.Enabled:=true;
-end;
-
-procedure THotKeyForm.btnOKClick(Sender: TObject);
-begin
-  if edithotkey then
-    btnApply.click;
-
-  close;
 end;
 
 procedure THotKeyForm.Button2Click(Sender: TObject);
@@ -453,30 +441,11 @@ begin
   begin
     onpossible:=cbFreezeDirection.itemindex in [0,1];
     offpossible:=cbFreezeDirection.itemindex in [0,2];
-
-    if onpossible then
-    begin
-      cbOnlyWhileDown.Caption:=rsDeactivateOnRelease;
-      cbOnlyWhileDown.visible:=true;
-    end
-    else
-      cbOnlyWhileDown.visible:=false;
   end
   else
   begin
     onpossible:=cbFreezeDirection.itemindex in [0,1,2,3,5,6,7];
     offpossible:=cbFreezeDirection.itemindex in [0,1,2,4];
-
-    if cbFreezeDirection.itemindex in [0,1,2,3,5] then
-    begin
-      case cbFreezeDirection.itemindex of
-        0, 1, 2, 3: cbOnlyWhileDown.Caption:=rsDeactivateOnRelease;
-        5: cbOnlyWhileDown.Caption:=rsRestoreToOriginalOnRelease;
-      end;
-      cbOnlyWhileDown.visible:=true;
-    end
-    else
-      cbOnlyWhileDown.visible:=false;
   end;
 
   lblActivateSound.enabled:=onpossible;
@@ -486,8 +455,6 @@ begin
   lblDeactivateSound.enabled:=offpossible;
   cbDeactivateSound.enabled:=offpossible;
   sbPlayDeactivate.enabled:=offpossible;
-
-
 
 end;
 
@@ -576,7 +543,7 @@ procedure THotKeyForm.FormCreate(Sender: TObject);
 var lblLimiteHotkeySupport: tlabel;
 begin
   {$ifdef darwin}
-  if loadMacHotkeyFunctions=false then
+  if loadHotkeyFunctions=false then
   begin
     lblLimiteHotkeySupport:=tlabel.create(self);
     lblLimiteHotkeySupport.caption:='Limited hotkey support. No character keys supported';
@@ -635,15 +602,6 @@ begin
   sbPlayActivate.enabled:=false;
   sbPlayDeactivate.enabled:=false;
   {$endif}
-end;
-
-procedure THotKeyForm.FormShortCut(var Msg: TLMKey; var Handled: Boolean);
-begin
-  if (pagecontrol1.ActivePage<>tabsheet2) and (Msg.CharCode=VK_ESCAPE) then
-  begin
-    handled:=true;
-    close;
-  end;
 end;
 
 procedure THotKeyForm.FormShow(Sender: TObject);
@@ -809,7 +767,7 @@ end;
 
 procedure THotKeyForm.Panel2Resize(Sender: TObject);
 begin
-
+  bitbtn1.left:=(panel2.clientwidth div 2) - (bitbtn1.width div 2);
 end;
 
 procedure THotKeyForm.pmHotkeylistPopup(Sender: TObject);

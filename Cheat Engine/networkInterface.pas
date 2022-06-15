@@ -114,8 +114,7 @@ type
     function RemoveBreakpoint(hProcess: THandle; threadid: integer; debugregister: integer; wasWatchpoint: boolean): boolean;
     function AllocateAndGetContext(hProcess: Thandle; threadid: integer): pointer;
     function getVersion(var name: string): integer;
-    function getArchitecture(hProcess: THandle): integer;
-    function getABI: integer;
+    function getArchitecture: integer;
     function enumSymbolsFromFile(modulepath: string; modulebase: ptruint; callback: TNetworkEnumSymCallback): boolean;
     function loadModule(hProcess: THandle; modulepath: string): boolean;
     function loadExtension(hProcess: Thandle): boolean;
@@ -179,7 +178,6 @@ const
   //
   CMD_VIRTUALQUERYEXFULL=31;
   CMD_GETREGIONINFO=32; //extended version of VirtualQueryEx which also get the full string
-  CMD_GETABI=33;  //for c-code compilation
 
 
 procedure TCEConnection.TerminateServer;
@@ -226,13 +224,12 @@ var ModulelistCommand: packed record
   r: packed record
     result: integer;
     modulebase: qword;
-    modulepart: dword;
     modulesize: dword;
     stringlength: dword;
   end;
 
   mname: pchar;
-  mnames: string;
+
 begin
 
   result:=false;
@@ -247,7 +244,6 @@ begin
     ModulelistCommand.handle:=hSnapshot and $ffffff;
     if send(@ModulelistCommand, sizeof(ModulelistCommand)) > 0 then
     begin
-      ZeroMemory(@r,sizeof(r));
       if receive(@r, sizeof(r))>0 then
       begin
         result:=r.result<>0;
@@ -258,26 +254,17 @@ begin
           receive(mname, r.stringlength);
           mname[r.stringlength]:=#0;
 
-          mnames:=mname;
-
-          if mname<>nil then
-            FreeMemAndNil(mname);
-
-          if r.modulepart<>0 then
-            mnames:=mnames+'.'+inttostr(r.modulepart);
-
-
-
           ZeroMemory(@lpme, sizeof(lpme));
           lpme.hModule:=r.modulebase;
           lpme.modBaseAddr:=pointer(r.modulebase);
           lpme.modBaseSize:=r.modulesize;
-          lpme.GlblcntUsage:=r.modulepart;
-          copymemory(@lpme.szExePath[0], @mnames[1], min(length(mnames)+1, MAX_PATH));
+          copymemory(@lpme.szExePath[0], mname, min(r.stringlength+1, MAX_PATH));
           lpme.szExePath[MAX_PATH-1]:=#0;
 
-          copymemory(@lpme.szModule[0], @mnames[1], min(length(mnames)+1, MAX_MODULE_NAME32));
+          copymemory(@lpme.szModule[0], mname, min(r.stringlength+1, MAX_MODULE_NAME32));
           lpme.szModule[MAX_MODULE_NAME32-1]:=#0;
+
+          FreeMemAndNil(mname);
         end;
 
       end;
@@ -1438,32 +1425,17 @@ begin
       name:=_name;
       FreeMemAndNil(_name);
 
-      result:=CeVersion.version;
+      result:=length(name);
     end;
   end;
 end;
 
-function TCEConnection.getArchitecture(hProcess: THandle): integer;
-var input: packed record
-    command: byte;
-    hprocess: uint32;
-  end;
-  r: byte;
-begin
-  result:=0;
-  input.command:=CMD_GETARCHITECTURE;
-  input.hprocess:=hProcess and $ffffff;
-  if send(@input, sizeof(input))>0 then
-    if receive(@r, 1)>0 then
-      result:=r;
-end;
-
-function TCEConnection.getABI: integer;
+function TCEConnection.getArchitecture: integer;
 var command: byte;
   r: byte;
 begin
   result:=0;
-  command:=CMD_GETABI;
+  command:=CMD_GETARCHITECTURE;
   if send(@command, 1)>0 then
     if receive(@r, 1)>0 then
       result:=r;

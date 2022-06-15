@@ -10,7 +10,7 @@ uses
   {$endif}
   LCLIntf, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, StdCtrls, Menus, CEFuncProc,
-  NewKernelHandler, LREsources, ComCtrls, registry, betterControls;
+  NewKernelHandler, LREsources, ComCtrls, registry;
 
 resourcestring
   rsDLNothingFound = 'nothing found';
@@ -224,12 +224,9 @@ var
   tn: TTreenode;
 begin
 
-
   {$ifdef windows}
   if (node.level=0) and (node.count=0) then
   begin
-    tvDriverList.BeginUpdate;
-
     //get the exportlist
     getmem(p,256);
     r:=GetDeviceDriverFileNameA(node.data, p,255);
@@ -259,8 +256,6 @@ begin
       node.HasChildren:=false;
 
     freemem(p);
-
-    tvDriverList.EndUpdate;
   end;
   {$endif}
 end;

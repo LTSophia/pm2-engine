@@ -4,12 +4,12 @@ unit disassemblerviewlinesunit;
 
 interface
 
-uses math,LCLIntf,sysutils, classes,ComCtrls, graphics, CEFuncProc, disassembler,
+uses LCLIntf,sysutils, classes,ComCtrls, graphics, CEFuncProc, disassembler,
      CEDebugger, debughelper, KernelDebugger, symbolhandler, plugin,
-     disassemblerComments, SymbolListHandler, ProcessHandlerUnit, tcclib,SynHighlighterCpp
+     disassemblerComments, SymbolListHandler, ProcessHandlerUnit
      {$ifdef USELAZFREETYPE}
-     ,LazFreeTypeIntfDrawer, EasyLazFreeType
-     {$endif}, betterControls;
+     ,LazFreeTypeIntfDrawer, EasyLazFreeType, math
+     {$endif};
 
 type
   TDisassemblerViewColorsState=(csUndefined=-1, csNormal=0, csHighlighted=1, csSecondaryHighlighted=2, csBreakpoint=3, csHighlightedbreakpoint=4, csSecondaryHighlightedbreakpoint=5, csUltimap=6, csHighlightedUltimap=7, csSecondaryHighlightedUltimap=8);
@@ -59,11 +59,6 @@ type
 
     refferencedByStart: integer;
 
-    sourcecodestart: integer;
-    sourcecodestop: integer;
-
-
-
     isbp,isultimap: boolean;
     focused: boolean;
 
@@ -75,7 +70,6 @@ type
     function truncatestring(s: string; maxwidth: integer; hasSpecialChars: boolean=false): string;
     procedure buildReferencedByString(sl: tstringlist);
     function DrawTextRectWithColor(const ARect: TRect; X, Y: integer; const Text: string): integer;
-    procedure renderCCodeLine(x,y: integer; text: string);
   public
 
 
@@ -83,7 +77,6 @@ type
     property instructionCenter: integer read fInstructionCenter;
     function isJumpOrCall(var addressitjumpsto: ptrUint): boolean;
     function getReferencedByAddress(y: integer):ptruint;
-    function getSourceCode(y: integer):PLineNumberInfo;
     function getHeight: integer;
     function getTop: integer;
     property description:string read fdescription;
@@ -109,7 +102,7 @@ implementation
 uses
   MemoryBrowserFormUnit, DissectCodeThread,debuggertypedefinitions,
   dissectcodeunit, disassemblerviewunit, frmUltimap2Unit, frmcodefilterunit,
-  BreakpointTypeDef, vmxfunctions, globals, sourcecodehandler, SynHighlighterAA;
+  BreakpointTypeDef, vmxfunctions, globals;
 
 resourcestring
   rsUn = '(Unconditional)';
@@ -118,10 +111,6 @@ resourcestring
   rsMemory = '(Code/Data)';
 
   rsInvalidDisassembly = 'Invalid disassembly';
-
-var
-  chighlighter: TSynCppSyn;  //the disassemblerview lines highlighter is accessed only from the GUI thread, so can be global
-
 
 procedure TDisassemblerLine.drawJumplineTo(yposition: integer; offset: integer; showendtriangle: boolean=true);
 var
@@ -195,30 +184,9 @@ begin
     end;
   end;
   freeandnil(sl);
-end;
-
-function TDisassemblerLine.getSourceCode(y: integer):PLineNumberInfo;
-var sci: TSourceCodeInfo;
-begin
-  result:=nil;
-  //check if y is between sourcecodestart/sourcecodestop, and if so get the sourcecode
-
-  if (sourcecodestart<>sourcecodestop) and InRange(top+y,sourcecodestart, sourcecodestop) then
-  begin
-    sci:=SourceCodeInfoCollection.getSourceCodeInfo(fAddress);
-    if sci<>nil then
-    begin
-      if sci.processID<>processid then
-      begin
-        sci.Free;
-        exit(nil);
-      end;
-
-      result:=sci.getLineInfo(fAddress);
-    end;
-  end;
 
 end;
+
 
 function TDisassemblerLine.truncatestring(s: string; maxwidth: integer; hasSpecialChars: boolean=false): string;
 var
@@ -362,13 +330,6 @@ var
     found :boolean;
     extrasymboldata: TExtraSymbolData;
 
-    sourcecodeinfo: TSourceCodeInfo;
-    lni: PLineNumberInfo;
-    sourcecode: Tstringlist=nil;
-    sourcecodelineheight: integer;
-    sourcecodeheight: integer;
-    sourcecodeindentationstart: integer; //after filename+linenumber
-
     iscurrentinstruction: boolean;
 
     PA: qword;
@@ -381,12 +342,7 @@ var
     w,h: single;
     {$endif}
 
-    d: TDisassembler;
-
-    header0left: integer;
-
 begin
-  d:=TDisassemblerview(owner).currentDisassembler;
 
   fcanvas.font.style:=[];
 
@@ -422,7 +378,7 @@ begin
   //z:=address;
 
 
-  symbolname:=symhandler.getNameFromAddress(address,symhandler.showsymbols,symhandler.showmodules,symhandler.showsections, @baseofsymbol, @found, 8,false);
+  symbolname:=symhandler.getNameFromAddress(address,symhandler.showsymbols,symhandler.showmodules,@baseofsymbol, @found, 8,false);
   if (faddress=baseofsymbol) and found then
   begin
     extrasymboldata:=symhandler.getExtraDataFromSymbolAtAddress(address);
@@ -432,31 +388,35 @@ begin
 
 
 
-
-
-
   if iscurrentinstruction then
-    d.context:=@MemoryBrowser.lastdebugcontext
+    visibleDisassembler.context:=@MemoryBrowser.lastdebugcontext
   else
-    d.context:=nil;
+    visibleDisassembler.context:=nil;
 
-  fdisassembled:=d.disassemble(address,fdescription);
+  fdisassembled:=visibleDisassembler.disassemble(address,fdescription);
 
-  addressstring:=inttohex(d.LastDisassembleData.address,8);
-  bytestring:=d.getLastBytestring;
-  opcodestring:=d.LastDisassembleData.prefix+d.LastDisassembleData.opcode;
+  addressstring:=inttohex(visibleDisassembler.LastDisassembleData.address,8);
+  bytestring:=visibleDisassembler.getLastBytestring;
+  opcodestring:=visibleDisassembler.LastDisassembleData.prefix+visibleDisassembler.LastDisassembleData.opcode;
+
+  //Correction for rendering bug.
+  if (processhandler.isNetwork=true) and (processhandler.SystemArchitecture=archarm) then
+  begin
+    bytestring+=' ';
+    opcodestring+=' ';
+  end;       
   
-  parameterstring:=d.LastDisassembleData.parameters+' ';
-  specialstring:=d.DecodeLastParametersToString;
+  parameterstring:=visibleDisassembler.LastDisassembleData.parameters+' ';
+  specialstring:=visibleDisassembler.DecodeLastParametersToString;
 
-  if iscurrentinstruction and d.LastDisassembleData.isconditionaljump and d.LastDisassembleData.willJumpAccordingToContext then
+  if iscurrentinstruction and visibleDisassembler.LastDisassembleData.isconditionaljump and visibleDisassembler.LastDisassembleData.willJumpAccordingToContext then
     parameterstring:=parameterstring+'  ---> ';
 
 
 
   //userdefined comments
   if dassemblercomments<>nil then
-    comment:=dassemblercomments.comments[d.LastDisassembleData.address]
+    comment:=dassemblercomments.comments[visibleDisassembler.LastDisassembleData.address]
   else
     comment:='';
 
@@ -474,19 +434,13 @@ begin
   else
     addressString:=truncatestring(addressString, fHeaders.Items[0].Width-2);
 
-  //Correction for rendering bug.
-  if (processhandler.isNetwork=true) and (processhandler.SystemArchitecture=archarm) then
-  begin
-    addressstring+=' ';
-    bytestring+=' ';
-    opcodestring+=' ';
-  end;
-
   TDisassemblerview(owner).DoDisassemblerViewLineOverride(address, addressstring, bytestring, opcodestring, parameterstring, specialstring);
 
   //split up into lines
   specialstrings.text:=specialstring;
-  customheaderstrings.text:=dassemblercomments.commentHeader[d.LastDisassembleData.address];
+  customheaderstrings.text:=dassemblercomments.commentHeader[visibleDisassembler.LastDisassembleData.address];
+
+
 
 
   bytestring:=truncatestring(bytestring, fHeaders.Items[1].Width-2, true);
@@ -498,7 +452,7 @@ begin
   if boldheight=-1 then
   begin
     {$ifdef USELAZFREETYPE}
-    if (not UseOriginalRenderingSystem) and (ftfontb<>nil) then
+    if (not UseOriginalRenderingSystem) and (ftfont<>nil) then
     begin
       boldheight:=ceil(ftfontb.TextHeight(fdisassembled));
     end
@@ -593,12 +547,15 @@ begin
     refferencedbystrings:=tstringlist.create;
     buildReferencedByString(refferencedbystrings);
 
+
+
+
     if refferencedbystrings.count>0 then
     begin
       if referencedbylineheight=-1 then
       begin
         {$ifdef USELAZFREETYPE}
-        if (not UseOriginalRenderingSystem) and (ftfontb<>nil) then
+        if (not UseOriginalRenderingSystem) and (ftfont<>nil) then
         begin
           referencedbylineheight:=ceil(ftfontb.TextHeight('xxx'));
         end
@@ -617,54 +574,20 @@ begin
     end;
   end;
 
-  lni:=nil;
-  if SourceCodeInfoCollection<>nil then
-  begin
-    sourcecodeinfo:=SourceCodeInfoCollection.getSourceCodeInfo(faddress);
-    if sourcecodeinfo<>nil then
-    begin
-      lni:=sourcecodeinfo.getLineInfo(faddress);
-      if lni<>nil then
-      begin
-        sourcecode:=Tstringlist.create;
-        sourcecode.text:=lni.sourcecode; //sourcecode has newline chars
-
-        {$ifdef USELAZFREETYPE}
-        if (not UseOriginalRenderingSystem) and (ftfont<>nil) then
-        begin
-          sourcecodelineheight:=ceil(ftfont.TextHeight('xxx'));
-          sourcecodeindentationstart:=ceil(ftfont.TextWidth(sourcecode[0]+' '));
-        end
-        else
-        {$endif}
-        begin
-          fcanvas.Font.Style:=[fsItalic];
-          sourcecodelineheight:=fcanvas.TextHeight('QjgPli');
-          fcanvas.Font.Style:=[];
-          sourcecodeindentationstart:=fcanvas.TextWidth(sourcecode[0]+' ');
-        end;
-
-        sourcecodeheight:=sourcecodelineheight*(sourcecode.Count-1); //first line is the file and linenumber
-
-        fheight:=height+sourcecodeheight;
-      end;
-    end;
-  end;
 
 
-
-  fisJump:=d.LastDisassembleData.isjump;
+  fisJump:=visibleDisassembler.LastDisassembleData.isjump;
 
   if fisJump then
   begin
     fisjump:=cefuncproc.isjumporcall(faddress, fJumpsTo);
 
 
-    if d.LastDisassembleData.iscall then
+    if visibleDisassembler.LastDisassembleData.iscall then
       fjumpcolor:= TDisassemblerview(owner).jlCallColor
     else
     begin
-      if d.LastDisassembleData.isconditionaljump then
+      if visibleDisassembler.LastDisassembleData.isconditionaljump then
         fjumpcolor:=TDisassemblerview(owner).jlConditionalJumpColor
       else
         fjumpcolor:=TDisassemblerview(owner).jlUnConditionalJumpColor ;
@@ -866,39 +789,6 @@ begin
 
   end;
 
-
-  if lni<>nil then  //render sourcecode lines
-  begin
-    sourcecodestart:=linestart;
-    fcanvas.Font.Style:=[fsItalic];
-    {$ifdef USELAZFREETYPE}
-    if (not UseOriginalRenderingSystem) and (drawer<>nil) then
-      drawer.DrawText(AnsiToUtf8(sourcecode[0]), ftfont, fHeaders.Items[0].Left+5, linestart, tcolortofpcolor(colortorgb(fcanvas.Font.color)), [ftaLeft, ftaTop])
-    else
-    {$endif}
-    fcanvas.TextOut(fHeaders.Items[0].Left+5,linestart,AnsiToUtf8(sourcecode[0]));
-    for i:=1 to sourcecode.count-1 do
-    begin
-      {$ifdef USELAZFREETYPE}
-      if (not UseOriginalRenderingSystem) and (drawer<>nil) then
-        drawer.DrawText(AnsiToUtf8(sourcecode[i]), ftfont, fHeaders.Items[0].Left+5+sourcecodeindentationstart, linestart, tcolortofpcolor(colortorgb(fcanvas.Font.color)), [ftaLeft, ftaTop])
-      else
-      {$endif}
-      begin
-        renderCCodeLine(fHeaders.Items[2].Left+1,linestart,AnsiToUtf8(sourcecode[i]));
-      end;
-      inc(linestart, sourcecodelineheight);
-    end;
-
-    fcanvas.Font.Style:=[];
-    sourcecodestop:=linestart;
-  end
-  else
-  begin
-    sourcecodestart:=0;
-    sourcecodestop:=0;
-  end;
-
   if customheaderstrings.count>0 then
   begin
     //render the custom header
@@ -1019,49 +909,7 @@ begin
   if refferencedbystrings<>nil then
     freeandnil(refferencedbystrings);
 
-  if sourcecode<>nil then
-    freeandnil(sourcecode);
 
-
-end;
-
-
-procedure TDisassemblerLine.renderCCodeLine(x,y: integer; text: string);
-var
-  s: string;
- // a: TToken
- oldfg: tcolor;
- oldstyle: TFontStyles;
- w: integer;
-begin
-  if chighlighter=nil then
-  begin
-    chighlighter:=TSynCppSyn.Create(nil);
-    chighlighter.loadFromRegistryDefault;
-  end;
-
-  oldstyle:=fcanvas.font.style;
-  oldfg:=fcanvas.font.color;
-
-  chighlighter.ResetRange;
-  chighlighter.SetLine(text,0);
-
-  while not chighlighter.GetEol do
-  begin
-    s:=chighlighter.GetToken;
-
-    fcanvas.Font.color:=chighlighter.GetTokenAttribute.Foreground;
-    fcanvas.Font.style:=chighlighter.GetTokenAttribute.Style;
-
-    w:=fcanvas.GetTextWidth(s);
-    fcanvas.TextOut(x ,y,s);
-    inc(x,w);
-
-    chighlighter.Next;
-  end;
-
-  fcanvas.font.style:=oldstyle;
-  fcanvas.font.color:=oldfg;
 end;
 
 function TDisassemblerLine.DrawTextRectWithColor(const ARect: TRect; X, Y: integer; const Text: string): integer;
@@ -1230,7 +1078,7 @@ begin
     end;
   end
   else
-    i:=length(text)+1;
+    i:=length(text);
 
   setcolor;
 
@@ -1275,7 +1123,6 @@ end;
 destructor TDisassemblerLine.destroy;
 begin
   freeandnil(specialstrings);
-
   inherited destroy;
 end;
 

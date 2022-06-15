@@ -4,13 +4,6 @@
 #include "main.h"
 #include "vmmhelper.h"
 
-//single step reasons
-#define SSR_HANDLEWATCH 1 //restore the protection after step
-#define SSR_HANDLECLOAK 2
-#define SSR_HANDLESOFTWAREBREAKPOINT 3
-#define SSR_STEPANDBREAK 4 //do a single step and then change RIP to the loop routine
-#define SSR_STEPTILLINTERUPTABLE 5 //nyi
-
 typedef struct
 /* this struct is to keep track of what the guest sets in the comport */
 {
@@ -56,8 +49,6 @@ typedef struct
 
 int handleVMEvent(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE64 *fxsave);
 
-void setRegister(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, int general_purpose_register, UINT64 value);
-UINT64 getRegister(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, int general_purpose_register);
 
 ULONG getSegmentLimit(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
 ULONG getSegmentBase(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
@@ -66,14 +57,11 @@ void setDescriptorAccessedFlag(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
 ULONG getSegmentAccessRights(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
 ULONG getSegmentAttrib(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
 
-int handle_rdtsc(pcpuinfo currentcpuinfo, VMRegisters *vmregisters);
-BOOL handleSoftwareBreakpoint(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE64 *fxsave);
-
 int setVM_CR0(pcpuinfo currentcpuinfo, UINT64 newcr0);
 int setVM_CR3(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, UINT64 newcr3);
 int setVM_CR4(pcpuinfo currentcpuinfo, UINT64 newcr4);
 
-int handleSingleStep(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE64 *fxsave);
+int handleSingleStep(pcpuinfo currentcpuinfo);
 int handleRealModeInt0x15(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, int instructionsize);
 int raisePMI();
 int raiseNMI(void);
@@ -84,7 +72,6 @@ int emulateExceptionInterrupt(pcpuinfo currentcpuinfo, VMRegisters *vmregisters,
 WORD convertSegmentAccessRightsToSegmentAttrib(ULONG accessrights);
 
 extern volatile QWORD globalTSC;
-extern volatile QWORD lowestTSC;
 
 extern criticalSection CR3ValueLogCS;
 extern QWORD *CR3ValueLog; //if not NULL, record
@@ -95,11 +82,8 @@ extern int adjustTimestampCounterTimeout;
 
 extern int useSpeedhack;
 
-
-
 void speedhack_setspeed(double speed);
 
-void incrementRIP(int count);
 
 
 #endif

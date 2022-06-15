@@ -15,10 +15,6 @@ typedef UINT16 WORD, *PWORD;
 typedef void *PVOID;
 
 
-UINT64 password1=0x76543210;
-DWORD password2=0xfedcba98;
-UINT64 password3=0x90909090;
-
 
 extern void enterVMM( void ); //declared in vmxoffloada.asm
 extern void enterVMMPrologue(void);
@@ -126,19 +122,7 @@ UINT_PTR vmmPA;
 int initializedvmm=0;
 
 
-void cleanupMemory()
-{
-  Print(L"Free unused memory\n");
 
-
-  st->BootServices->FreePages(originalstate->APEntryPage,1);
-  st->BootServices->FreePages((EFI_PHYSICAL_ADDRESS)enterVMM2,1);
-
-  st->BootServices->FreePages(originalstatePA, 1+(sizeof(OriginalState) / 4096));
-
-  Print(L"Freed unused memory\n");
-
-}
 
 void InitializeDBVM(UINT64 vmm, int vmmsize)
 {
@@ -347,25 +331,9 @@ void InitializeDBVM(UINT64 vmm, int vmmsize)
       initvars->extramemory=0;
       initvars->extramemorysize=0;
     }
-
-    s=AllocatePages(AllocateAnyPages,EfiRuntimeServicesCode, 64,&address); //64 pages
-    if (s==EFI_SUCCESS)
-    {
-      Print(L"Allocated 64MB of extra ram at %lx\n", address);
-      initvars->contiguousmemory=address;
-      initvars->contiguousmemorysize=64;
-    }
-    else
-    {
-      Print(L"Failed to allocate extra ram\n");
-      initvars->contiguousmemory=0;
-      initvars->contiguousmemorysize=0;
-    }
-
-
     char something[201];
 
-    //Input(L"Type something : ", something, 200);
+    Input(L"Type something : ", something, 200);
 
 
 
@@ -644,14 +612,10 @@ void LaunchDBVM()
 
     Print(L"\nReturned from enterVMMPrologue\n");
 
+    Print(L"Testing:\n");
 
-    //return;
-
-
-    if (1)
     {
 
-      Print(L"Testing:\n");
       struct
       {
         unsigned int structsize;
@@ -677,42 +641,21 @@ void LaunchDBVM()
       dovmcall2(&vmcallinfo, 0x76543210, &freemem,&fullpages);
 
 
-
-      Print(L"Doing system test.  Before DR6=%x DR7=%x\n", getDR6(), getDR7());
-
       disableInterrupts();
       r=doSystemTest(); //check if the system behaves like it should
       enableInterrupts();
-
-      Print(L"After system test.  After DR6=%x DR7=%x\n", getDR6(), getDR7());
 
       if (r)
       {
         Print(L"Failed to pass test %d\n", r);
       }
-      else
-      {
-        Print(L"System Test Successful\n", r);
-
-      }
-
-
-
-
-      vmcallinfo.structsize=sizeof(vmcallinfo);
-      vmcallinfo.level2pass=0xfedcba98;
-      vmcallinfo.command=79; //HIDE DBVM MEMORY local cpu
-      dovmcall(&vmcallinfo, 0x76543210);
 
 
 
       Print(L"still alive\ndbvmversion=%x\nfreemem=%d (fullpages=%d)", dbvmversion, freemem, fullpages);
-
-
     }
 
     //DbgPrint("cpunr=%d\n",cpunr());
-
 
 
 

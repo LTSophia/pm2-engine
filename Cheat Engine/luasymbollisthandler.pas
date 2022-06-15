@@ -13,13 +13,7 @@ procedure pushSymbol(L: PLua_state; si: PCESymbolInfo);
 
 implementation
 
-uses LuaHandler, LuaObject, symbolhandler, ProcessHandlerUnit, NewKernelHandler;
-
-function getMainSymbolList(L: Plua_State): integer; cdecl;
-begin
-  result:=1;
-  luaclass_newClass(L, symhandler.GetMainSymbolList);
-end;
+uses LuaHandler, LuaObject, symbolhandler, ProcessHandlerUnit;
 
 function createSymbolList(L: Plua_State): integer; cdecl;
 begin
@@ -52,71 +46,6 @@ begin
   sl:=luaclass_getClassObject(L);
   symhandler.RemoveSymbolList(sl);
   result:=0;
-end;
-
-function SymbolList_getModuleList(L: Plua_State): integer; cdecl;
-var
-  sl: TSymbolListHandler;
-  list: TExtraModuleInfoList;
-  i: integer;
-begin
-  sl:=luaclass_getClassObject(L);
-  sl.GetModuleList(list);
-
-  lua_createtable(L, length(list),0);
-  for i:=0 to length(list)-1 do
-  begin
-    lua_pushinteger(L,i+1);
-    lua_createtable(L,0,5);
-
-    lua_pushstring(L,'modulename');
-    lua_pushstring(L,pchar(list[i].modulename));
-    lua_settable(L,-3);
-
-    lua_pushstring(L,'modulepath');
-    lua_pushstring(L,pchar(list[i].modulepath));
-    lua_settable(L,-3);
-
-    lua_pushstring(L,'baseaddress');
-    lua_pushinteger(L,list[i].baseaddress);
-    lua_settable(L,-3);
-
-    lua_pushstring(L,'modulesize');
-    lua_pushinteger(L,list[i].modulesize);
-    lua_settable(L,-3);
-
-    lua_pushstring(L,'is64bitmodule');
-    lua_pushboolean(L,list[i].is64bitmodule);
-    lua_settable(L,-3);
-
-    lua_settable(L,-3);
-  end;
-
-  result:=1;
-end;
-
-function SymbolList_getSymbolList(L: Plua_State): integer; cdecl;
-var
-  sl: TSymbolListHandler;
-  list: tstringlist;
-  i: integer;
-begin
-  sl:=luaclass_getClassObject(L);
-
-  list:=tstringlist.create;
-  sl.GetSymbolList(list);
-
-  lua_createtable(L, 0,list.count);
-  for i:=0 to list.count-1 do
-  begin
-    lua_pushstring(L, pchar(list[i]));
-    lua_pushinteger(L, ptruint(list.Objects[i]));
-    lua_settable(L,-3);
-  end;
-
-  result:=1;
-
-  list.free;
 end;
 
 procedure pushSymbol(L: PLua_state; si: PCESymbolInfo);
@@ -286,18 +215,10 @@ begin
       parameters:='';
 
 
-    si:=sl.AddSymbol(modulename, searchkey, address, size, skipAddressToSymbol, esd,true);
-
+    si:=sl.AddSymbol(modulename, searchkey, address, size, skipAddressToSymbol, esd);
 
     if esd<>nil then
       esd.free;
-
-    if si=nil then
-    begin
-      //outputdebugstring('sl.AddSymbol returned nil');
-      exit(0);
-    end;
-
 
     pushSymbol(L, si);
     result:=1;
@@ -356,15 +277,11 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'deleteModule', SymbolList_deleteModule);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'register', SymbolList_register);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'unregister', SymbolList_unregister);
-
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getModuleList', SymbolList_getModuleList);
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getSymbolList', SymbolList_getSymbolList);
 end;
 
 procedure initializeLuaSymbolListHandler;
 begin
   lua_register(LuaVM, 'createSymbolList', createSymbolList);
-  lua_register(LuaVM, 'getMainSymbolList', getMainSymbolList);
 end;
 
 initialization

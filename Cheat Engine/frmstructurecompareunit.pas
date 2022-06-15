@@ -13,7 +13,7 @@ uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls, ComCtrls,
   cefuncproc, newkernelhandler, frmStringMapUnit, MemFuncs, AvgLvlTree, Menus,
   bigmemallochandler, math, maps, oldRegExpr, symbolhandler, commonTypeDefs,
-  pagemap, syncobjs2, syncobjs, Clipbrd, betterControls;
+  pagemap, syncobjs2, syncobjs, Clipbrd;
 
 const compareversion=1;
 

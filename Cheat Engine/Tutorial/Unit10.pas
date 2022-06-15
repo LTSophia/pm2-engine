@@ -6,8 +6,8 @@ unit Unit10;
 interface
 
 uses
-  {$ifdef windows}windows,{$endif} LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, Unit8, StdCtrls, Buttons, LResources, ExtCtrls, math, betterControls;
+  windows, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  Dialogs, Unit8, StdCtrls, Buttons, LResources, ExtCtrls, math;
 
 type
   TPlayer=class
@@ -63,9 +63,9 @@ type
   private
     { Private declarations }
     p1, p2, p3,p4: TPlayer;
-    {$ifdef windows}
+
     procedure  LaunchGraphicalTut;
-    {$endif}
+
   public
     { Public declarations }
   end;
@@ -75,7 +75,7 @@ var
 
 implementation
 
-uses Unit4, frmHelpUnit, cetranslator;
+uses Unit4, frmHelpUnit;
 
 resourcestring
   rsThisPlayerIsAlreadyDeadRestartTheGame = 'This player is already dead. Restart the game';
@@ -137,7 +137,6 @@ begin
 end;
 
 
-{$ifdef windows}
 procedure TForm10.LaunchGraphicalTut;
 var nexttut: string;
     filename: string;
@@ -148,7 +147,6 @@ begin
   if fileexists(nexttut) then
   begin
     //launch the graphical tutorial
-
     ShellExecute(0, PChar('open'), PChar(nexttut),PChar(''), PChar(extractfilepath(nexttut)), SW_SHOW);
     ExitProcess(0);
   end;
@@ -168,20 +166,16 @@ begin
     end;
   end;
 end;
-{$endif}
 
 procedure TForm10.Button2Click(Sender: TObject);
 begin
-  {$ifdef windows}
   LaunchGraphicalTut;
-    {$endif}
   hide;
   form4:=tform4.create(self);
   form4.show;
 
   frmHelp.free;
   frmHelp:=nil;
-
 end;
 
 procedure TForm10.Button1Click(Sender: TObject);
@@ -305,8 +299,7 @@ procedure TForm10.FormCreate(Sender: TObject);
 begin
 
       //31337157
-  caption:=altnamer(caption);
-  memo1.lines.text:=altnamer(rsTutorialStep9);
+  memo1.lines.text:=rsTutorialStep9;
   memo1.Lines.Insert(0, Format(rsStep9SharedCodePW, [inttostr(313)+inttostr(37157)]));
 
   button3.Click;
@@ -316,9 +309,7 @@ end;
 
 procedure TForm10.SpeedButton1Click(Sender: TObject);
 begin
-  {$ifdef windows}
   LaunchGraphicalTut;
-  {$endif}
   showmessage(rsU10ThisWasTheLastTutorial);
   Application.Terminate;
 end;

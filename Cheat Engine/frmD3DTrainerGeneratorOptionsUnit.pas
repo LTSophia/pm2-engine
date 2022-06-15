@@ -9,7 +9,7 @@ uses
   windows,
   {$endif}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls, ExtCtrls, ExtDlgs, cefuncproc, commonTypeDefs, betterControls;
+  ComCtrls, ExtCtrls, ExtDlgs, cefuncproc, commonTypeDefs;
 
 type
 

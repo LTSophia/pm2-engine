@@ -1,0 +1,16 @@
+{"version":1,"strings":[
+{"hash":83590163,"name":"tformmemoryregions.caption","sourcebytes":[77,101,109,111,114,121,32,114,101,103,105,111,110,115],"value":"Memory regions"},
+{"hash":1339,"name":"tformmemoryregions.button1.caption","sourcebytes":[79,75],"value":"OK"},
+{"hash":128683235,"name":"tformmemoryregions.listview1.columns[0].caption","sourcebytes":[65,100,100,114,101,115,115],"value":"Address"},
+{"hash":196861540,"name":"tformmemoryregions.listview1.columns[1].caption","sourcebytes":[65,108,108,111,99,97,116,105,111,110,32,80,114,111,116,101,99,116],"value":"Allocation Protect"},
+{"hash":5941413,"name":"tformmemoryregions.listview1.columns[2].caption","sourcebytes":[83,116,97,116,101],"value":"State"},
+{"hash":127314932,"name":"tformmemoryregions.listview1.columns[3].caption","sourcebytes":[80,114,111,116,101,99,116],"value":"Protect"},
+{"hash":376933,"name":"tformmemoryregions.listview1.columns[4].caption","sourcebytes":[84,121,112,101],"value":"Type"},
+{"hash":368901,"name":"tformmemoryregions.listview1.columns[5].caption","sourcebytes":[83,105,122,101],"value":"Size"},
+{"hash":5045121,"name":"tformmemoryregions.listview1.columns[6].caption","sourcebytes":[69,120,116,114,97],"value":"Extra"},
+{"hash":148748083,"name":"tformmemoryregions.statusbar1.panels[0].text","sourcebytes":[72,111,108,100,32,99,116,114,108,32,119,104,101,110,32,111,112,101,110,105,110,103,32,116,104,105,115,32,119,105,110,100,111,119,32,116,111,32,97,108,115,111,32,115,101,101,32,107,101,114,110,101,108,109,111,100,101,32,114,101,103,105,111,110,115],"value":"Hold ctrl when opening this window to also see kernelmode regions"},
+{"hash":257986947,"name":"tformmemoryregions.saveselectedregions1.caption","sourcebytes":[83,97,118,101,32,115,101,108,101,99,116,101,100,32,114,101,103,105,111,110,115],"value":"Save selected regions"},
+{"hash":245002153,"name":"tformmemoryregions.selectallreadablememory1.caption","sourcebytes":[83,101,108,101,99,116,32,97,108,108,32,114,101,97,100,97,98,108,101,32,109,101,109,111,114,121],"value":"Select all readable memory"},
+{"hash":146518133,"name":"tformmemoryregions.setselectedregionstobewritable1.caption","sourcebytes":[83,101,116,32,115,101,108,101,99,116,101,100,32,114,101,103,105,111,110,115,32,116,111,32,98,101,32,119,114,105,116,97,98,108,101],"value":"Set selected regions to be writable"},
+{"hash":132767417,"name":"tformmemoryregions.savedialog1.title","sourcebytes":[71,105,118,101,32,116,104,101,32,98,97,115,101,110,97,109,101,32,111,102,32,116,104,101,32,114,101,103,105,111,110,115,32,116,111,32,98,101,32,115,97,118,101,100,46,32,40,67,97,110,32,98,101,32,97,32,67,84,32,102,105,108,101,41],"value":"Give the basename of the regions to be saved. (Can be a CT file)"}
+]}

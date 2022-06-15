@@ -6,9 +6,9 @@ else
   LDFLAGS = -lz -ldl -pthread -lm -shared
 endif
 LIBS      =
-INCLUDE   = -I../
-TARGET    = ./libceserver-extension.so
-SRCDIR    = ../
+INCLUDE   = -I./include
+TARGET    = ./bin/libceserver-extension.so
+SRCDIR    = ./source
 ifeq "$(strip $(SRCDIR))" ""
   SRCDIR  = .
 endif

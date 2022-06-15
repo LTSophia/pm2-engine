@@ -319,12 +319,7 @@ begin
                     begin
                       funcaddress:=symhandler.getAddressFromName(importmodulename+'!'+importfunctionname, true, haserror);
                       if haserror then
-                      begin
-                        //try without module (in case it's one of those downlevel dlls that just don't work well)
-                        funcaddress:=symhandler.getAddressFromName(importfunctionname, true, haserror);
-                        if haserror then
-                          raise exception.create(rsMMLFailedFindingAddressOf+importmodulename+'!'+importfunctionname);
-                      end;
+                        raise exception.create(rsMMLFailedFindingAddressOf+importmodulename+'!'+importfunctionname);
                     end;
 
                     PQWORD(importaddress)^:=funcaddress;
@@ -350,11 +345,7 @@ begin
                     begin
                       funcaddress:=symhandler.getAddressFromName(importmodulename+'!'+importfunctionname, true, haserror);
                       if haserror then
-                      begin
-                        funcaddress:=symhandler.getAddressFromName(importfunctionname, true, haserror);
-                        if haserror then
-                          raise exception.create(rsMMLFailedFindingAddressOf+importmodulename+'!'+importfunctionname);
-                      end;
+                        raise exception.create(rsMMLFailedFindingAddressOf+importmodulename+'!'+importfunctionname);
 
                     end;
 

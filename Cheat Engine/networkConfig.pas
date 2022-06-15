@@ -64,7 +64,7 @@ implementation
 
 {$R *.lfm}
 
-uses networkInterfaceApi, mainunit2;
+uses networkInterfaceApi;
 
 resourcestring
   rsHost = 'host:';
@@ -236,13 +236,7 @@ begin
   port:=ShortHostToNet(p);
 
   if getConnection=nil then
-  begin
-    host.s_addr:=0;
-    if MainThreadID=GetCurrentThreadId then
-      MessageDlg(rsFailedConnectingToTheServer, mtError, [mbOK],0);
-
-    exit;
-  end;
+    raise exception.create(rsFailedConnectingToTheServer);
 
 
   InitializeNetworkInterface;
@@ -271,9 +265,6 @@ end;
 procedure TfrmNetworkConfig.FormShow(Sender: TObject);
 begin
   requestlist;
-
-  edtHost.Width:=canvas.GetTextWidth('1234.1234.1234.1234');
-  edtPort.Width:=canvas.GetTextWidth(' 99999 ');
 end;
 
 
@@ -286,7 +277,7 @@ begin
   //still here so the connection is made
   reg:=tregistry.create;
   try
-    if reg.OpenKey('\Software\'+strCheatEngine+'\',false) then
+    if reg.OpenKey('\Software\Cheat Engine\',false) then
     begin
       reg.WriteString('Last Connect IP', edtHost.text);
       reg.WriteString('Last Connect Port', edtport.text);
@@ -303,7 +294,7 @@ var reg: tregistry;
 begin
   reg:=tregistry.create;
   try
-    if reg.OpenKey('\Software\'+strCheatEngine+'\',false) then
+    if reg.OpenKey('\Software\Cheat Engine\',false) then
     begin
       if reg.ValueExists('Last Connect IP') then
         edtHost.text:=reg.ReadString('Last Connect IP');

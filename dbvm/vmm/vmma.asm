@@ -13,8 +13,6 @@ extern memorylist
 extern clearScreen
 extern getAPICID
 
-
-
 GLOBAL amain
 GLOBAL vmmstart
 GLOBAL pagedirlvl4
@@ -48,9 +46,6 @@ GLOBAL initcs
 GLOBAL extramemory
 GLOBAL extramemorysize
 
-GLOBAL contiguousmemoryPA
-GLOBAL contiguousmemorysize
-
 GLOBAL dbvmversion
 GLOBAL exportlist
 
@@ -73,8 +68,6 @@ pagedirlvl4:        dq 0 ;virtual address of the pml4 page (the memory after thi
 nextstack:          dq 0 ;start of stack for the next cpu
 extramemory:        dq 0 ;physical address of a contiguous block of physical memory available to DBVM
 extramemorysize:    dq 0 ;number of pages in extramemory
-contiguousmemoryPA: dq 0 ;physical address of a contiguous block of physical memory available for device access
-contiguousmemorysize:dq 0 ;number of pages left in contiguousmemoryPA
 dbvmversion:        dq 11
 exportlist:         dq 0
 ;uefibooted:         dq 0 ;if set it means this has to launch the AP cpu's as well
@@ -187,16 +180,11 @@ vmcalltest_asm:
   add rsp,8+12
   ret
 
-
-extern Password1
-extern Password3
-
 global _vmcall
 _vmcall:
   sub rsp,8
-  mov rax,rdi  ;data
-  mov rdx,[Password1]  ;password1
-  mov rcx,[Password3]
+  mov rax,rsi  ;data
+  mov rdx,rdi  ;password1
   call [vmcall_instr]
   add rsp,8
   ret
@@ -269,9 +257,7 @@ struc vmxloop_amd_stackframe
   saved_rax:      resq 1
   saved_fsbase:   resq 1
   fxsavespace:    resb 512 ;fxsavespace must be aligned
-
-  psavedstate:    resq 1 ;saved param4
-  vmcb_hostsave_PA: resq 1 ;saved param3
+  psavedstate:    resq 1 ;saved param3
   vmcb_PA:        resq 1 ;saved param2
   currentcpuinfo: resq 1 ;saved param1
   ;At entry RSP points here
@@ -286,17 +272,16 @@ global vmxloop_amd
 vmxloop_amd:
 ;xchg bx,bx ;break by bochs
 
-sub rsp, vmxloop_amd_stackframe_size
+sub rsp, vmxloop_amd_stackframe_size-8 ;-8 because the structure assumes returnaddress is in
 
 mov [rsp+currentcpuinfo],rdi
 mov [rsp+vmcb_PA], rsi
-mov [rsp+vmcb_hostsave_PA], rdx
-mov [rsp+psavedstate], rcx
+mov [rsp+psavedstate], rdx
 
 clgi ;no more interrupts from this point on. (Not even some special interrupts)
 
 
-mov rax,rcx
+mov rax,rdx
 cmp rax,0
 je notloadedos_amd
 
@@ -341,16 +326,14 @@ mov rsi,rax
 
 vmrun_loop:
 ;xchg bx,bx
-mov rax,[rsp+vmcb_hostsave_PA]
-vmsave
-
 mov rax,[rsp+vmcb_PA]  ;for those wondering, RAX is stored in the vmcb->RAX field, not here
 vmload
+clgi
+cli
 vmrun ;rax
+cli
+clgi
 vmsave
-
-mov rax,[rsp+vmcb_hostsave_PA]
-vmload ;this way I don't have to fuck with the fsbase msr
 
 
 db 0x48
@@ -371,7 +354,18 @@ mov [rsp+saved_rcx],rcx
 mov [rsp+saved_rbx],rbx
 mov [rsp+saved_rax],rax
 
+;save guest fs-base
+mov ecx,0c0000100h
+rdmsr
+shl rdx,32
+add rax,rdx
+mov [rsp+saved_fsbase],rax
 
+;restore host fs-base
+mov ecx,0c0000100h
+mov eax,[rsp+currentcpuinfo]
+mov edx,[rsp+currentcpuinfo+4]
+wrmsr
 
 mov rdi,[rsp+currentcpuinfo]
 lea rsi,[rsp+saved_r15] ;vmregisters
@@ -383,6 +377,11 @@ call vmexit_amd
 cmp eax,1
 je vmrun_exit
 
+;restore guest
+mov ecx,0c0000100h ;fs-base
+mov eax,[rsp+saved_fsbase]
+mov edx,[rsp+saved_fsbase+4]
+wrmsr
 
 db 0x48
 fxrstor [rsp+fxsavespace]
@@ -409,110 +408,6 @@ jmp vmrun_loop
 vmrun_exit:
 add rsp,vmxloop_amd_stackframe_size-8
 ret
-
-
-global doVMRUN
-;------------------------------------------------------------------------;
-;QWORD doVMRUN(QWORD VMCB_PA, VMRegisters *vmregisters, QWORD dbvmhost_PA, QWORD emulatedhost_PA);
-;------------------------------------------------------------------------;
-doVMRUN:
-;1=rdi=VMCB_PA
-;2=rsi=vmregisters
-;3=rdx=dbvmhost_PA
-;4=rcx=emulatedhost_PA
-xchg bx,bx
-
-sub rsp, vmxloop_amd_stackframe_size-8
-
-;store the host state
-mov [rsp+saved_rbx],rbx
-mov [rsp+saved_rcx],rcx
-mov [rsp+saved_rdx],rdx
-mov [rsp+saved_rbp],rbp
-mov [rsp+saved_rsi],rsi
-mov [rsp+saved_rdi],rdi
-mov [rsp+saved_r8],r8
-mov [rsp+saved_r9],r9
-mov [rsp+saved_r10],r10
-mov [rsp+saved_r11],r11
-mov [rsp+saved_r12],r12
-mov [rsp+saved_r13],r13
-mov [rsp+saved_r14],r14
-mov [rsp+saved_r15],r15
-
-;dbvm doesn't need to store the fxstate. (has nothing stored there anyhow)
-
-mov rax,[rsp+saved_rsi] ;vmregisters (amd stackframe)
-mov r15,[rax+saved_r15]
-mov r14,[rax+saved_r14]
-mov r13,[rax+saved_r13]
-mov r12,[rax+saved_r12]
-mov r11,[rax+saved_r11]
-mov r10,[rax+saved_r10]
-mov r9,[rax+saved_r9]
-mov r8,[rax+saved_r8]
-mov rbp,[rax+saved_rbp]
-mov rsi,[rax+saved_rsi]
-mov rdi,[rax+saved_rdi]
-mov rdx,[rax+saved_rdx]
-mov rcx,[rax+saved_rcx]
-mov rbx,[rax+saved_rbx]
-
-mov rax,[rsp+saved_rdx] ;dbvmhost_pa
-vmsave ;store the current state
-
-mov rax,[rsp+saved_rcx] ;host_pa
-vmload ;load the state of the host right before vmrun
-
-mov rax,[rsp+saved_rdi] ;emulated guest vmcb pa
-vmrun
-mov rax,[rsp+saved_rcx]  ;save the new state to the previous host vmcb (it will be reposible for calling vmsave next)
-vmsave
-
-;restore dbvm state
-mov rax,[rsp+saved_rdx]
-vmload
-
-
-;store the guest state
-mov rax,[rsp+saved_rsi]
-db 0x48
-fxsave [rax+fxsavespace] ;save fpu
-
-mov [rax+saved_rbx],rbx
-mov [rax+saved_rcx],rcx
-mov [rax+saved_rdx],rdx
-mov [rax+saved_rsi],rsi
-mov [rax+saved_rdi],rdi
-mov [rax+saved_rbp],rbp
-mov [rax+saved_r8],r8
-mov [rax+saved_r9],r9
-mov [rax+saved_r10],r10
-mov [rax+saved_r11],r11
-mov [rax+saved_r12],r12
-mov [rax+saved_r13],r13
-mov [rax+saved_r14],r14
-mov [rax+saved_r15],r15
-
-mov rax,[rsp+saved_rax]
-mov rbx,[rsp+saved_rbx]
-mov rcx,[rsp+saved_rcx]
-mov rdx,[rsp+saved_rdx]
-mov rsi,[rsp+saved_rsi]
-mov rdi,[rsp+saved_rdi]
-mov rbp,[rsp+saved_rbp]
-mov r8,[rsp+saved_r8]
-mov r9,[rsp+saved_r9]
-mov r10,[rsp+saved_r10]
-mov r11,[rsp+saved_r11]
-mov r12,[rsp+saved_r12]
-mov r13,[rsp+saved_r13]
-mov r14,[rsp+saved_r14]
-mov r15,[rsp+saved_r15]
-
-add rsp,vmxloop_amd_stackframe_size-8
-ret
-
 
 
 global vmxloop
@@ -652,8 +547,6 @@ vmxloop_vmexit:
 
 ;save registers
 
-;db 0xf1
-
 
 sub rsp,15*8
 
@@ -690,10 +583,10 @@ jne notfucker
 ;xchg bx,bx
 wbinvd
 
-mov rbx,0x681e  ;RIP
+mov rbx,0x681e
 vmread rax,rbx
 
-mov rbx,0x6808  ;CS
+mov rbx,0x6808
 vmread rbx,rbx
 
 
@@ -802,12 +695,8 @@ pop rax
 vmlaunch
 
 
-;db 0xf1 ;debug
-
 ;never executed unless on error
 ;restore state of vmm
-
-
 mov dword [fs:0x10],0xce00 ;exitreason 0xce00
 jmp vmxloop_vmexit
 
@@ -831,10 +720,9 @@ pop rax
 
 vmresume
 
-db 0xf1 ;debug
 
 ;never executed unless on error
-mov dword [fs:0x10],0xce01 ;exitreason 0xce01  (resume fail)
+mov dword [fs:0x10],0xce00 ;exitreason 0xce00
 jmp vmxloop_vmexit
 
 vmxloop_exitvm:  ;(esp-68)
@@ -3010,8 +2898,6 @@ mov eax,[0x700c] ;edx
 mov al,dl ;save dl
 mov edx,eax
 
-
-
 mov eax,[0x7000]
 mov ebx,[0x7004]
 mov ecx,[0x7008]
@@ -3032,7 +2918,13 @@ pop ax
 
 
 beforeboot:
-xchg bx,bx
+nop
+nop
+cpuid
+nop
+
+
+
 ;jmp beforeboot
 ;int 19h
 

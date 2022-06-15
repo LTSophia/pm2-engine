@@ -14,7 +14,7 @@ uses
   LCLIntf, LMessages, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ComCtrls, ExtCtrls, LResources, EditBtn, Buttons, Contnrs,
   CEFuncProc, NewKernelHandler, symbolhandler, multilineinputqueryunit,
-  registry, resolve, math, PointerscanSettingsIPConnectionList, types, commonTypeDefs, betterControls;
+  registry, resolve, math, PointerscanSettingsIPConnectionList, types, commonTypeDefs;
 
 
 type
@@ -249,7 +249,7 @@ var frmpointerscannersettings: tfrmpointerscannersettings;
 implementation
 
 uses MainUnit, {$ifdef windows}frmMemoryAllocHandlerUnit,{$endif} MemoryBrowserFormUnit, ProcessHandlerUnit,
-  Globals, parsers{$ifdef windows}, DPIHelper{$endif}, mainunit2;
+  Globals, parsers{$ifdef windows}, DPIHelper{$endif};
 
 
 
@@ -375,7 +375,7 @@ begin
   //cbAddress.clientwidth:=tcustomform(aowner).canvas.TextWidth('DDDDDDDDDDDD');
   cbAddress.anchors:=[aktop, akright];
   cbAddress.BorderSpacing.Right:=8;
-  cbAddress.style:=csOwnerDrawEditableFixed;
+  cbAddress.style:=csOwnerDrawFixed;
   cbAddress.OnDrawItem:=cbAddressDrawItem;
   cbAddress.ItemHeight:=TfrmPointerScannerSettings(TPointerFileList(aowner).Owner).cbAddress.ItemHeight;
   //cbAddress.Height:=btnDelete.Height;
@@ -1133,7 +1133,7 @@ begin
     reg.RootKey := HKEY_CURRENT_USER;
 
 
-    if Reg.OpenKey('\Software\'+strCheatEngine+'\'+ClassName, true) then
+    if Reg.OpenKey('\Software\Cheat Engine\'+ClassName, true) then
     begin
       reg.WriteBool('Advanced', cbShowAdvancedOptions.checked);
       reg.WriteBool('warnedAboutDisablingInstantRescan', warnedAboutDisablingInstantRescan);
@@ -1146,7 +1146,7 @@ begin
 
     end;
 
-    if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList', false) then
+    if Reg.OpenKey('\Software\Cheat Engine\PSNNodeList', false) then
     begin
       oldlist:=tstringlist.create;
       try
@@ -1165,7 +1165,7 @@ begin
     begin
       if iplist[i].host<>'' then
       begin
-        if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList\'+iplist[i].host+':'+iplist[i].port,true) then
+        if Reg.OpenKey('\Software\Cheat Engine\PSNNodeList\'+iplist[i].host+':'+iplist[i].port,true) then
         begin
           reg.WriteString('Password', iplist[i].password);
           reg.WriteBool('StableConnection', iplist[i].stable);
@@ -1301,7 +1301,6 @@ var
   i: integer;
   host, port: string;
 begin
-  panel3.color:=clWindow;
   ComboBox1.Items.Clear;
   with ComboBox1.items do
   begin
@@ -1332,7 +1331,7 @@ begin
   reg:=tregistry.Create;
   Reg.RootKey := HKEY_CURRENT_USER;
 
-  if Reg.OpenKey('\Software\'+strCheatEngine+'\'+ClassName, false) then
+  if Reg.OpenKey('\Software\Cheat Engine\'+ClassName, false) then
   begin
     if reg.ValueExists('Advanced') then
       cbShowAdvancedOptions.checked:=reg.ReadBool('Advanced');
@@ -1348,7 +1347,7 @@ begin
 
   end;
 
-  if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList', false) then
+  if Reg.OpenKey('\Software\Cheat Engine\PSNNodeList', false) then
   begin
     list:=tstringlist.create;
     try
@@ -1359,7 +1358,7 @@ begin
 
     for i:=0 to list.count-1 do
     begin
-      if reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList\'+list[i], false) then
+      if reg.OpenKey('\Software\Cheat Engine\PSNNodeList\'+list[i], false) then
       begin
         while iplist.count<=i do
           iplist.add;

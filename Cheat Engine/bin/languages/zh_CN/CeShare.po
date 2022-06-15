@@ -1,6 +1,6 @@
 #: frmCEShareCheatBrowser.TTrainerForm.Caption
 msgid "Cheat Browser"
-msgstr "作弊浏览器"
+msgstr "CT浏览器"
 
 #: frmCEShareCheatBrowser.CELabel.Caption
 msgid "Processname:"
@@ -16,7 +16,7 @@ msgstr "作者"
 
 #: frmCEShareCheatBrowser.Public.Caption
 msgid "Public"
-msgstr "公开"
+msgstr "公有"
 
 #: frmCEShareCheatBrowser.Score.Caption
 msgid "Score"
@@ -24,13 +24,15 @@ msgstr "分数"
 
 #: frmCEShareCheatBrowser.Version.Caption
 msgid "Version independent"
-msgstr "特定版本可用"
+msgstr ""
 
-# msgid "Signed"
-# msgstr ""
-#: frmCEShareCheatBrowser.Signed.Caption frmCEShareCheatBrowser.Match.Caption
+#: frmCEShareCheatBrowser.Signed.Caption
+#msgid "Signed"
+#msgstr ""
+
+#: frmCEShareCheatBrowser.Match.Caption
 msgid "% Match"
-msgstr "% 匹配"
+msgstr ""
 
 #: frmCEShareCheatBrowser.btnLoadTable.Caption
 msgid "    Load    "
@@ -62,14 +64,13 @@ msgstr "加载"
 
 #: frmCEShareCheatBrowser.miViewComments.Caption
 msgid "View Comments"
-msgstr "添加/查看评论"
+msgstr "查看评论"
 
 #: frmCEShareCheatBrowser.miLoginToSeeMoreOptions.Caption
 msgid "Login to see more options"
-msgstr "登录以查看更多选项"
+msgstr "请登录以便查看更多选项"
 
 #: frmCEShareCheatBrowser.miUpdateTable.Caption
-#: frmCEShareUpdateOrNew_1.btnChoose.Caption
 msgid "Update table"
 msgstr "更新"
 
@@ -106,14 +107,8 @@ msgid "By entering a CEShare URL you will be able to upload and download Cheat T
 msgstr "通过设置CEShare URL，您将能够从ceshare服务器社区上传和下载CT表"
 
 #: ceshare_initiaISetup.CELabel3.Caption
-msgid ""
-"Disclaimer: These are third-party servers. They are not owned or maintained by the Cheat Engine project, and no warranty or responsiblity regarding their content is given.  DMCA Claims need to be send to the appropriate administrator of the server who will be reachable by the link in the bottom right part of a cheat table entry\n"
-"\n"
-"Please contact the respective server owner for further inquiries."
-msgstr ""
-"免责声明：这些是第三方服务器。 它们不是Cheat Engine项目的所有者或维护者，也不对其内容提供任何保证。DMCA 声明需要发送给服务器或管理员，管理员可以通过CT表右下角的链接访问\n"
-"\n"
-"请联系相应的服务器所有者以进行进一步的查询。"
+msgid "Disclaimer: These are third-party servers. They are not owned or maintained by the Cheat Engine project, and no warranty or responsiblity regarding their content is given. \n\nPlease contact the respective server owner for further inquiries."
+msgstr "免责声明：这些是第三方服务器。 它们不是Cheat Engine项目的所有者或维护者，也不对其内容提供任何保证。\n\n请联系相应的服务器所有者以进行进一步的查询。"
 
 #: ceshare_initiaISetup.CELabel4.Caption
 msgid "Click cancel or leave empty if you don't wish to use this"
@@ -137,15 +132,15 @@ msgstr "标题:"
 
 #: frmCESharePublishCheat.lblHeaderMD5Text.Caption
 msgid "Header MD5:"
-msgstr "文件头 MD5:"
+msgstr ""
 
 #: frmCESharePublishCheat.cbNeedsFullFilrHash.Caption
 msgid "Needs full file hash"
-msgstr "文件哈希"
+msgstr ""
 
 #: frmCESharePublishCheat.lblFullHeaderMD5Text.Caption
 msgid "Full file hash:"
-msgstr "完整文件哈希:"
+msgstr ""
 
 #: frmCESharePublishCheat.cbUseSecondaryModule.Caption
 msgid "Needs secondary modulecheck"
@@ -153,7 +148,7 @@ msgstr ""
 
 #: frmCESharePublishCheat.lblModulename.Caption
 msgid "Modulename"
-msgstr "模块名称"
+msgstr ""
 
 #: frmCESharePublishCheat.lblURL.Caption
 msgid "URL (Optional)"
@@ -178,6 +173,10 @@ msgstr "更新/发布"
 #: frmCEShareUpdateOrNew_1.rbPublish.Caption
 msgid "Publish new table"
 msgstr "发布"
+
+#: frmCEShareUpdateOrNew_1.btnChoose.Caption
+msgid "Update table"
+msgstr "更新"
 
 #: ceshare_permissions.Caption
 msgid "Update Permissions"
@@ -214,10 +213,6 @@ msgstr "请求获取当前进程CT分享"
 #: miLoginToSeeMoreOptions.Caption
 msgid "Publish/Update table"
 msgstr "登录(发布CT)"
-
-#: miViewAllTables.Caption
-msgid "View all available tables"
-msgstr "查看所有可用CT"
 
 #: sf.SettingsTreeView.Items.insert
 msgid "CEShare"
@@ -269,11 +264,11 @@ msgstr "注册"
 
 #: ceshare_account-cbLogoutWhenLoadingTables.Caption
 msgid "Logout when loading ceshare tables"
-msgstr "加载ceshare表时注销"
+msgstr ""
 
 #: ceshare_account-cbLogoutWhenLoadingTables.Hint
 msgid "When checked you will get logged out when loading a ceshare table. This to prevent malicious tables from using your account"
-msgstr "如果选中该选项，则在加载ceshare表时注销你的账户， 这可以防止恶意表格使用您的帐户"
+msgstr ""
 
 #: ceshare_permissions
 msgid "Are you sure you wish to change the owner?"
@@ -328,12 +323,12 @@ msgid "Invalid background update query list"
 msgstr ""
 
 #: ceshare_publish
-msgid "Are you sure you wish to let 'Everyone' overwrite your table in the ceshare system ?"
-msgstr "您确定要让 '所有人' 在ceshare系统中覆盖您的CT表吗？"
+msgid "Are you sure you wish to let \'Everyone\' overwrite your table in the ceshare system ?"
+msgstr "您确定要让 \'所有人\' 在ceshare系统中覆盖您的CT表吗？"
 
 #: ceshare_publish
 msgid "Do you wish to sign this table?"
-msgstr "你想合并到现有CT表吗?"
+msgstr ""
 
 #: ceshare_querycheats
 msgid "Contact who?"
@@ -349,32 +344,12 @@ msgstr "CT作者"
 
 #: ceshare_querycheats
 msgid "Sorry, but there are currently no tables for this target. Perhaps you can be the first"
-msgstr "抱歉，该进程没有任何CT分享，也许你可以成为第一个分享的人。"
+msgstr "抱歉，改目标目前没有任何CT分享，也许你可以成为第一个分享的人。"
 
 #: ceshare_requests
 msgid "Requests"
-msgstr "申请"
+msgstr ""
 
 #: ceshare_requests
 msgid "Score="
-msgstr "👍="
-
-#: ceshare_fulltablelist
-msgid "  and %d more tables..."
-msgstr "  ↑有 %d 个可用CT表..."
-
-#: ceshare_fulltablelist
-msgid "All tables"
-msgstr "所有CT"
-
-#: ceshare_fulltablelist
-msgid "Search:"
-msgstr "搜索："
-
-#: ceshare_fulltablelist
-msgid "Previous (25)"
-msgstr "上一页 (25)"
-
-#: ceshare_fulltablelist
-msgid "Next (25)"
-msgstr "下一页 (25)"
+msgstr "点赞="

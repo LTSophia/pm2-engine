@@ -100,8 +100,6 @@ type
 
     previous: PCESymbolInfo;
     next: PCESymbolInfo;
-
-    alternative: PCESymbolInfo; //chain of duplicates
   end;
 
   TExtraSymbolDataList=TList;
@@ -129,11 +127,8 @@ type
 
     fExtraSymbolDataList: TExtraSymbolDataList;
     fPID: dword;
-    fname: string;
-    frefcount: integer;
     function A2SCheck(Tree: TAvgLvlTree; Data1, Data2: pointer): integer;
     function S2ACheck(Tree: TAvgLvlTree; Data1, Data2: pointer): integer;
-    function getCount: integer;
   public
     constructor create;
     destructor destroy; override;
@@ -145,21 +140,17 @@ type
     function GetModuleByAddress(address: ptrUint; var mi: TModuleInfo):BOOLEAN;
     function getmodulebyname(modulename: string; var mi: TModuleInfo):BOOLEAN;
     procedure GetModuleList(var list: TExtraModuleInfoList);
-    procedure GetSymbolList(list: TStrings);
-    function AddSymbol(module: string; searchkey: string; address: qword; size: integer; skipaddresstostringlookup: boolean=false; extradata: TExtraSymbolData=nil; skipDuplicateSupport:boolean=false): PCESymbolInfo;
+    function AddSymbol(module: string; searchkey: string; address: qword; size: integer; skipaddresstostringlookup: boolean=false; extraData: TExtraSymbolData=nil): PCESymbolInfo;
     function FindAddress(address: qword): PCESymbolInfo;
     function FindSymbol(s: string): PCESymbolInfo;
     function FindFirstSymbolFromBase(baseaddress: qword): PCESymbolInfo;
     procedure DeleteSymbol(searchkey: string); overload;
     procedure DeleteSymbol(address: qword); overload;
     procedure clear;
-    procedure unregisterList;
   published
     property ExtraSymbolDataList: TExtraSymbolDataList read fExtraSymbolDataList;
     property PID: dword read fPID write fPID;
-    property count: integer read getCount;
-    property name: string read fName write fName;
-    property refcount: integer read frefcount write frefcount;
+
   end;
 
 
@@ -196,13 +187,6 @@ begin
 end;
 
 //-------------
-
-function TSymbolListHandler.getCount: integer;
-begin
-  cs.Beginread;
-  result:=StringToAddress.Count;
-  cs.Endread;
-end;
 
 procedure TSymbolListHandler.AddModule(module:string; path: string; base: ptruint; size: dword; is64bit: boolean);
 var i: integer;
@@ -302,22 +286,6 @@ begin
     end;
   end;
   cs.Endread;
-end;
-
-procedure TSymbolListHandler.GetSymbolList(list: TStrings);
-var si: PCESymbolInfo;
-begin
-  list.clear;
-  cs.Beginread;
-  si:=FindFirstSymbolFromBase(0);
-
-  while si<>nil do
-  begin
-    list.AddObject(si^.originalstring, tobject(ptruint(si^.address)));
-    si:=si^.next;
-  end;
-
-  cs.endread;
 end;
 
 procedure TSymbolListHandler.GetModuleList(var list: TExtraModuleInfoList);
@@ -443,11 +411,10 @@ begin
   end;
 end;
 
-function TSymbolListHandler.AddSymbol(module: string; searchkey: string; address: qword; size: integer; skipaddresstostringlookup: boolean=false; extradata: TExtraSymbolData=nil; skipDuplicateSupport:boolean=false): PCESymbolInfo;
+function TSymbolListHandler.AddSymbol(module: string; searchkey: string; address: qword; size: integer; skipaddresstostringlookup: boolean=false; extradata: TExtraSymbolData=nil): PCESymbolInfo;
 var new: PCESymbolInfo;
   n: TAvgLvlTreeNode;
   prev, next: TAvgLvlTreeNode;
-  x: PCESymbolInfo;
 begin
   new:=getmem(sizeof(TCESymbolInfo));
   new^.module:=strnew(pchar(module));
@@ -455,10 +422,7 @@ begin
   new^.s:=strnew(pchar(lowercase(searchkey)));
   new^.address:=address;
   new^.size:=size;
-  new^.alternative:=nil;
   new^.extra:=extradata;
-
-  result:=new;
 
   cs.Beginwrite;
 //  sleep(1);
@@ -486,31 +450,11 @@ begin
       end;
     end;
 
-    if skipDuplicateSupport=false then
-    begin
-      n:=StringToAddress.Find(new);
-      if (n<>nil) and (PCESymbolInfo(n.data)^.address<>new^.address)  then
-      begin
-        //different symbol, same name
-        x:=PCESymbolInfo(n.data);
-        while x^.alternative<>nil do //chain duplicates
-        begin
-          x:=x^.alternative;
-          if x^.address=new^.address then exit; //duplicate symbol. Same name and address.
-        end;
-
-        x^.alternative:=new;
-      end
-      else
-        n:=StringToAddress.Add(new);
-    end
-    else
-      n:=StringToAddress.Add(new);
-
+    StringToAddress.Add(new);
   finally
     cs.Endwrite;
   end;
-
+  result:=new;
 end;
 
 function TSymbolListHandler.A2SCheck(Tree: TAvgLvlTree; Data1, Data2: pointer): integer;
@@ -542,11 +486,6 @@ begin
 
       x.s:=d^.s;
 
-      d^.address:=0;
-      d^.next:=nil;
-      d^.previous:=nil;
-
-
       if d^.originalstring<>nil then
       begin
         StrDispose(d^.originalstring);
@@ -572,10 +511,6 @@ begin
       if z<>nil then
       begin
         d:=PCESymbolInfo(z.data);
-
-        d^.address:=0;
-        d^.next:=nil;
-        d^.previous:=nil;
 
         if d^.originalstring<>nil then
         begin
@@ -624,10 +559,6 @@ begin
 
       x.address:=d^.address;
 
-      d^.address:=0;
-      d^.next:=nil;
-      d^.previous:=nil;
-
       if d^.originalstring<>nil then
       begin
         StrDispose(d^.originalstring);
@@ -654,10 +585,6 @@ begin
       begin
         d:=PCESymbolInfo(z.data);
 
-        d^.address:=0;
-        d^.next:=nil;
-        d^.previous:=nil;
-
         if d^.originalstring<>nil then
         begin
           StrDispose(d^.originalstring);
@@ -676,7 +603,7 @@ begin
           d^.module:=nil;
         end;
 
-        AddressToString.Delete(z);
+        StringToAddress.Delete(z);
       end;
     end;
 
@@ -684,26 +611,7 @@ begin
   finally
     cs.Endwrite;
   end;
-end;
 
-procedure CleanSymbolInfoEntry(var d: PCESymbolInfo);
-begin
-  if d^.originalstring<>nil then
-    StrDispose(d^.originalstring);
-
-  if d^.s<>nil then
-    StrDispose(d^.s);
-
-  if d^.module<>nil then
-    strDispose(d^.module);
-
-  if d^.alternative<>nil then
-  begin
-    CleanSymbolInfoEntry(d^.alternative);
-    freememandnil(d^.alternative);
-  end;
-
-  freememandnil(d);
 end;
 
 procedure TSymbolListHandler.clear;
@@ -712,7 +620,7 @@ var
   d:PCESymbolInfo;
   i: integer;
 
-  //e: TAVLTreeNodeEnumerator;
+  e: TAVLTreeNodeEnumerator;
 begin
   cs.Beginwrite;
   try
@@ -722,11 +630,33 @@ begin
       while x<>nil do
       begin
         d:=PCESymbolInfo(x.Data);
-        CleanSymbolInfoEntry(d);
+
+        if d^.originalstring<>nil then
+          StrDispose(d^.originalstring);
+
+        if d^.s<>nil then
+          StrDispose(d^.s);
+
+        if d^.module<>nil then
+          strDispose(d^.module);
+
+        FreeMemAndNil(d);
         x.data:=nil;
         x:=StringToAddress.FindSuccessor(x);
       end;
 
+      {
+      x:=StringToAddress.Root;
+      while x<>nil do
+      begin
+        if x.data<>nil then
+        begin
+          OutputDebugString('Missed one');
+        end;
+
+        StringToAddress.Delete(x);
+        x:=stringtoaddress.root;
+      end;}
 
 
       StringToAddress.Clear;
@@ -755,13 +685,6 @@ begin
   fExtraSymbolDataList.Remove(d);
 end;
 
-procedure TSymbolListHandler.unregisterList;
-begin
-  if selfsymhandler<>nil then selfsymhandler.RemoveSymbolList(self);
-  if symhandler<>nil then symhandler.RemoveSymbolList(self);
-end;
-
-
 constructor TSymbolListHandler.create;
 begin
   inherited create;
@@ -776,17 +699,14 @@ begin
 
   log('TSymbolListHandler.create exit');
 
-  frefcount:=1;
-  fname:='unnamed';
+
 end;
 
 destructor TSymbolListHandler.destroy;
 var i: integer;
 begin
-  unregisterList;
-
-
-
+  if symhandler<>nil then
+    symhandler.RemoveSymbolList(self);
 
 
   clear;

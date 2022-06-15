@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  StdCtrls, Menus, math, NewKernelHandler, FPImage, FPCanvas, FPImgCanv, FPReadPNG, FPWritePNG, betterControls  ;
+  StdCtrls, Menus, math, NewKernelHandler, FPImage, FPCanvas, FPImgCanv, FPReadPNG, FPWritePNG;
 
 resourcestring
   rsSHView = 'View';
@@ -467,10 +467,12 @@ begin
       safed3dhook;
       mainform.updated3dgui;
 
-      if frmd3dhooksnapshotconfig.rbFormatPNG.Checked then
-        pf:=3
-      else
-        pf:=0;
+
+      case frmd3dhooksnapshotconfig.rgPictureFormat.itemindex of
+        0: pf:=3;
+        1: pf:=0;
+      end;
+
 
 
       if d3dhook<>nil then

@@ -34,7 +34,7 @@ uses
   windows,
   {$endif}
   Classes, SysUtils, ComCtrls, Controls, StdCtrls,  MemoryRecordUnit,
-  Graphics, LCLType, betterControls;
+  Graphics, LCLType;
 
 type
   TAddressListEditor=class(TCustomEdit)
@@ -161,7 +161,6 @@ begin
   begin
     try
       memrec.Value:=text;
-      edited:=false;
     except
       beep;
     end;

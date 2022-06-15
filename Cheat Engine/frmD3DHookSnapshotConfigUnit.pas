@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, EditBtn,
-  StdCtrls, ExtCtrls, CEFuncProc, registry, commonTypeDefs, betterControls;
+  StdCtrls, ExtCtrls, CEFuncProc, registry, commonTypeDefs;
 
 type
 
@@ -21,7 +21,6 @@ type
     dirSnapshot: TDirectoryEdit;
     edtFullSnapshot: TEdit;
     edtSmallSnapshot: TEdit;
-    gbPictureFormat: TGroupBox;
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
@@ -30,8 +29,7 @@ type
     Panel1: TPanel;
     Panel2: TPanel;
     Panel3: TPanel;
-    rbFormatPNG: TRadioButton;
-    rbFormatBMP: TRadioButton;
+    rgPictureFormat: TRadioGroup;
     procedure btnClearFullSnapshotClick(Sender: TObject);
     procedure btnClearSmallSnapshotClick(Sender: TObject);
     procedure cbClearDepthChange(Sender: TObject);
@@ -51,8 +49,6 @@ type
   end;
 
 implementation
-
-uses mainunit2;
 
 {$R *.lfm}
 
@@ -112,7 +108,7 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\'+strCheatEngine+'\D3DHook',false) then
+    if Reg.OpenKey('\Software\Cheat Engine\D3DHook',false) then
     begin
       if reg.ValueExists('Snapshot Folder') then
         dirSnapshot.text:=reg.ReadString('Snapshot Folder');
@@ -133,12 +129,7 @@ begin
         cbAlsoOutputPng.Checked:=reg.readBool('Also save PNG');
 
       if reg.ValueExists('Snapshot picture format') then
-      begin
-        if reg.ReadInteger('Snapshot picture format')=0 then
-          rbFormatPNG.checked:=true
-        else
-          rbFormatBMP.checked:=true;
-      end;
+        rgPictureFormat.ItemIndex:=reg.ReadInteger('Snapshot picture format');
 
       k[1]:=0;
       k[0]:=fullsnapshotkey;
@@ -165,7 +156,7 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\'+strCheatEngine+'\D3DHook',true) then
+    if Reg.OpenKey('\Software\Cheat Engine\D3DHook',true) then
     begin
       reg.WriteString('Snapshot Folder', dirSnapshot.Text);
       reg.WriteBool('Snapshot Progressive', cbProgressive.checked);
@@ -174,7 +165,7 @@ begin
       reg.WriteInteger('Small Snapshot Key', smallsnapshotkey);
       reg.writeBool('Also save PNG', cbAlsoOutputPng.Checked);
 
-      reg.WriteInteger('Snapshot picture format', ifthen<integer>(rbFormatPNG.checked,0,1));
+      reg.WriteInteger('Snapshot picture format', rgPictureFormat.ItemIndex);
     end;
 
   finally
